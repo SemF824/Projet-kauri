@@ -85,7 +85,7 @@ export function ManageAccountScreen() {
               <ChevronRight className={isDarkMode ? 'text-[#94A3B8]' : 'text-[#64748B]'} />
             </button>
 
-            <button className={`w-full rounded-xl p-4 flex items-center justify-between border ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}>
+            <button onClick={() => navigate('/kauri/setup-2fa')} className={`w-full rounded-xl p-4 flex items-center justify-between border ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-[#0D9488]/10 flex items-center justify-center">
                   <Shield className="w-5 h-5 text-[#0D9488]" />

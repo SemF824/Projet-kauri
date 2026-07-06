@@ -1,13 +1,159 @@
-import { Eye, EyeOff, TrendingUp, Users, Plus, Bell, User, Wallet, Heart, BarChart3, LogOut, WifiOff, Moon, Sun } from 'lucide-react';
+import { Eye, EyeOff, TrendingUp, Users, Plus, Bell, User, BarChart3, WifiOff, Moon, Sun, Home, Briefcase, Play, BarChart2 } from 'lucide-react';
+import { useProData } from '../../contexts/ProDataContext';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useDarkMode } from '../../contexts/DarkModeContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useProPublications, computeSocialStats } from '../../contexts/ProPublicationsContext';
+
+// ── Social icon (même que dashboard normal) ───────────────────────────────────
+function SocialIcon({ color, size = 22 }: { color: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9.5" stroke={color} strokeWidth="1.6" />
+      <path d="M3 12 Q7 9.5 12 9.5 Q17 9.5 21 12" stroke={color} strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.5" />
+      <circle cx="7"  cy="10.5" r="1.1" fill={color} />
+      <path d="M5.8 13.5 Q7 12.5 8.2 13.5"   stroke={color} strokeWidth="1.1" strokeLinecap="round" fill="none" />
+      <circle cx="17" cy="10.5" r="1.1" fill={color} />
+      <path d="M15.8 13.5 Q17 12.5 18.2 13.5" stroke={color} strokeWidth="1.1" strokeLinecap="round" fill="none" />
+      <circle cx="12" cy="6.5"  r="1.1" fill={color} />
+      <path d="M10.8 9.5 Q12 8.5 13.2 9.5"   stroke={color} strokeWidth="1.1" strokeLinecap="round" fill="none" />
+      <line x1="8"   y1="11" x2="11"  y2="7.5"  stroke={color} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />
+      <line x1="16"  y1="11" x2="13"  y2="7.5"  stroke={color} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />
+      <line x1="8.5" y1="12" x2="15.5" y2="12" stroke={color} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />
+    </svg>
+  );
+}
+
+// ── Pro bottom nav ────────────────────────────────────────────────────────────
+type ProTab = 'accueil' | 'projets' | 'kauri' | 'social' | 'profil';
+
+function ProBottomNav({
+  active, isDarkMode, navigate,
+}: { active: ProTab; isDarkMode: boolean; navigate: (p: string) => void }) {
+  const GOLD = '#D4AF37';
+  const TEAL = '#006D77';
+  const bg      = isDarkMode ? '#1E293B' : '#ffffff';
+  const border  = isDarkMode ? '#334155' : '#E8EDF2';
+  const inactive = isDarkMode ? '#475569' : '#94A3B8';
+
+  const tabs: { id: ProTab; icon?: React.ElementType; label: string; path?: string; isCenter?: boolean }[] = [
+    { id: 'accueil', icon: Home,      label: 'Accueil',  path: '/kauri/pro-dashboard' },
+    { id: 'projets', icon: Briefcase, label: 'Projets',  path: '/kauri/pro-projets' },
+    { id: 'kauri',                    label: 'Kauri',    path: '/kauri/pro-creer-tontine', isCenter: true },
+    { id: 'social',                   label: 'Social',   path: '/kauri/social-hub-gateway' },
+    { id: 'profil',  icon: User,      label: 'Profil',   path: '/kauri/profil-pro' },
+  ];
+
+  return (
+    <nav
+      className="fixed bottom-0 left-0 right-0 max-w-md mx-auto"
+      style={{
+        backgroundColor: bg,
+        borderTop: `1px solid ${border}`,
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
+    >
+      <div className="flex items-end justify-around px-2 pt-1.5 pb-3">
+        {tabs.map(tab => {
+          const isActive = active === tab.id;
+          const Icon = tab.icon;
+
+          // ── Bouton central Kauri ──
+          if (tab.isCenter) {
+            return (
+              <button
+                key={tab.id}
+                onClick={() => tab.path && navigate(tab.path)}
+                aria-label="Kauri Pro"
+                style={{
+                  width: 56, height: 56, borderRadius: '50%', flexShrink: 0,
+                  marginBottom: 6,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'linear-gradient(135deg, #D4AF37, #F59E0B)',
+                  boxShadow: '0 4px 16px rgba(212,175,55,0.50), 0 2px 8px rgba(0,0,0,0.18)',
+                  border: isActive ? '2.5px solid rgba(255,255,255,0.5)' : '2px solid rgba(255,255,255,0.2)',
+                  transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                  transition: 'transform 0.15s ease',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Cowrie shell SVG identique au dashboard normal */}
+                <svg viewBox="0 0 100 100" style={{ width: 28, height: 28, color: '#fff' }}>
+                  <path
+                    d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35"
+                    fill="currentColor"
+                  />
+                </svg>
+              </button>
+            );
+          }
+
+          // ── Onglet Social ──
+          if (tab.id === 'social') {
+            return (
+              <button
+                key={tab.id}
+                onClick={() => tab.path && navigate(tab.path)}
+                aria-label="Social"
+                className="flex flex-col items-center gap-0.5 relative"
+                style={{ minWidth: 44, paddingTop: 6, paddingBottom: 2 }}
+              >
+                <SocialIcon color={isActive ? TEAL : inactive} size={22} />
+                <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 400, color: isActive ? TEAL : inactive, transition: 'color 0.15s' }}>
+                  {tab.label}
+                </span>
+                {isActive && (
+                  <span style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', backgroundColor: TEAL }} />
+                )}
+              </button>
+            );
+          }
+
+          // ── Onglets standard ──
+          return (
+            <button
+              key={tab.id}
+              onClick={() => tab.path && navigate(tab.path)}
+              aria-label={tab.label}
+              className="flex flex-col items-center gap-0.5 relative"
+              style={{ minWidth: 44, paddingTop: 6, paddingBottom: 2 }}
+            >
+              {Icon && (
+                <Icon
+                  style={{
+                    width: 22, height: 22,
+                    color: isActive ? GOLD : inactive,
+                    strokeWidth: isActive ? 2.2 : 1.8,
+                    transition: 'color 0.15s',
+                  }}
+                />
+              )}
+              <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 400, color: isActive ? GOLD : inactive, transition: 'color 0.15s' }}>
+                {tab.label}
+              </span>
+              {isActive && (
+                <span style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', backgroundColor: GOLD }} />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
 
 export function ProDashboardScreen() {
   const navigate = useNavigate();
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const { isDarkMode, toggleDarkMode, resetDarkMode } = useDarkMode();
+  const { profile } = useAuth();
+
+  const displayName = profile?.businessName || profile?.firstName || 'Professionnel';
+  const initials = profile?.businessName
+    ? profile.businessName.slice(0, 2).toUpperCase()
+    : `${(profile?.firstName?.[0] ?? 'P')}${(profile?.lastName?.[0] ?? '')}`.toUpperCase();
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -28,10 +174,15 @@ export function ProDashboardScreen() {
     navigate('/kauri/login');
   };
 
-  const projects = [
-    { name: 'Lolo Moderne', funding: 45000, goal: 100000, backers: 87 },
-    { name: 'Coopérative Agricole', funding: 32000, goal: 50000, backers: 42 },
-  ];
+  const { projets } = useProData();
+  const { publications } = useProPublications();
+  const socialStats = computeSocialStats(publications);
+  const projetsActifs = projets.filter(p => p.statut === 'En cours');
+  const totalLeve  = projets.reduce((s, p) => s + p.leve, 0);
+  const totalBackers = projets.reduce((s, p) => s + p.backers, 0);
+  const projects = projetsActifs.slice(0, 3).map(p => ({
+    name: p.nom, funding: p.leve, goal: p.objectif, backers: p.backers,
+  }));
 
   return (
     <div className={`min-h-screen pb-24 transition-colors ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#F9F9F9]'}`}>
@@ -39,10 +190,10 @@ export function ProDashboardScreen() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-lg ${isDarkMode ? 'bg-[#D4AF37] border-white' : 'bg-white border-[#D4AF37]'}`}>
-              <span className={isDarkMode ? 'text-white' : 'text-[#D4AF37]'}>MC</span>
+              <span className={isDarkMode ? 'text-white' : 'text-[#D4AF37]'}>{initials}</span>
             </div>
             <div>
-              <h2 className="text-white">Bonjour, Marie</h2>
+              <h2 className="text-white">Bonjour, {displayName}</h2>
               <p className="text-white/90 text-sm">Compte Professionnel</p>
             </div>
           </div>
@@ -62,13 +213,6 @@ export function ProDashboardScreen() {
             >
               <Bell className="w-5 h-5 text-white" />
             </button>
-            <button
-              onClick={handleLogout}
-              className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
-              title="Déconnexion"
-            >
-              <LogOut className="w-5 h-5 text-white" />
-            </button>
           </div>
         </div>
 
@@ -87,16 +231,16 @@ export function ProDashboardScreen() {
           </h1>
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => navigate('/kauri/pro-manage-account')}
-              className="bg-white text-[#D4AF37] py-3 rounded-xl text-sm"
+              onClick={() => navigate('/kauri/pro-portefeuille')}
+              className="bg-white text-[#D4AF37] py-3 rounded-xl text-sm font-medium"
             >
-              Gérer
+              Détail
             </button>
             <button
-              onClick={() => navigate('/kauri/pro-project-form')}
-              className="bg-[#006D77] text-white py-3 rounded-xl text-sm"
+              onClick={() => navigate('/kauri/pro-projets')}
+              className="bg-[#006D77] text-white py-3 rounded-xl text-sm font-medium"
             >
-              Nouveau Projet
+              Gérer
             </button>
           </div>
         </div>
@@ -118,23 +262,32 @@ export function ProDashboardScreen() {
 
       <div className="px-6 py-6 space-y-6">
         <div className="grid grid-cols-3 gap-3">
-          <div className={`rounded-xl p-4 text-center shadow-md border ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}>
+          <button
+            onClick={() => navigate('/kauri/pro-leves')}
+            className={`rounded-xl p-4 text-center shadow-md border transition-opacity active:opacity-70 ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}
+          >
             <BarChart3 className="w-8 h-8 text-[#006D77] mx-auto mb-2" />
-            <p className={`mb-1 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>77 000 €</p>
+            <p className={`mb-1 font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{totalLeve.toLocaleString('fr-FR')} €</p>
             <p className={`text-xs ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Levés</p>
-          </div>
+          </button>
 
-          <div className={`rounded-xl p-4 text-center shadow-md border ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}>
+          <button
+            onClick={() => navigate('/kauri/pro-investisseurs')}
+            className={`rounded-xl p-4 text-center shadow-md border transition-opacity active:opacity-70 ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}
+          >
             <Users className="w-8 h-8 text-[#D4AF37] mx-auto mb-2" />
-            <p className={`mb-1 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>129</p>
+            <p className={`mb-1 font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{totalBackers}</p>
             <p className={`text-xs ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Investisseurs</p>
-          </div>
+          </button>
 
-          <div className={`rounded-xl p-4 text-center shadow-md border ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}>
+          <button
+            onClick={() => navigate('/kauri/pro-projets')}
+            className={`rounded-xl p-4 text-center shadow-md border transition-opacity active:opacity-70 ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}
+          >
             <TrendingUp className="w-8 h-8 text-[#0D9488] mx-auto mb-2" />
-            <p className={`mb-1 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>2</p>
+            <p className={`mb-1 font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{projetsActifs.length}</p>
             <p className={`text-xs ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Projets</p>
-          </div>
+          </button>
         </div>
 
         <div>
@@ -144,11 +297,10 @@ export function ProDashboardScreen() {
               Mes Levées de Fonds
             </h3>
             <button
-              onClick={() => navigate('/kauri/pro-project-form')}
-              className={`flex items-center gap-1 text-sm ${isDarkMode ? 'text-[#0D9488]' : 'text-[#006D77]'}`}
+              onClick={() => navigate('/kauri/pro-projets')}
+              className={`text-sm underline underline-offset-2 ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#64748B]'}`}
             >
-              <Plus className="w-4 h-4" />
-              <span>Publier</span>
+              Tout voir
             </button>
           </div>
 
@@ -194,52 +346,75 @@ export function ProDashboardScreen() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        {/* ── Réseau Social ── */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className={`flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+              <div className="w-1 h-5 bg-[#B05B3B] rounded-full" />
+              Réseau Social
+            </h3>
+            <button
+              onClick={() => navigate('/kauri/pro-publication-stats')}
+              className={`text-sm underline underline-offset-2 ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#64748B]'}`}
+            >
+              Statistiques
+            </button>
+          </div>
+
+          {/* Stats sociales */}
+          <div className={`rounded-2xl p-4 border mb-3 grid grid-cols-3 gap-3 ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'} shadow-md`}>
+            {[
+              { label: 'Publications', value: String(socialStats.nbPublications), icon: Play, color: '#006D77' },
+              { label: 'Vues totales', value: socialStats.totalVues >= 1000 ? `${(socialStats.totalVues / 1000).toFixed(1)}k` : String(socialStats.totalVues), icon: BarChart2, color: '#D4AF37' },
+              { label: 'Abonnés', value: String(socialStats.totalAbonnes), icon: Users, color: '#B05B3B' },
+            ].map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div key={stat.label} className="text-center">
+                  <div className="w-9 h-9 mx-auto mb-1.5 rounded-full flex items-center justify-center" style={{ background: `${stat.color}18` }}>
+                    <Icon className="w-4 h-4" style={{ color: stat.color }} />
+                  </div>
+                  <p className={`font-bold text-sm ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{stat.value}</p>
+                  <p className={`text-[10px] ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#64748B]'}`}>{stat.label}</p>
+                </div>
+              );
+            })}
+          </div>
+
           <button
-            onClick={() => navigate('/kauri/pro-project-form')}
-            className="bg-gradient-to-r from-[#D4AF37] to-[#F59E0B] text-white py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg"
+            onClick={() => navigate('/kauri/pro-publish')}
+            className="w-full bg-gradient-to-r from-[#0F172A] to-[#1E293B] text-white py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg font-semibold"
           >
             <Plus className="w-5 h-5" />
-            <span>Nouveau Projet</span>
-          </button>
-          <button
-            onClick={() => navigate('/kauri/pot-commun')}
-            className="bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg"
-          >
-            <span>Pot Commun</span>
+            <span>Nouvelle Publication</span>
           </button>
         </div>
 
         <button
-          onClick={() => navigate('/kauri/pro-multi-signature')}
-          className="w-full bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-xl shadow-lg"
+          onClick={() => navigate('/kauri/pro-project-form')}
+          className="w-full bg-gradient-to-r from-[#D4AF37] to-[#F59E0B] text-white py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg font-semibold"
         >
-          Validation Multi-Signatures Pro
+          <Plus className="w-5 h-5" />
+          <span>Nouveau Projet</span>
         </button>
-      </div>
 
-      <nav className={`fixed bottom-0 left-0 right-0 border-t px-6 py-4 max-w-md mx-auto ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}>
-        <div className="flex items-center justify-around">
-          <button className="flex flex-col items-center gap-1">
-            <Wallet className="w-6 h-6 text-[#D4AF37]" />
-            <span className="text-xs text-[#D4AF37]">FinTech</span>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => navigate('/kauri/pot-commun')}
+            className={`py-4 rounded-xl border-2 font-medium text-sm transition-colors ${isDarkMode ? 'border-[#334155] text-[#94A3B8]' : 'border-[#E2E8F0] text-[#64748B]'}`}
+          >
+            Pot Commun
           </button>
           <button
-            onClick={() => navigate('/kauri/social-hub-gateway')}
-            className="flex flex-col items-center gap-1"
+            onClick={() => navigate('/kauri/multi-signature')}
+            className="bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-xl font-medium text-sm shadow-lg"
           >
-            <Heart className="w-6 h-6 text-[#94A3B8]" />
-            <span className="text-xs text-[#94A3B8]">Social</span>
-          </button>
-          <button
-            onClick={() => navigate('/kauri/profil-pro')}
-            className="flex flex-col items-center gap-1"
-          >
-            <User className="w-6 h-6 text-[#94A3B8]" />
-            <span className="text-xs text-[#94A3B8]">Profil</span>
+            Multi-Signatures
           </button>
         </div>
-      </nav>
+      </div>
+
+      <ProBottomNav active="accueil" isDarkMode={isDarkMode} navigate={navigate} />
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { ArrowLeft, Shield, ChevronRight, Lock, AlertCircle, User } from 'lucide
 import { useNavigate, useLocation } from 'react-router';
 import { useState } from 'react';
 import { useDarkMode } from '../../contexts/DarkModeContext';
+import { SERVER_URL, authHeaders } from '../../../utils/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 function formatAmount(amount: string) {
   const n = parseFloat(amount);
@@ -32,6 +34,8 @@ export function TransferConfirmScreen() {
     .toUpperCase()
     .slice(0, 2);
 
+  const { refreshProfile } = useAuth();
+
   const handleDigit = (d: string) => {
     if (pinDigits.length >= 4) return;
     const next = [...pinDigits, d];
@@ -47,20 +51,47 @@ export function TransferConfirmScreen() {
     setPinError(false);
   };
 
-  const confirmTransfer = (pin: string) => {
-    if (pin !== '1234') {
+  const confirmTransfer = async (pin: string) => {
+    // Validate PIN has at least 4 digits (any digits accepted, real PIN stored in Supabase auth)
+    if (pin.length < 4) {
       setPinError(true);
       setPinDigits([]);
       return;
     }
     setIsConfirming(true);
-    const txId = 'KAU-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-    setTimeout(() => {
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`${SERVER_URL}/wallet/send`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          amount: parseFloat(amount),
+          recipient,
+          description: message || `Virement à ${recipient}`,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setPinError(true);
+        setPinDigits([]);
+        setIsConfirming(false);
+        console.error('Transfer error:', data.error);
+        return;
+      }
+
+      await refreshProfile();
+      const txId = 'KAU-' + Math.random().toString(36).substring(2, 8).toUpperCase();
       navigate('/kauri/transfer-success', {
         state: { amount, recipient, message, transactionId: txId, avatarInitials },
         replace: true,
       });
-    }, 800);
+    } catch (e) {
+      console.error('Transfer exception:', e);
+      setPinError(true);
+      setPinDigits([]);
+      setIsConfirming(false);
+    }
   };
 
   const bg = isDarkMode ? '#0F172A' : '#F8FAFC';

@@ -7,6 +7,7 @@ import {
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
 import { useDarkMode } from '../../contexts/DarkModeContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const TEAL = '#0A847E';
 const GOLD = '#D4AF37';
@@ -16,11 +17,17 @@ export function ProfilParticulierScreen() {
   const { isDarkMode, resetDarkMode } = useDarkMode();
   const [activeSpace, setActiveSpace] = useState<'personnel' | 'professionnel'>('personnel');
 
-  const trustScore = 87;
+  const { profile, signOut } = useAuth();
+  const trustScore = Math.round((profile?.trustScore ?? 3.5) * (100 / 5));
+  const fullName = profile ? `${profile.firstName} ${profile.lastName}` : 'Utilisateur';
+  const initials = profile ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase() : 'KA';
+  const memberSince = profile?.createdAt
+    ? new Date(profile.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+    : '';
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     resetDarkMode();
-    localStorage.removeItem('kauri_account_type');
+    await signOut();
     navigate('/kauri/login');
   };
 
@@ -62,11 +69,11 @@ export function ProfilParticulierScreen() {
             className="w-18 h-18 rounded-full flex items-center justify-center border-4 border-white shadow-xl text-white text-xl font-bold flex-shrink-0"
             style={{ width: 72, height: 72, background: `linear-gradient(135deg, ${GOLD}, #B8860B)` }}
           >
-            JD
+            {initials}
           </div>
           <div className="flex-1">
-            <h1 className="text-white text-xl font-bold">Jean Dupont</h1>
-            <p className="text-white/70 text-xs mt-0.5">Membre depuis mars 2026</p>
+            <h1 className="text-white text-xl font-bold">{fullName}</h1>
+            <p className="text-white/70 text-xs mt-0.5">{memberSince ? `Membre depuis ${memberSince}` : 'Membre KAURI'}</p>
           </div>
           <button
             onClick={() => navigate('/kauri/manage-account')}
@@ -153,7 +160,7 @@ export function ProfilParticulierScreen() {
               {[
                 { icon: Users, color: TEAL,   bg: `${TEAL}14`,  label: 'Tontines',  value: '3',  path: '/kauri/mes-tontines' },
                 { icon: TrendingUp, color: GOLD, bg: `${GOLD}18`, label: 'Investis',  value: '2',  path: '/kauri/mes-investissements' },
-                { icon: Award, color: '#8B5CF6', bg: '#8B5CF614', label: 'Badges',    value: '12', path: null },
+                { icon: Award, color: '#8B5CF6', bg: '#8B5CF614', label: 'Badges',    value: '12', path: '/kauri/badges' },
               ].map(({ icon: Icon, color, bg: ibg, label, value, path }) => (
                 <div key={label} onClick={() => path && navigate(path)} className="rounded-2xl p-4 text-center" style={{ backgroundColor: card, border: `1.5px solid ${border}`, cursor: path ? 'pointer' : 'default' }}>
                   <div className="w-10 h-10 mx-auto mb-2 rounded-xl flex items-center justify-center" style={{ backgroundColor: ibg }}>
@@ -196,7 +203,7 @@ export function ProfilParticulierScreen() {
               <div className="space-y-2.5">
                 <SettingRow icon={Lock}       color="#0A847E" bg={`${TEAL}12`}    label="Code PIN"             sub="Modifier votre PIN"    onClick={() => navigate('/kauri/biometric-setup')} />
                 <SettingRow icon={Smartphone} color={GOLD}   bg={`${GOLD}18`}    label="Biométrie"            sub="Touch ID activé"       onClick={() => navigate('/kauri/biometric-setup')} />
-                <SettingRow icon={Shield}     color="#0D9488" bg="#0D948812"      label="Authentification 2FA" sub="Désactivé"             onClick={() => navigate('/kauri/manage-account')} />
+                <SettingRow icon={Shield}     color="#0D9488" bg="#0D948812"      label="Authentification 2FA" sub="Désactivé"             onClick={() => navigate('/kauri/setup-2fa')} />
               </div>
             </div>
 

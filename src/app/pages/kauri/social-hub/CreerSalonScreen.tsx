@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Hash, Users, Lock, Globe, ChevronRight, Check } from 'lucide-react';
+import { ArrowLeft, Hash, Users, Lock, Globe, ChevronRight, Check, Settings } from 'lucide-react';
 
 const TERRACOTTA = '#B05B3B';
 const TEAL = '#006D77';
@@ -42,16 +42,16 @@ export default function CreerSalonScreen() {
           <strong style={{ color: '#1E293B' }}>#{name}</strong> est maintenant actif. Invitez des membres pour commencer les discussions.
         </p>
         <button
-          onClick={() => navigate('/kauri/social-hub/salon/new')}
-          style={{ width: '100%', background: TERRACOTTA, color: '#fff', border: 'none', borderRadius: 14, padding: '14px', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 12 }}
+          onClick={() => navigate('/kauri/social-hub/salon/s1/gerer', { state: { isFirstTime: true } })}
+          style={{ width: '100%', background: TERRACOTTA, color: '#fff', border: 'none', borderRadius: 14, padding: '14px', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
         >
-          Ouvrir le salon
+          <Settings size={18} /> Configurer le salon
         </button>
         <button
-          onClick={() => navigate('/kauri/social-hub/forums-menu')}
+          onClick={() => navigate('/kauri/social-hub/forums')}
           style={{ width: '100%', background: '#fff', color: '#64748B', border: '1px solid #E8ECF0', borderRadius: 14, padding: '14px', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}
         >
-          Retour aux forums
+          Retour aux discussions
         </button>
       </div>
     );

@@ -1,21 +1,24 @@
-import { ArrowLeft, Globe, Users, Calendar, Euro, Shuffle, ShieldCheck, ChevronDown, Tag } from 'lucide-react';
+import { ArrowLeft, Globe, Users, Calendar, Euro, Shuffle, ShieldCheck, ChevronDown, Tag, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
 import { useDarkMode } from '../../contexts/DarkModeContext';
+import { SERVER_URL, authHeaders } from '../../../utils/supabase';
+import { toast } from 'sonner';
 
 const GOLD = '#D4AF37';
 
-type Frequence  = 'mensuelle' | 'hebdomadaire' | 'bihebdomadaire';
+type Frequence    = 'mensuelle' | 'hebdomadaire' | 'bihebdomadaire';
 type OrdrePassage = 'aleatoire' | 'fixe';
-type Categorie  = 'famille' | 'entrepreneuriat' | 'diaspora' | 'epargne' | 'investissement' | 'autre';
+type Categorie    = 'famille' | 'entrepreneuriat' | 'diaspora' | 'epargne' | 'investissement' | 'autre';
+type Duree        = '3' | '6' | '9' | '12' | '18' | '24';
 
 const CATEGORIES: { value: Categorie; label: string; emoji: string }[] = [
-  { value: 'famille',        label: 'Famille',        emoji: '👨‍👩‍👧' },
-  { value: 'entrepreneuriat',label: 'Entrepreneuriat', emoji: '🚀' },
-  { value: 'diaspora',       label: 'Diaspora',        emoji: '🌍' },
-  { value: 'epargne',        label: 'Épargne',         emoji: '💰' },
-  { value: 'investissement', label: 'Investissement',  emoji: '📈' },
-  { value: 'autre',          label: 'Autre',           emoji: '✨' },
+  { value: 'famille',         label: 'Famille',        emoji: '👨‍👩‍👧' },
+  { value: 'entrepreneuriat', label: 'Entrepreneuriat', emoji: '🚀' },
+  { value: 'diaspora',        label: 'Diaspora',        emoji: '🌍' },
+  { value: 'epargne',         label: 'Épargne',         emoji: '💰' },
+  { value: 'investissement',  label: 'Investissement',  emoji: '📈' },
+  { value: 'autre',           label: 'Autre',           emoji: '✨' },
 ];
 
 export function CreerTontinePubliqueScreen() {
@@ -31,7 +34,9 @@ export function CreerTontinePubliqueScreen() {
   const [ordre, setOrdre]                 = useState<OrdrePassage>('aleatoire');
   const [categorie, setCategorie]         = useState<Categorie | null>(null);
   const [trustMin, setTrustMin]           = useState('60');
+  const [duree, setDuree]                 = useState<Duree | ''>('');
   const [showFrequence, setShowFrequence] = useState(false);
+  const [isSubmitting, setIsSubmitting]   = useState(false);
 
   const bg          = isDarkMode ? '#0F172A' : '#F8FAFC';
   const cardBg      = isDarkMode ? '#1E293B' : '#ffffff';
@@ -45,6 +50,10 @@ export function CreerTontinePubliqueScreen() {
     { value: 'hebdomadaire',   label: 'Hebdomadaire'      },
     { value: 'bihebdomadaire', label: 'Toutes les 2 sem.' },
   ];
+
+  const potTotal = cotisation && maxMembres && duree
+    ? parseFloat(cotisation) * parseInt(maxMembres) * parseInt(duree)
+    : null;
 
   function Field({ label, icon: Icon, children }: { label: string; icon: any; children: React.ReactNode }) {
     return (
@@ -98,7 +107,43 @@ export function CreerTontinePubliqueScreen() {
     );
   }
 
-  const isValid = nom.trim() && cotisation && maxMembres && dateDebut && categorie;
+  const isValid = nom.trim() && cotisation && maxMembres && dateDebut && categorie && duree !== '';
+
+  const handleCreate = async () => {
+    if (!isValid || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`${SERVER_URL}/tontines`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          name: nom,
+          description,
+          contribution: Number(cotisation),
+          frequency: frequence,
+          maxMembers: Number(maxMembres),
+          duration: Number(duree),
+          startDate: dateDebut,
+          orderType: ordre,
+          category: categorie,
+          minTrustScore: Number(trustMin),
+          type: 'public',
+        }),
+      });
+      if (res.ok) {
+        toast.success('Tontine publique créée !');
+        navigate('/kauri/mes-tontines');
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Erreur lors de la création');
+      }
+    } catch {
+      toast.error('Erreur de connexion');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen pb-10" style={{ backgroundColor: bg }}>
@@ -144,7 +189,6 @@ export function CreerTontinePubliqueScreen() {
             />
           </Field>
 
-          {/* Catégorie */}
           <Field label="Catégorie" icon={Tag}>
             <div className="grid grid-cols-3 gap-2">
               {CATEGORIES.map(cat => (
@@ -180,6 +224,26 @@ export function CreerTontinePubliqueScreen() {
             </Field>
           </div>
 
+          <Field label="Durée de la tontine" icon={Calendar}>
+            <div className="grid grid-cols-3 gap-2">
+              {(['3', '6', '9', '12', '18', '24'] as Duree[]).map(d => (
+                <button
+                  key={d}
+                  onClick={() => setDuree(d)}
+                  className="py-2.5 rounded-xl text-xs font-semibold transition-all"
+                  style={{
+                    background: duree === d ? `linear-gradient(135deg, #B8860B, ${GOLD})` : inputBg,
+                    color: duree === d ? '#fff' : textSec,
+                    border: `1.5px solid ${duree === d ? GOLD : border}`,
+                    boxShadow: duree === d ? `0 2px 8px ${GOLD}40` : 'none',
+                  }}
+                >
+                  {d} mois
+                </button>
+              ))}
+            </div>
+          </Field>
+
           <Field label="Fréquence" icon={Calendar}>
             <button
               onClick={() => setShowFrequence(v => !v)}
@@ -212,6 +276,22 @@ export function CreerTontinePubliqueScreen() {
           <Field label="Date de début" icon={Calendar}>
             <Input value={dateDebut} onChange={setDateDebut} placeholder="" type="date" />
           </Field>
+
+          {/* Pot estimé */}
+          {potTotal !== null && (
+            <div className="rounded-xl p-3.5 flex items-center gap-3"
+              style={{ background: `${GOLD}10`, border: `1.5px solid ${GOLD}35` }}>
+              <TrendingUp style={{ width: 16, height: 16, color: GOLD, flexShrink: 0 }} />
+              <div>
+                <p className="text-xs font-bold" style={{ color: '#92400E' }}>
+                  Pot total estimé : {potTotal.toLocaleString('fr-FR')} €
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: textSec }}>
+                  {cotisation} € × {maxMembres} membres × {duree} mois
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Règles & critères */}
@@ -244,7 +324,7 @@ export function CreerTontinePubliqueScreen() {
                 style={{ accentColor: GOLD }}
               />
               <div className="flex justify-between mt-1">
-                <span className="text-xs" style={{ color: textSec }}>0</span>
+                <span className="text-xs" style={{ color: textSec }}>0 — Ouvert à tous</span>
                 <span className="text-xs" style={{ color: textSec }}>100</span>
               </div>
             </div>
@@ -253,16 +333,23 @@ export function CreerTontinePubliqueScreen() {
 
         {/* CTA */}
         <button
-          disabled={!isValid}
-          className="w-full py-4 rounded-2xl text-white text-sm font-bold shadow-lg transition-opacity"
+          disabled={!isValid || isSubmitting}
+          onClick={handleCreate}
+          className="w-full py-4 rounded-2xl text-white text-sm font-bold shadow-lg transition-opacity flex items-center justify-center gap-2"
           style={{
             background: isValid ? `linear-gradient(135deg, #B8860B, ${GOLD})` : '#CBD5E1',
             boxShadow: isValid ? `0 4px 16px ${GOLD}44` : 'none',
             opacity: isValid ? 1 : 0.7,
           }}
         >
-          Créer ma tontine publique
+          {isSubmitting ? (
+            <>
+              <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white" style={{ animation: 'spin 0.8s linear infinite' }} />
+              Création…
+            </>
+          ) : 'Créer ma tontine publique'}
         </button>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
         <p className="text-center text-xs pb-4" style={{ color: textSec }}>
           Votre tontine sera visible par tous les membres KAURI ayant le Trust Score requis.

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, LogOut, ChevronRight, Shield } from 'lucide-react';
+import { ArrowLeft, LogOut, ChevronRight, Shield, UserCircle, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 // ─── Custom Pillar Icons ──────────────────────────────────────────────────────
@@ -29,23 +29,42 @@ function IconDecouverte({ active }: { active: boolean }) {
 }
 
 function IconRencontres({ active }: { active: boolean }) {
+  const fill = active ? 'rgba(212,175,55,0.22)' : 'rgba(212,175,55,0.09)';
+  const stroke = '#D4AF37';
+  const hw = 1.5;
   return (
     <svg viewBox="0 0 44 44" width="36" height="36" fill="none" aria-hidden="true">
-      {/* Left silhouette */}
-      <circle cx="14" cy="13" r="5.5"
-        stroke="#D4AF37" strokeWidth="1.5"
-        fill={active ? 'rgba(212,175,55,0.2)' : 'rgba(212,175,55,0.08)'} />
-      <path d="M5 32c0-5.5 4-9 9-9h2"
-        stroke="#D4AF37" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      {/* Right silhouette */}
-      <circle cx="30" cy="13" r="5.5"
-        stroke="#D4AF37" strokeWidth="1.5"
-        fill={active ? 'rgba(212,175,55,0.15)' : 'rgba(212,175,55,0.06)'} />
-      <path d="M39 32c0-5.5-4-9-9-9h-2"
-        stroke="#D4AF37" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      {/* Central connecting heart */}
-      <path d="M22 38 L14 29 C12 26 13 22 16.5 21.5 C18.5 21 20 22.5 22 24 C24 22.5 25.5 21 27.5 21.5 C31 22 32 26 30 29 Z"
-        fill="#D4AF37" opacity={active ? 0.9 : 0.65} />
+      {/* Mallette gauche */}
+      <rect x="4" y="18" width="15" height="11" rx="2.5"
+        fill={fill} stroke={stroke} strokeWidth={hw} />
+      {/* Poignée gauche */}
+      <path d="M8.5 18v-2.5a3 3 0 0 1 3-3h1.5a3 3 0 0 1 3 3V18"
+        stroke={stroke} strokeWidth={hw} strokeLinecap="round" fill="none" />
+      {/* Ligne centrale mallette gauche */}
+      <line x1="4" y1="24" x2="19" y2="24"
+        stroke={stroke} strokeWidth={hw - 0.3} strokeLinecap="round" opacity="0.5" />
+      {/* Boucle mallette gauche */}
+      <rect x="9.5" y="22.5" width="4" height="2.8" rx="1"
+        fill={stroke} opacity={active ? 0.8 : 0.5} />
+
+      {/* Mallette droite */}
+      <rect x="25" y="18" width="15" height="11" rx="2.5"
+        fill={fill} stroke={stroke} strokeWidth={hw} />
+      {/* Poignée droite */}
+      <path d="M28.5 18v-2.5a3 3 0 0 1 3-3H33a3 3 0 0 1 3 3V18"
+        stroke={stroke} strokeWidth={hw} strokeLinecap="round" fill="none" />
+      {/* Ligne centrale mallette droite */}
+      <line x1="25" y1="24" x2="40" y2="24"
+        stroke={stroke} strokeWidth={hw - 0.3} strokeLinecap="round" opacity="0.5" />
+      {/* Boucle mallette droite */}
+      <rect x="30.5" y="22.5" width="4" height="2.8" rx="1"
+        fill={stroke} opacity={active ? 0.8 : 0.5} />
+
+      {/* Lien central — deux flèches qui se rejoignent */}
+      <path d="M19 23.5 L22 23.5 M22 23.5 L25 23.5"
+        stroke={stroke} strokeWidth={hw} strokeLinecap="round" />
+      <circle cx="22" cy="23.5" r="2"
+        fill={stroke} opacity={active ? 0.9 : 0.6} />
     </svg>
   );
 }
@@ -147,18 +166,40 @@ export function SocialHubGateway() {
   const [activePillar, setActivePillar] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Social profile state
+  const [socialProfile, setSocialProfile] = useState<{
+    pseudo?: string; useRealName?: boolean;
+    tagline?: string; invisibleRencontres?: boolean; invisibleDiscussions?: boolean;
+  } | null>(null);
+
   useEffect(() => {
     const t = setTimeout(() => setIsLoaded(true), 80);
+
+    // Redirect to setup on first visit
+    const setupDone = localStorage.getItem('kauri_social_profile_setup_done');
+    if (!setupDone) {
+      navigate('/kauri/social-hub/profil-setup');
+      return;
+    }
+
+    // Load profile
+    try {
+      const saved = localStorage.getItem('kauri_social_profile');
+      if (saved) setSocialProfile(JSON.parse(saved));
+    } catch { /* noop */ }
+
     return () => clearTimeout(t);
-  }, []);
+  }, [navigate]);
 
   // Respect account type when navigating back / logging out
   const accountType = typeof window !== 'undefined'
     ? (localStorage.getItem('kauri_account_type') || 'normal')
     : 'normal';
 
+  const isPro = accountType === 'pro' || accountType === 'professionnel';
+
   const handleBack = () =>
-    navigate(accountType === 'pro' ? '/kauri/pro-dashboard' : '/kauri/normal-dashboard');
+    navigate(isPro ? '/kauri/pro-dashboard' : '/kauri/normal-dashboard');
 
   const handleLogout = () => {
     localStorage.removeItem('kauri_account_type');
@@ -496,8 +537,7 @@ export function SocialHubGateway() {
         <div
           style={{
             display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
+            flexDirection: 'column',
             gap: 10,
             width: '100%',
           }}
@@ -510,31 +550,27 @@ export function SocialHubGateway() {
               <motion.button
                 key={pillar.id}
                 style={{
-                  // Responsive pillar sizing — 3 cols on ≥375px, wraps below
-                  flex: '1 1 0',
-                  minWidth: 100,
-                  maxWidth: 200,
+                  width: '100%',
                   background: isActive
                     ? 'rgba(212,175,55,0.14)'
                     : 'rgba(255,255,255,0.07)',
                   backdropFilter: 'blur(28px)',
                   WebkitBackdropFilter: 'blur(28px)',
                   border: `1px solid ${isActive ? 'rgba(212,175,55,0.55)' : 'rgba(212,175,55,0.18)'}`,
-                  borderRadius: 22,
-                  padding: '18px 12px 14px',
+                  borderRadius: 18,
+                  padding: '14px 16px',
                   cursor: 'pointer',
                   display: 'flex',
-                  flexDirection: 'column',
+                  flexDirection: 'row',
                   alignItems: 'center',
-                  gap: 9,
-                  textAlign: 'center',
+                  gap: 14,
+                  textAlign: 'left',
                   position: 'relative',
                   overflow: 'hidden',
                   boxShadow: isActive
                     ? '0 8px 28px rgba(212,175,55,0.22), inset 0 1px 0 rgba(255,255,255,0.12)'
                     : '0 4px 18px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.07)',
-                  transition:
-                    'background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
+                  transition: 'background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
                 }}
                 initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -543,22 +579,21 @@ export function SocialHubGateway() {
                   delay: 1.2 + index * 0.14,
                   ease: [0.16, 1, 0.3, 1],
                 }}
-                whileTap={{ scale: 0.96 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => navigate(pillar.path)}
                 onMouseEnter={() => setActivePillar(pillar.id)}
                 onMouseLeave={() => setActivePillar(null)}
                 onTouchStart={() => setActivePillar(pillar.id)}
                 onTouchEnd={() => setTimeout(() => setActivePillar(null), 550)}
               >
-                {/* Accent corner glow */}
+                {/* Accent glow */}
                 <AnimatePresence>
                   {isActive && (
                     <motion.div
                       style={{
-                        position: 'absolute', top: 0, right: 0,
-                        width: 70, height: 70, pointerEvents: 'none',
-                        background: `radial-gradient(circle at top right, rgba(212,175,55,0.32), transparent)`,
-                        borderRadius: '0 22px 0 0',
+                        position: 'absolute', inset: 0, pointerEvents: 'none',
+                        background: `radial-gradient(ellipse at left center, rgba(212,175,55,0.18), transparent 70%)`,
+                        borderRadius: 18,
                       }}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -568,70 +603,67 @@ export function SocialHubGateway() {
                   )}
                 </AnimatePresence>
 
-                {/* Trust-score badge (Rencontres only) */}
-                {pillar.badge && (
-                  <div style={{
-                    position: 'absolute', top: 10, right: 10,
-                    display: 'flex', alignItems: 'center', gap: 3,
-                    background: 'rgba(0,109,119,0.35)',
-                    borderRadius: 20, padding: '2px 7px',
-                    border: '1px solid rgba(0,109,119,0.55)',
-                  }}>
-                    <Shield size={8} color="#7DD3DA" />
-                    <span style={{
-                      color: '#7DD3DA', fontSize: 7.5,
-                      fontWeight: 700, letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                    }}>
-                      Confiance
-                    </span>
-                  </div>
-                )}
-
                 {/* Icon container */}
                 <div style={{
-                  width: 54, height: 54, borderRadius: 16,
+                  width: 52, height: 52, borderRadius: 15, flexShrink: 0,
                   background: isActive
                     ? 'linear-gradient(135deg, rgba(212,175,55,0.32), rgba(212,175,55,0.1))'
                     : 'linear-gradient(135deg, rgba(212,175,55,0.14), rgba(212,175,55,0.04))',
                   border: `1px solid ${isActive ? 'rgba(212,175,55,0.55)' : 'rgba(212,175,55,0.22)'}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'background 0.3s ease, border-color 0.3s ease',
-                  flexShrink: 0,
                 }}>
                   <Icon active={isActive} />
                 </div>
 
-                {/* Title */}
-                <p style={{
-                  color: '#FFE57A', fontSize: 14, fontWeight: 700,
-                  margin: 0, letterSpacing: '0.02em', lineHeight: 1,
-                }}>
-                  {pillar.label}
-                </p>
+                {/* Text block */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* Title + badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <p style={{
+                      color: '#FFE57A', fontSize: 15, fontWeight: 700,
+                      margin: 0, letterSpacing: '0.01em', lineHeight: 1,
+                    }}>
+                      {pillar.label}
+                    </p>
+                    {pillar.badge && (
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 3,
+                        background: 'rgba(0,109,119,0.35)',
+                        borderRadius: 20, padding: '2px 7px',
+                        border: '1px solid rgba(0,109,119,0.55)',
+                        flexShrink: 0,
+                      }}>
+                        <Shield size={8} color="#7DD3DA" />
+                        <span style={{
+                          color: '#7DD3DA', fontSize: 8,
+                          fontWeight: 700, letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
+                        }}>
+                          Confiance
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
-                {/* Description */}
-                <p style={{
-                  color: 'rgba(255,255,255,0.88)', fontSize: 11,
-                  margin: 0, lineHeight: 1.55,
-                  display: '-webkit-box',
-                  WebkitLineClamp: 3,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                }}>
-                  {pillar.desc}
-                </p>
+                  {/* Description — toujours visible en entier */}
+                  <p style={{
+                    color: 'rgba(255,255,255,0.80)', fontSize: 12.5,
+                    margin: 0, lineHeight: 1.55, fontWeight: 400,
+                  }}>
+                    {pillar.desc}
+                  </p>
+                </div>
 
-                {/* Entrer CTA */}
+                {/* Entrer CTA — à droite de la carte */}
                 <div style={{
-                  display: 'flex', alignItems: 'center', gap: 3,
-                  color: isActive ? '#FFE57A' : 'rgba(212,175,55,0.80)',
-                  fontSize: 12, fontWeight: 600,
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, gap: 2,
+                  color: isActive ? '#FFE57A' : 'rgba(212,175,55,0.65)',
                   transition: 'color 0.3s ease',
-                  marginTop: 2,
                 }}>
-                  <span>Entrer</span>
-                  <ChevronRight size={12} strokeWidth={2.5} />
+                  <ChevronRight size={20} strokeWidth={2.5} />
                 </div>
               </motion.button>
             );
@@ -650,6 +682,80 @@ export function SocialHubGateway() {
           alignItems: 'center', gap: 10,
         }}
       >
+        {/* Mon Profil Social button */}
+        <motion.button
+          onClick={() => navigate('/kauri/social-hub/profil-setup', { state: { isEditing: true } })}
+          style={{
+            width: '100%',
+            background: 'rgba(255,255,255,0.07)',
+            backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)',
+            border: '1px solid rgba(212,175,55,0.22)',
+            borderRadius: 16, padding: '12px 16px',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.6 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div style={{
+            width: 38, height: 38, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #B05B3B, #8B3E24)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <UserCircle style={{ width: 20, height: 20, color: '#fff' }} />
+          </div>
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <p style={{ color: '#fff', fontSize: 13, fontWeight: 700, margin: 0 }}>
+              {socialProfile?.useRealName === false && socialProfile?.pseudo
+                ? `@${socialProfile.pseudo}`
+                : 'Mon profil social'}
+            </p>
+            {socialProfile?.tagline ? (
+              <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11.5, margin: '1px 0 0' }}>
+                {socialProfile.tagline}
+              </p>
+            ) : (
+              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11.5, margin: '1px 0 0', fontStyle: 'italic' }}>
+                Modifier mon profil
+              </p>
+            )}
+          </div>
+          {/* Invisible status pills */}
+          <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+            {socialProfile?.invisibleRencontres && (
+              <div style={{
+                background: 'rgba(176,91,59,0.25)', borderRadius: 20,
+                padding: '3px 7px', display: 'flex', alignItems: 'center', gap: 3,
+                border: '1px solid rgba(176,91,59,0.4)',
+              }}>
+                <EyeOff style={{ width: 9, height: 9, color: '#FDA07A' }} />
+                <span style={{ color: '#FDA07A', fontSize: 9, fontWeight: 700 }}>R</span>
+              </div>
+            )}
+            {socialProfile?.invisibleDiscussions && (
+              <div style={{
+                background: 'rgba(0,109,119,0.25)', borderRadius: 20,
+                padding: '3px 7px', display: 'flex', alignItems: 'center', gap: 3,
+                border: '1px solid rgba(0,109,119,0.4)',
+              }}>
+                <EyeOff style={{ width: 9, height: 9, color: '#7DD3DA' }} />
+                <span style={{ color: '#7DD3DA', fontSize: 9, fontWeight: 700 }}>D</span>
+              </div>
+            )}
+            {!socialProfile?.invisibleRencontres && !socialProfile?.invisibleDiscussions && (
+              <div style={{
+                background: 'rgba(52,211,153,0.15)', borderRadius: 20,
+                padding: '3px 7px', display: 'flex', alignItems: 'center', gap: 3,
+                border: '1px solid rgba(52,211,153,0.3)',
+              }}>
+                <Eye style={{ width: 9, height: 9, color: '#34d399' }} />
+                <span style={{ color: '#34d399', fontSize: 9, fontWeight: 700 }}>Visible</span>
+              </div>
+            )}
+          </div>
+        </motion.button>
         {/* Stats card */}
         <motion.div
           style={{ width: '100%' }}

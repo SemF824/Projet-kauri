@@ -2,10 +2,12 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Heart, MessageCircle, Bookmark, Volume2, VolumeX, Music,
-  X, Send, Copy, Flag, ExternalLink, ChevronRight, Users,
-  CheckCircle, Share2,
+  X, Send, Copy, Flag, ChevronRight, Users,
+  CheckCircle, Share2, Lock, ArrowLeft, Check, Globe,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
+import { addComment, setFollowPro } from '../../../../utils/supabase';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -354,6 +356,296 @@ function VerifiedBadge() {
   );
 }
 
+// ─── Share sub-data ───────────────────────────────────────────────────────────
+
+const SALONS_LIST = [
+  { id: 's1', name: 'Immobilier Antilles', emoji: '🏘️', members: 234, color: '#006D77' },
+  { id: 's2', name: 'Tech Diaspora',       emoji: '⚡', members: 189, color: '#D4AF37' },
+  { id: 's3', name: 'Bons Plans',          emoji: '💡', members: 412, color: '#B05B3B' },
+  { id: 's4', name: 'Entrepreneuriat',     emoji: '🚀', members: 156, color: '#7C3AED' },
+];
+
+const GROUPS_LIST = [
+  { id: 'g1', name: 'Tontine Famille', emoji: '🏠', members: 6, isGroup: true },
+  { id: 'g2', name: 'Projet AgriCarib', emoji: '🌱', members: 4, isGroup: true },
+];
+
+const CONTACTS_LIST = [
+  { id: 'c1', name: 'Marie-Claire Dubois',    initials: 'MC', color: '#8B5CF6', online: true  },
+  { id: 'c2', name: 'Jean-Baptiste Laurent',  initials: 'JL', color: '#006D77', online: true  },
+  { id: 'c3', name: 'Isabelle Moutoussamy',   initials: 'IM', color: '#D4AF37', online: false },
+  { id: 'c4', name: 'Marcus Johnson',         initials: 'MJ', color: '#059669', online: true  },
+  { id: 'c5', name: 'Amina Diallo',           initials: 'AD', color: '#B05B3B', online: false },
+];
+
+// ─── Salon Picker ─────────────────────────────────────────────────────────────
+
+function SalonPicker({
+  post, onBack, onDone,
+}: { post: Post; onBack: () => void; onDone: (name: string) => void }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [sending, setSending]   = useState(false);
+
+  const handleSend = () => {
+    if (!selected) return;
+    setSending(true);
+    setTimeout(() => {
+      const s = SALONS_LIST.find(s => s.id === selected)!;
+      onDone(s.name);
+    }, 900);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px 14px', borderBottom: '1px solid #F1F5F9' }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', padding: 4 }}>
+          <ArrowLeft size={20} />
+        </button>
+        <div>
+          <p style={{ margin: 0, fontWeight: 800, fontSize: 15, color: '#1E293B' }}>Partager dans un salon</p>
+          <p style={{ margin: 0, fontSize: 12, color: '#94A3B8' }}>Visible par tous les membres du salon</p>
+        </div>
+      </div>
+
+      {/* Preview */}
+      <div style={{ margin: '12px 16px', background: '#F4F6F8', borderRadius: 12, padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ width: 38, height: 38, borderRadius: 8, flexShrink: 0, background: `linear-gradient(135deg, ${post.avatarGrad[0]}, ${post.avatarGrad[1]})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ color: '#fff', fontWeight: 800, fontSize: 12 }}>{post.initials}</span>
+        </div>
+        <p style={{ margin: 0, fontSize: 12, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{post.caption}</p>
+      </div>
+
+      {/* Salon list */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px' }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 8px' }}>Vos salons</p>
+        <div style={{ borderRadius: 14, border: '1px solid #E8ECF0', overflow: 'hidden', marginBottom: 16 }}>
+          {SALONS_LIST.map((s, i) => (
+            <button key={s.id} onClick={() => setSelected(s.id)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px',
+                background: selected === s.id ? `${s.color}10` : '#fff',
+                border: 'none', cursor: 'pointer', textAlign: 'left',
+                borderTop: i > 0 ? '1px solid #F8FAFC' : 'none',
+                transition: 'background 0.15s',
+              }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: `${s.color}18`, border: `1px solid ${s.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
+                {s.emoji}
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: '#1E293B' }}>{s.name}</p>
+                <p style={{ margin: 0, fontSize: 11, color: '#9CA3AF', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <Globe size={9} /> {s.members} membres · Public
+                </p>
+              </div>
+              <div style={{ width: 22, height: 22, borderRadius: '50%', border: `2px solid ${selected === s.id ? s.color : '#E5E7EB'}`, background: selected === s.id ? s.color : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                {selected === s.id && <Check size={11} color="#fff" />}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div style={{ padding: '12px 16px 28px', borderTop: '1px solid #F1F5F9' }}>
+        <button onClick={handleSend} disabled={!selected || sending}
+          style={{
+            width: '100%', padding: '14px', borderRadius: 16,
+            background: selected && !sending ? 'linear-gradient(135deg, #006D77, #0D9488)' : '#E5E7EB',
+            border: 'none', color: selected && !sending ? '#fff' : '#9CA3AF',
+            fontSize: 14, fontWeight: 700, cursor: selected && !sending ? 'pointer' : 'not-allowed',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            transition: 'all 0.2s',
+          }}>
+          {sending ? '⏳ Envoi en cours...' : <><Send size={16} /> Partager dans ce salon</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Contact Picker ───────────────────────────────────────────────────────────
+
+function ContactPicker({
+  post, onBack, onDone,
+}: { post: Post; onBack: () => void; onDone: (names: string[]) => void }) {
+  const [selected, setSelected]   = useState<string[]>([]);
+  const [search,   setSearch]     = useState('');
+  const [sending,  setSending]    = useState(false);
+
+  const toggle = (id: string) =>
+    setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  const allItems = [
+    ...GROUPS_LIST.map(g => ({ ...g, type: 'group' as const })),
+    ...CONTACTS_LIST.map(c => ({ ...c, type: 'contact' as const, isGroup: false })),
+  ];
+
+  const filtered = allItems.filter(item => item.name.toLowerCase().includes(search.toLowerCase()));
+
+  const handleSend = () => {
+    if (selected.length === 0) return;
+    setSending(true);
+    setTimeout(() => {
+      const names = selected.map(id => allItems.find(i => i.id === id)?.name ?? '').filter(Boolean);
+      onDone(names);
+    }, 900);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px 10px', borderBottom: '1px solid #F1F5F9' }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', padding: 4 }}>
+          <ArrowLeft size={20} />
+        </button>
+        <div style={{ flex: 1 }}>
+          <p style={{ margin: 0, fontWeight: 800, fontSize: 15, color: '#1E293B' }}>Envoyer en privé</p>
+          <p style={{ margin: 0, fontSize: 12, color: '#94A3B8' }}>Groupes & messages directs</p>
+        </div>
+        {selected.length > 0 && (
+          <span style={{ background: '#B05B3B', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>
+            {selected.length}
+          </span>
+        )}
+      </div>
+
+      {/* Search */}
+      <div style={{ padding: '10px 16px', borderBottom: '1px solid #F8FAFC' }}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Rechercher une personne ou un groupe..."
+          style={{ width: '100%', padding: '9px 14px', borderRadius: 20, background: '#F4F6F8', border: '1px solid #E8ECF0', fontSize: 13, color: '#1E293B', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+        />
+      </div>
+
+      {/* Selected chips */}
+      {selected.length > 0 && (
+        <div style={{ display: 'flex', gap: 7, padding: '8px 16px', flexWrap: 'wrap', borderBottom: '1px solid #F8FAFC' }}>
+          {selected.map(id => {
+            const item = allItems.find(i => i.id === id)!;
+            return (
+              <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#B05B3B18', border: '1px solid #B05B3B40', borderRadius: 20, padding: '4px 10px 4px 7px' }}>
+                <span style={{ fontSize: 13 }}>{(item as { emoji?: string }).emoji ?? ''}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#1E293B' }}>{item.name.split(' ')[0]}</span>
+                <button onClick={() => toggle(id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}>
+                  <X size={12} color="#9CA3AF" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* List */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 8px' }}>
+        {/* Groups section */}
+        {!search && (
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '4px 0 8px' }}>Groupes privés</p>
+        )}
+        <div style={{ borderRadius: 14, border: '1px solid #E8ECF0', overflow: 'hidden', marginBottom: 14 }}>
+          {filtered.filter(i => i.type === 'group').map((item, idx, arr) => (
+            <button key={item.id} onClick={() => toggle(item.id)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                background: selected.includes(item.id) ? '#B05B3B10' : '#fff',
+                border: 'none', cursor: 'pointer', textAlign: 'left',
+                borderTop: idx > 0 ? '1px solid #F8FAFC' : 'none',
+              }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg, #B05B3B, #8B3E24)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
+                {(item as { emoji: string }).emoji}
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: '#1E293B', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {item.name} <Lock size={10} color="#B05B3B" />
+                </p>
+                <p style={{ margin: 0, fontSize: 11, color: '#9CA3AF' }}>{(item as { members: number }).members} membres · Privé</p>
+              </div>
+              <div style={{ width: 22, height: 22, borderRadius: '50%', border: `2px solid ${selected.includes(item.id) ? '#B05B3B' : '#E5E7EB'}`, background: selected.includes(item.id) ? '#B05B3B' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                {selected.includes(item.id) && <Check size={11} color="#fff" />}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Contacts section */}
+        {!search && (
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '4px 0 8px' }}>Messages directs</p>
+        )}
+        <div style={{ borderRadius: 14, border: '1px solid #E8ECF0', overflow: 'hidden' }}>
+          {filtered.filter(i => i.type === 'contact').map((item, idx) => (
+            <button key={item.id} onClick={() => toggle(item.id)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                background: selected.includes(item.id) ? '#B05B3B10' : '#fff',
+                border: 'none', cursor: 'pointer', textAlign: 'left',
+                borderTop: idx > 0 ? '1px solid #F8FAFC' : 'none',
+              }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: (item as { color: string }).color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff' }}>
+                  {(item as { initials: string }).initials}
+                </div>
+                <div style={{ position: 'absolute', bottom: 0, right: 0, width: 11, height: 11, borderRadius: '50%', background: (item as { online?: boolean }).online ? '#22c55e' : '#D1D5DB', border: '2px solid #fff' }} />
+              </div>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: '#1E293B', flex: 1 }}>{item.name}</p>
+              <div style={{ width: 22, height: 22, borderRadius: '50%', border: `2px solid ${selected.includes(item.id) ? '#B05B3B' : '#E5E7EB'}`, background: selected.includes(item.id) ? '#B05B3B' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                {selected.includes(item.id) && <Check size={11} color="#fff" />}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div style={{ padding: '12px 16px 28px', borderTop: '1px solid #F1F5F9' }}>
+        <button onClick={handleSend} disabled={selected.length === 0 || sending}
+          style={{
+            width: '100%', padding: '14px', borderRadius: 16,
+            background: selected.length > 0 && !sending ? 'linear-gradient(135deg, #B05B3B, #8B3E24)' : '#E5E7EB',
+            border: 'none', color: selected.length > 0 && !sending ? '#fff' : '#9CA3AF',
+            fontSize: 14, fontWeight: 700, cursor: selected.length > 0 && !sending ? 'pointer' : 'not-allowed',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s',
+          }}>
+          {sending ? '⏳ Envoi en cours...' : (
+            selected.length > 0
+              ? <><Send size={16} /> Envoyer à {selected.length} destinataire{selected.length > 1 ? 's' : ''}</>
+              : <><Send size={16} /> Choisir un destinataire</>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Share success animation ──────────────────────────────────────────────────
+
+function ShareSuccess({ label, onDone }: { label: string; onDone: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 2200);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '40px 24px', textAlign: 'center' }}>
+      <motion.div
+        initial={{ scale: 0 }} animate={{ scale: 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #059669, #10B981)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, boxShadow: '0 8px 24px rgba(5,150,105,0.4)' }}>
+        <CheckCircle size={36} color="#fff" />
+      </motion.div>
+      <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+        style={{ fontWeight: 800, fontSize: 17, color: '#1E293B', margin: '0 0 8px' }}>
+        Partagé !
+      </motion.p>
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+        style={{ fontSize: 13, color: '#64748B', margin: 0 }}>
+        {label}
+      </motion.p>
+    </div>
+  );
+}
+
 // ─── Share Sheet ─────────────────────────────────────────────────────────────
 
 function ShareSheet({
@@ -365,49 +657,54 @@ function ShareSheet({
 }) {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
-  const [sharedToSalon, setSharedToSalon] = useState(false);
+  // sub-screen: null = main, 'salon' = salon picker, 'contact' = contact picker, 'success' = done
+  const [sub, setSub] = useState<null | 'salon' | 'contact' | 'success'>(null);
+  const [successLabel, setSuccessLabel] = useState('');
+
+  const postUrl  = `https://kauri.app/decouverte/${post.id}`;
+  const shareText = encodeURIComponent(`${post.caption}\n\n${postUrl}`);
 
   function copyLink() {
+    navigator.clipboard?.writeText(postUrl).catch(() => {});
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    toast.success('Lien copié !');
+    setTimeout(() => setCopied(false), 2500);
   }
 
-  const SHARE_OPTS = [
-    {
-      icon: copied ? <CheckCircle size={22} color="#059669" /> : <Copy size={22} color="#1E293B" />,
-      label: copied ? 'Lien copié !' : 'Copier le lien',
-      sub: 'kauri.app/decouverte/' + post.id,
-      action: copyLink,
-      color: '#F4F6F8',
-    },
-    {
-      icon: <span style={{ fontSize: 22 }}>💬</span>,
-      label: 'Partager sur WhatsApp',
-      sub: 'Envoyer à vos contacts',
-      action: () => {},
-      color: '#F4F6F8',
-    },
-    {
-      icon: <span style={{ fontSize: 22 }}>✈️</span>,
-      label: 'Partager sur Telegram',
-      sub: 'Envoyer à vos groupes',
-      action: () => {},
-      color: '#F4F6F8',
-    },
-    {
-      icon: sharedToSalon ? <CheckCircle size={22} color="#059669" /> : <Users size={22} color="#006D77" />,
-      label: sharedToSalon ? 'Partagé dans un salon ✓' : 'Partager dans un salon KAURI',
-      sub: 'Choisir un de vos salons',
-      action: () => { setSharedToSalon(true); setTimeout(() => setSharedToSalon(false), 2000); },
-      color: '#F0FAFB',
-    },
-    {
-      icon: <Send size={22} color="#B05B3B" />,
-      label: 'Envoyer en message privé',
-      sub: 'À un membre KAURI',
-      action: () => { navigate('/kauri/social-hub/forums'); onClose(); },
-      color: '#FDF5F2',
-    },
+  function shareWhatsApp() {
+    window.open(`https://wa.me/?text=${shareText}`, '_blank', 'noopener');
+  }
+
+  function shareTelegram() {
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(post.caption)}`, '_blank', 'noopener');
+  }
+
+  function shareTwitter() {
+    window.open(`https://twitter.com/intent/tweet?text=${shareText}`, '_blank', 'noopener');
+  }
+
+  function shareFacebook() {
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`, '_blank', 'noopener');
+  }
+
+  function onSalonDone(name: string) {
+    setSuccessLabel(`Publié dans le salon "${name}"`);
+    setSub('success');
+  }
+
+  function onContactDone(names: string[]) {
+    const label = names.length === 1
+      ? `Message envoyé à ${names[0].split(' ')[0]}`
+      : `Message envoyé à ${names.length} personnes`;
+    setSuccessLabel(label);
+    setSub('success');
+  }
+
+  const EXTERNAL_OPTS = [
+    { emoji: '💬', label: 'WhatsApp',  sub: 'Envoyer à vos contacts WhatsApp', action: shareWhatsApp,  bg: '#ECFDF5' },
+    { emoji: '✈️', label: 'Telegram',  sub: 'Envoyer à vos groupes Telegram',  action: shareTelegram,  bg: '#F0F9FF' },
+    { emoji: '🐦', label: 'X (Twitter)', sub: 'Tweeter cette vidéo',          action: shareTwitter,   bg: '#F8FAFC' },
+    { emoji: '📘', label: 'Facebook',  sub: 'Partager sur votre profil',       action: shareFacebook,  bg: '#EFF6FF' },
   ];
 
   return (
@@ -419,87 +716,133 @@ function ShareSheet({
       style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 200,
         background: '#fff', borderRadius: '24px 24px 0 0',
-        maxHeight: '82vh', display: 'flex', flexDirection: 'column',
+        maxHeight: '85vh', minHeight: 420, display: 'flex', flexDirection: 'column',
         boxShadow: '0 -8px 40px rgba(0,0,0,0.25)',
       }}
       onClick={e => e.stopPropagation()}
     >
       {/* Handle */}
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px', flexShrink: 0 }}>
         <div style={{ width: 36, height: 4, borderRadius: 2, background: '#E8ECF0' }} />
       </div>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 14px' }}>
-        <div>
-          <p style={{ margin: 0, fontWeight: 800, fontSize: 16, color: '#1E293B' }}>Partager</p>
-          <p style={{ margin: 0, fontSize: 12, color: '#94A3B8' }}>
-            {post.handle} · {fmt(post.shares)} partages
-          </p>
-        </div>
-        <button
-          onClick={onClose}
-          style={{ width: 32, height: 32, borderRadius: '50%', background: '#F4F6F8', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-        >
-          <X size={16} color="#64748B" />
-        </button>
-      </div>
+      {/* ── Sub-screens ── */}
+      <AnimatePresence mode="wait">
 
-      {/* Preview card */}
-      <div style={{ margin: '0 20px 16px', background: '#F4F6F8', borderRadius: 14, padding: '12px', display: 'flex', gap: 12, alignItems: 'center' }}>
-        <div style={{
-          width: 48, height: 48, borderRadius: 10, flexShrink: 0,
-          background: `linear-gradient(135deg, ${post.avatarGrad[0]}, ${post.avatarGrad[1]})`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <span style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>{post.initials}</span>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
-            <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: '#1E293B' }}>{post.handle}</p>
-            {post.isVerified && <VerifiedBadge />}
-          </div>
-          <p style={{ margin: 0, fontSize: 12, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {post.caption}
-          </p>
-        </div>
-      </div>
+        {sub === 'salon' && (
+          <motion.div key="salon" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <SalonPicker post={post} onBack={() => setSub(null)} onDone={onSalonDone} />
+          </motion.div>
+        )}
 
-      {/* Options */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 32px' }}>
-        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E8ECF0', overflow: 'hidden' }}>
-          {SHARE_OPTS.map((opt, i) => (
-            <button
-              key={i}
-              onClick={opt.action}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 14,
-                padding: '14px 16px', background: opt.color,
-                border: 'none', cursor: 'pointer', textAlign: 'left',
-                borderTop: i > 0 ? '1px solid #F1F5F9' : 'none',
-              }}
-            >
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: '#fff', border: '1px solid #E8ECF0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {opt.icon}
+        {sub === 'contact' && (
+          <motion.div key="contact" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <ContactPicker post={post} onBack={() => setSub(null)} onDone={onContactDone} />
+          </motion.div>
+        )}
+
+        {sub === 'success' && (
+          <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <ShareSuccess label={successLabel} onDone={onClose} />
+          </motion.div>
+        )}
+
+        {sub === null && (
+          <motion.div key="main" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 20px 12px', flexShrink: 0 }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: 800, fontSize: 16, color: '#1E293B' }}>Partager</p>
+                <p style={{ margin: 0, fontSize: 12, color: '#94A3B8' }}>{post.handle} · {fmt(post.shares)} partages</p>
               </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#1E293B' }}>{opt.label}</p>
-                <p style={{ margin: 0, fontSize: 12, color: '#94A3B8' }}>{opt.sub}</p>
-              </div>
-              <ChevronRight size={16} color="#CBD5E1" />
-            </button>
-          ))}
-        </div>
+              <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: '50%', background: '#F4F6F8', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={16} color="#64748B" />
+              </button>
+            </div>
 
-        {/* Report */}
-        <button
-          onClick={() => { navigate('/kauri/social-hub/signaler-abus'); onClose(); }}
-          style={{ width: '100%', marginTop: 12, background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 14, padding: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer' }}
-        >
-          <Flag size={16} color="#EF4444" />
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#EF4444' }}>Signaler ce contenu</span>
-        </button>
-      </div>
+            {/* Preview */}
+            <div style={{ margin: '0 16px 14px', background: '#F4F6F8', borderRadius: 14, padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: `linear-gradient(135deg, ${post.avatarGrad[0]}, ${post.avatarGrad[1]})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ color: '#fff', fontWeight: 800, fontSize: 13 }}>{post.initials}</span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: 12, color: '#1E293B' }}>{post.handle}</p>
+                  {post.isVerified && <VerifiedBadge />}
+                </div>
+                <p style={{ margin: 0, fontSize: 12, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.caption}</p>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 28px' }}>
+              {/* External apps — 2x2 grid */}
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 10px' }}>Partager sur</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
+                {EXTERNAL_OPTS.map(opt => (
+                  <button key={opt.label} onClick={opt.action}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: opt.bg, border: '1px solid #E8ECF0', borderRadius: 14, cursor: 'pointer', textAlign: 'left' }}>
+                    <span style={{ fontSize: 22, flexShrink: 0 }}>{opt.emoji}</span>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: '#1E293B' }}>{opt.label}</p>
+                      <p style={{ margin: 0, fontSize: 10, color: '#9CA3AF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opt.sub}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* KAURI internal */}
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 10px' }}>Dans KAURI</p>
+              <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E8ECF0', overflow: 'hidden', marginBottom: 12 }}>
+                {[
+                  {
+                    icon: copied ? <CheckCircle size={20} color="#059669" /> : <Copy size={20} color="#1E293B" />,
+                    label: copied ? 'Lien copié !' : 'Copier le lien',
+                    sub: 'kauri.app/decouverte/' + post.id,
+                    action: copyLink,
+                    bg: copied ? '#ECFDF5' : '#fff',
+                    chevron: !copied,
+                  },
+                  {
+                    icon: <Users size={20} color="#006D77" />,
+                    label: 'Partager dans un salon public',
+                    sub: 'Choisir parmi vos salons',
+                    action: () => setSub('salon'),
+                    bg: '#F0FAFB',
+                    chevron: true,
+                  },
+                  {
+                    icon: <Lock size={20} color="#B05B3B" />,
+                    label: 'Envoyer en groupe ou en privé',
+                    sub: 'Groupes privés & messages directs',
+                    action: () => setSub('contact'),
+                    bg: '#FDF5F2',
+                    chevron: true,
+                  },
+                ].map((opt, i) => (
+                  <button key={i} onClick={opt.action}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', background: opt.bg, border: 'none', cursor: 'pointer', textAlign: 'left', borderTop: i > 0 ? '1px solid #F1F5F9' : 'none' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 11, background: '#F4F6F8', border: '1px solid #E8ECF0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {opt.icon}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: '#1E293B' }}>{opt.label}</p>
+                      <p style={{ margin: 0, fontSize: 11, color: '#94A3B8' }}>{opt.sub}</p>
+                    </div>
+                    {opt.chevron && <ChevronRight size={15} color="#CBD5E1" />}
+                  </button>
+                ))}
+              </div>
+
+              {/* Report */}
+              <button onClick={() => { navigate('/kauri/social-hub/signaler-abus'); onClose(); }}
+                style={{ width: '100%', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 14, padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer' }}>
+                <Flag size={15} color="#EF4444" />
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#EF4444' }}>Signaler ce contenu</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -546,6 +889,7 @@ function CommentsSheet({
     setComments(updated);
     onUpdatePost(updated);
     setText('');
+    addComment(post.id, trimmed, 'Moi', 'JD').catch(() => null);
   }
 
   return (
@@ -716,7 +1060,13 @@ export default function DecouverteScreen() {
   };
 
   const toggleFollow = (id: string) => {
-    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, isFollowing: !p.isFollowing } : p)));
+    const post = posts.find(p => p.id === id);
+    if (!post) return;
+    const nowFollowing = !post.isFollowing;
+    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, isFollowing: nowFollowing } : p)));
+    setFollowPro(`decouverte_${id}`, nowFollowing).catch(() => {
+      setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, isFollowing: !nowFollowing } : p)));
+    });
   };
 
   const updatePostComments = (postId: string, newComments: Comment[]) => {

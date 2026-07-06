@@ -4,8 +4,9 @@ import {
   CheckCircle2, Clock, Star
 } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDarkMode } from '../../contexts/DarkModeContext';
+import { SERVER_URL, authHeaders } from '../../../utils/supabase';
 
 const TEAL = '#0A847E';
 const GOLD = '#D4AF37';
@@ -231,14 +232,63 @@ export function ProjetsImpactsScreen() {
   const { isDarkMode } = useDarkMode();
   const [tab, setTab] = useState<'participations' | 'decouvrir'>('participations');
   const [search, setSearch] = useState('');
+  const [serverProjects, setServerProjects] = useState<Projet[]>([]);
+  const [userInvestments, setUserInvestments] = useState<Participation[]>([]);
 
   const bg = isDarkMode ? '#0F172A' : '#F8FAFC';
 
-  const totalInvesti = PARTICIPATIONS.filter(p => p.type === 'investissement').reduce((s, p) => s + p.amount, 0);
-  const totalDons    = PARTICIPATIONS.filter(p => p.type === 'don').reduce((s, p) => s + p.amount, 0);
-  const totalGains   = PARTICIPATIONS.filter(p => p.earned).reduce((s, p) => s + (p.earned ?? 0), 0);
+  useEffect(() => {
+    // Fetch available projects
+    authHeaders().then(headers => {
+      fetch(`${SERVER_URL}/projects`, { headers })
+        .then(r => r.ok ? r.json() : [])
+        .then((data: any[]) => {
+          const mapped: Projet[] = data.map(p => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            description: p.description || '',
+            raised: p.raisedAmount || 0,
+            goal: p.targetAmount || 1,
+            backers: p.investors?.length || 0,
+            daysLeft: 30,
+            icon: p.category?.toLowerCase().includes('éducation') ? Building2 : p.category?.toLowerCase().includes('agriculture') ? Leaf : Sun,
+            iconColor: p.category?.toLowerCase().includes('éducation') ? '#8B5CF6' : TEAL,
+            iconBg: p.category?.toLowerCase().includes('éducation') ? '#8B5CF614' : `${TEAL}18`,
+            tags: ['Impact+'],
+          }));
+          setServerProjects(mapped);
+        })
+        .catch(e => console.error('Projects fetch error:', e));
 
-  const filtered = PROJETS.filter(p =>
+      fetch(`${SERVER_URL}/user/investments`, { headers })
+        .then(r => r.ok ? r.json() : [])
+        .then((data: any[]) => {
+          const mapped: Participation[] = data.map(inv => ({
+            id: inv.id,
+            project: inv.projectName || 'Projet',
+            category: 'Investissement',
+            type: 'investissement' as const,
+            amount: inv.amount,
+            date: new Date(inv.date).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }),
+            status: 'actif' as const,
+            icon: TrendingUp,
+            iconColor: GOLD,
+          }));
+          setUserInvestments(mapped);
+        })
+        .catch(e => console.error('Investments fetch error:', e));
+    });
+  }, []);
+
+  const displayParticipations = userInvestments.length > 0 ? userInvestments : PARTICIPATIONS;
+  const displayProjects = serverProjects.length > 0 ? serverProjects : PROJETS;
+
+  const totalInvesti = displayParticipations.filter(p => p.type === 'investissement').reduce((s, p) => s + p.amount, 0);
+  const totalDons    = displayParticipations.filter(p => p.type === 'don').reduce((s, p) => s + p.amount, 0);
+  const totalGains   = displayParticipations.filter(p => p.earned).reduce((s, p) => s + (p.earned ?? 0), 0);
+
+  const filtered = displayProjects.filter(p =>
     search === '' ||
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     p.category.toLowerCase().includes(search.toLowerCase())
@@ -307,7 +357,7 @@ export function ProjetsImpactsScreen() {
         {/* ── MES PARTICIPATIONS ── */}
         {tab === 'participations' && (
           <div className="space-y-3">
-            {PARTICIPATIONS.length === 0 ? (
+            {displayParticipations.length === 0 ? (
               <div className="text-center py-12">
                 <Heart style={{ width: 36, height: 36, color: '#CBD5E1', margin: '0 auto 12px' }} />
                 <p className="text-[#94A3B8] text-sm">Vous n'avez encore financé aucun projet.</p>
@@ -316,7 +366,7 @@ export function ProjetsImpactsScreen() {
                 </button>
               </div>
             ) : (
-              PARTICIPATIONS.map(p => <ParticipationCard key={p.id} p={p} isDark={isDarkMode} />)
+              displayParticipations.map(p => <ParticipationCard key={p.id} p={p} isDark={isDarkMode} />)
             )}
           </div>
         )}

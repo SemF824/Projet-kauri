@@ -47,9 +47,8 @@ export function PreferencesContentScreen() {
   };
 
   const handleContinue = () => {
-    // Persist preferences
     localStorage.setItem('kauri_preferences', JSON.stringify([...selected]));
-    navigate(`/kauri/normal-dashboard`);
+    navigate(`/kauri/wallet-creation?type=${accountType}`);
   };
 
   const remaining = Math.max(0, MIN_SELECTION - selected.size);

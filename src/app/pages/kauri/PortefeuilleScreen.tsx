@@ -1,12 +1,7 @@
 import { ArrowLeft, ChevronRight, Users, BarChart2, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight, Percent, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
-
-const TOTAL = 2450;
-const TONTINES = 1470;
-const INVEST = 980;
-const TONTINES_PCT = TONTINES / TOTAL;
-const INVEST_PCT = INVEST / TOTAL;
+import { SERVER_URL, authHeaders } from '../../../utils/supabase';
 
 const TEAL = '#0A847E';
 const GOLD = '#D4A373';
@@ -15,6 +10,7 @@ const CX = SIZE / 2;
 const CY = SIZE / 2;
 const R_OUTER = 84;
 const R_INNER = 50;
+const GAP = 3;
 
 function polarToXY(cx: number, cy: number, r: number, angleDeg: number) {
   const rad = ((angleDeg - 90) * Math.PI) / 180;
@@ -30,10 +26,6 @@ function donutSlice(cx: number, cy: number, rO: number, rI: number, s: number, e
     `L ${i1.x} ${i1.y}`, `A ${rI} ${rI} 0 ${la} 0 ${i2.x} ${i2.y}`, 'Z',
   ].join(' ');
 }
-
-const GAP = 3;
-const sliceTontines = donutSlice(CX, CY, R_OUTER, R_INNER, GAP / 2, 360 * TONTINES_PCT - GAP / 2);
-const sliceInvest   = donutSlice(CX, CY, R_OUTER, R_INNER, 360 * TONTINES_PCT + GAP / 2, 360 - GAP / 2);
 
 function formatEur(n: number) {
   return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -53,17 +45,39 @@ export function PortefeuilleScreen() {
   const navigate = useNavigate();
   const [activeSlice, setActiveSlice] = useState<'tontines' | 'invest' | null>(null);
   const [animated, setAnimated] = useState(false);
+  const [walletData, setWalletData] = useState<{ balance: number; transactions: any[] } | null>(null);
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
 
   useEffect(() => {
     const t = setTimeout(() => setAnimated(true), 80);
     return () => clearTimeout(t);
   }, []);
 
+  useEffect(() => {
+    authHeaders().then(headers =>
+      fetch(`${SERVER_URL}/wallet`, { headers })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data) {
+            setWalletData(data);
+            setRecentTransactions((data.transactions || []).slice(0, 6));
+          }
+        })
+        .catch(e => console.error('Wallet fetch error:', e))
+    );
+  }, []);
+
+  const realTotal = walletData?.balance ?? 0;
+  const tontinesPct = realTotal > 0 ? 0.6 : 0.5;
+  const investPct = realTotal > 0 ? 0.4 : 0.5;
+  const sliceTontines = donutSlice(CX, CY, R_OUTER, R_INNER, GAP / 2, 360 * tontinesPct - GAP / 2);
+  const sliceInvest   = donutSlice(CX, CY, R_OUTER, R_INNER, 360 * tontinesPct + GAP / 2, 360 - GAP / 2);
+
   const centerLabel = activeSlice === 'tontines'
-    ? { pct: '60%', amount: formatEur(TONTINES), color: TEAL,     label: 'Tontines' }
+    ? { pct: '60%', amount: formatEur(realTotal * 0.6), color: TEAL, label: 'Tontines' }
     : activeSlice === 'invest'
-    ? { pct: '40%', amount: formatEur(INVEST),   color: GOLD,     label: 'Invest. RWA' }
-    : { pct: '100%', amount: formatEur(TOTAL),   color: '#1A1A1A', label: 'Total' };
+    ? { pct: '40%', amount: formatEur(realTotal * 0.4), color: GOLD, label: 'Invest. RWA' }
+    : { pct: '100%', amount: formatEur(realTotal), color: '#1A1A1A', label: 'Total' };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10">
@@ -89,7 +103,7 @@ export function PortefeuilleScreen() {
             className="px-3 py-1.5 rounded-full"
             style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)' }}
           >
-            <span className="text-white text-xs font-semibold">{formatEur(TOTAL)}</span>
+            <span className="text-white text-xs font-semibold">{formatEur(realTotal)}</span>
           </div>
         </div>
       </div>
@@ -195,7 +209,7 @@ export function PortefeuilleScreen() {
           <div className="flex-1 text-left">
             <p className="text-[#0F172A] text-sm font-semibold">Tontines</p>
             <div className="flex items-center gap-2 mt-1">
-              <div className="h-1.5 rounded-full" style={{ width: `${TONTINES_PCT * 80}px`, backgroundColor: TEAL, opacity: 0.4 }} />
+              <div className="h-1.5 rounded-full" style={{ width: `${tontinesPct * 80}px`, backgroundColor: TEAL, opacity: 0.4 }} />
               <span className="text-[#94A3B8] text-xs">60 %</span>
             </div>
           </div>
@@ -217,7 +231,7 @@ export function PortefeuilleScreen() {
           <div className="flex-1 text-left">
             <p className="text-[#0F172A] text-sm font-semibold">Investissements RWA</p>
             <div className="flex items-center gap-2 mt-1">
-              <div className="h-1.5 rounded-full" style={{ width: `${INVEST_PCT * 80}px`, backgroundColor: GOLD, opacity: 0.5 }} />
+              <div className="h-1.5 rounded-full" style={{ width: `${investPct * 80}px`, backgroundColor: GOLD, opacity: 0.5 }} />
               <span className="text-[#94A3B8] text-xs">40 %</span>
             </div>
           </div>

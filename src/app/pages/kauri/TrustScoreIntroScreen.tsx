@@ -33,9 +33,8 @@ export function TrustScoreIntroScreen() {
   }, []);
 
   const handleContinue = () => {
-    localStorage.setItem('kauri_account_type', accountType);
     if (accountType === 'professionnel') {
-      navigate('/kauri/pro-dashboard');
+      navigate(`/kauri/wallet-creation?type=${accountType}`);
     } else {
       navigate(`/kauri/preferences-contenu?type=${accountType}`);
     }

@@ -68,7 +68,17 @@ import PreferencesDiscussionScreen from './pages/kauri/social-hub/PreferencesDis
 import SignalerAbusSalonScreen from './pages/kauri/social-hub/SignalerAbusSalonScreen';
 import AideSupportScreen from './pages/kauri/social-hub/AideSupportScreen';
 import CreateurProfileScreen from './pages/kauri/social-hub/CreateurProfileScreen';
+import SocialProfilSetupScreen from './pages/kauri/social-hub/SocialProfilSetupScreen';
+import CreerGroupePriveScreen from './pages/kauri/social-hub/CreerGroupePriveScreen';
+import GroupManagementScreen from './pages/kauri/social-hub/GroupManagementScreen';
+import SalonManagementScreen from './pages/kauri/social-hub/SalonManagementScreen';
 import { PortefeuilleScreen } from './pages/kauri/PortefeuilleScreen';
+import { ProPortefeuilleScreen } from './pages/kauri/ProPortefeuilleScreen';
+import { ProLevesScreen } from './pages/kauri/ProLevesScreen';
+import { ProInvestisseursScreen } from './pages/kauri/ProInvestisseursScreen';
+import { ProProjetsScreen } from './pages/kauri/ProProjetsScreen';
+import { ProPublishScreen } from './pages/kauri/ProPublishScreen';
+import { ProPublicationStatsScreen } from './pages/kauri/ProPublicationStatsScreen';
 import { TontinesPortefeuilleScreen } from './pages/kauri/TontinesPortefeuilleScreen';
 import { InvestissementsPortefeuilleScreen } from './pages/kauri/InvestissementsPortefeuilleScreen';
 import { MesTontinesScreen } from './pages/kauri/MesTontinesScreen';
@@ -89,6 +99,9 @@ import { ContributionSuccessScreen } from './pages/kauri/ContributionSuccessScre
 import { CercleDetailScreen } from './pages/kauri/CercleDetailScreen';
 import { RejoindreCircleScreen } from './pages/kauri/RejoindreCircleScreen';
 import { CircleJoinSuccessScreen } from './pages/kauri/CircleJoinSuccessScreen';
+import { ProCreerTontineScreen } from './pages/kauri/ProCreerTontineScreen';
+import { BadgesScreen } from './pages/kauri/BadgesScreen';
+import { Setup2FAScreen } from './pages/kauri/Setup2FAScreen';
 
 export const router = createBrowserRouter([
   {
@@ -221,6 +234,14 @@ export const router = createBrowserRouter([
         element: <ProProjectFormScreen />,
       },
       {
+        path: 'pro-publish',
+        element: <ProPublishScreen />,
+      },
+      {
+        path: 'pro-publication-stats',
+        element: <ProPublicationStatsScreen />,
+      },
+      {
         path: 'suspended',
         element: <SuspendedAccountScreen />,
       },
@@ -325,6 +346,22 @@ export const router = createBrowserRouter([
         element: <PortefeuilleScreen />,
       },
       {
+        path: 'pro-portefeuille',
+        element: <ProPortefeuilleScreen />,
+      },
+      {
+        path: 'pro-leves',
+        element: <ProLevesScreen />,
+      },
+      {
+        path: 'pro-investisseurs',
+        element: <ProInvestisseursScreen />,
+      },
+      {
+        path: 'pro-projets',
+        element: <ProProjetsScreen />,
+      },
+      {
         path: 'portefeuille-tontines',
         element: <TontinesPortefeuilleScreen />,
       },
@@ -413,6 +450,18 @@ export const router = createBrowserRouter([
         element: <CircleJoinSuccessScreen />,
       },
       {
+        path: 'pro-creer-tontine',
+        element: <ProCreerTontineScreen />,
+      },
+      {
+        path: 'badges',
+        element: <BadgesScreen />,
+      },
+      {
+        path: 'setup-2fa',
+        element: <Setup2FAScreen />,
+      },
+      {
         path: 'social-hub/decouverte',
         element: <DecouverteScreen />,
       },
@@ -463,6 +512,22 @@ export const router = createBrowserRouter([
       {
         path: 'social-hub/createur/:id',
         element: <CreateurProfileScreen />,
+      },
+      {
+        path: 'social-hub/profil-setup',
+        element: <SocialProfilSetupScreen />,
+      },
+      {
+        path: 'social-hub/creer-groupe-prive',
+        element: <CreerGroupePriveScreen />,
+      },
+      {
+        path: 'social-hub/groupe/:id/gerer',
+        element: <GroupManagementScreen />,
+      },
+      {
+        path: 'social-hub/salon/:id/gerer',
+        element: <SalonManagementScreen />,
       },
     ],
   },

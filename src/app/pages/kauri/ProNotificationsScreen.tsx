@@ -1,13 +1,16 @@
-import { ArrowLeft, TrendingUp, Users, AlertCircle, DollarSign, FileText, Briefcase, ChevronRight, ArrowRight, ShieldCheck, Moon, Sun } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, AlertCircle, DollarSign, FileText, Briefcase, ChevronRight, ArrowRight, ShieldCheck, Moon, Sun, Heart, Trophy, Play, Gift, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
 import { useDarkMode } from '../../contexts/DarkModeContext';
 
 import { SwipeableNotification } from '../../components/SwipeableNotification';
 
+type NotifCategory = 'tout' | 'investisseurs' | 'paliers' | 'social' | 'documents';
+
 interface Notification {
   id: string;
   type: 'success' | 'info' | 'warning' | 'business';
+  category: NotifCategory;
   title: string;
   message: string;
   detail: string;
@@ -16,6 +19,7 @@ interface Notification {
   read: boolean;
   status?: 'active' | 'archived';
   action: { label: string; path: string };
+  meta?: { palier?: string; montant?: string; contributionType?: 'don' | 'investissement' };
 }
 
 export function ProNotificationsScreen() {
@@ -23,79 +27,127 @@ export function ProNotificationsScreen() {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
+  const [activeCategory, setActiveCategory] = useState<NotifCategory>('tout');
 
   const [notifications, setNotifications] = useState<Notification[]>([
     {
       id: '1',
       type: 'success',
-      title: 'Nouvel investisseur',
-      message: 'SARL Delta a investi 5 000 € dans « Lolo Moderne »',
-      detail: "La société SARL Delta a confirmé une participation de 5 000 € dans votre projet « Lolo Moderne ». Cet investissement porte le total collecté à 45 000 €, soit 45 % de l'objectif.",
+      category: 'investisseurs',
+      title: 'Nouvel investisseur · Palier 2',
+      message: 'Sophie B. a investi 5 000 € — Palier Partenaire',
+      detail: "Sophie Bernard a confirmé un investissement de 5 000 € sur le Palier 2 (Partenaire) du projet « Lolo Moderne ». Rendement annuel proposé : 8%. Le total collecté atteint désormais 45 000 € (45% de l'objectif).",
       time: 'Il y a 1h',
-      icon: Users,
+      icon: TrendingUp,
       read: false,
-      action: { label: 'Voir le projet', path: '/kauri/investment-hub' },
+      meta: { palier: 'Palier 2 · Partenaire', montant: '5 000 €', contributionType: 'investissement' },
+      action: { label: 'Voir les investisseurs', path: '/kauri/pro-investisseurs' },
     },
     {
       id: '2',
-      type: 'business',
-      title: 'Objectif intermédiaire atteint',
-      message: '« Lolo Moderne » à 45 % de son objectif',
-      detail: "Félicitations ! Votre projet vient de franchir le seuil des 45 000 €. À ce rythme, l'objectif de 100 000 € sera atteint avant la fin du mois. Partagez la campagne pour accélérer.",
-      time: 'Il y a 3h',
-      icon: TrendingUp,
+      type: 'success',
+      category: 'investisseurs',
+      title: 'Nouveau donateur · Palier 1',
+      message: 'Jean-Luc M. a fait un don de 500 € — Palier Soutien',
+      detail: "Jean-Luc Martin a choisi de soutenir votre projet « Lolo Moderne » avec un don de 500 € au Palier 1 (Soutien). Il recevra les contreparties associées : remerciement public + goodies. Total dons : 3 200 €.",
+      time: 'Il y a 2h',
+      icon: Gift,
       read: false,
-      action: { label: 'Tableau de bord', path: '/kauri/investment-hub' },
+      meta: { palier: 'Palier 1 · Soutien', montant: '500 €', contributionType: 'don' },
+      action: { label: 'Voir les contributions', path: '/kauri/pro-investisseurs' },
     },
     {
       id: '3',
-      type: 'info',
-      title: 'Document requis',
-      message: 'Rapport financier T2 à soumettre avant le 15 juin',
-      detail: "La plateforme KAURI requiert votre rapport financier du 2ème trimestre pour maintenir la conformité de votre compte Pro. Date limite : 15 juin. Accédez à vos paramètres pour déposer le fichier.",
-      time: 'Il y a 6h',
-      icon: FileText,
+      type: 'business',
+      category: 'paliers',
+      title: '🥈 Palier 2 atteint !',
+      message: '« Lolo Moderne » a franchi les 30 000 € collectés',
+      detail: "Félicitations ! Votre projet vient de franchir le Palier 1 (Bronze) à 30 000 €. Les 87 contributeurs à ce stade financent désormais : équipement de base + local. Prochain objectif : Palier 2 à 60 000 €.",
+      time: 'Il y a 3h',
+      icon: Trophy,
       read: false,
-      action: { label: 'Gérer les documents', path: '/kauri/pro-manage-account' },
+      meta: { palier: 'Palier 1 · Bronze', montant: '30 000 €' },
+      action: { label: 'Voir le pot commun', path: '/kauri/pot-commun' },
     },
     {
       id: '4',
+      type: 'business',
+      category: 'paliers',
+      title: 'Palier 3 en approche',
+      message: '85% de l\'objectif maximal atteint · 15 000 € restants',
+      detail: "Votre campagne « Lolo Moderne » approche du Palier 3 (Visionnaire) fixé à 100 000 €. Il reste 15 000 € à collecter. Publiez une nouvelle vidéo dans Découverte pour accélérer la mobilisation des particuliers.",
+      time: 'Il y a 5h',
+      icon: TrendingUp,
+      read: false,
+      meta: { palier: 'Palier 3 · Visionnaire', montant: '100 000 €' },
+      action: { label: 'Publier une vidéo', path: '/kauri/pro-publish' },
+    },
+    {
+      id: '5',
+      type: 'success',
+      category: 'social',
+      title: 'Publication performante',
+      message: 'Votre vidéo "Ouverture Lolo" · 891 vues · 12 clics CTA',
+      detail: "Votre publication vidéo « Ouverture de notre Lolo Moderne » publiée il y a 2 jours totalise 891 vues, 342 likes et 12 clics sur le bouton Investir. 3 conversions ont été générées (2 investissements + 1 don).",
+      time: 'Il y a 6h',
+      icon: Play,
+      read: true,
+      action: { label: 'Voir les stats', path: '/kauri/pro-publication-stats' },
+    },
+    {
+      id: '6',
+      type: 'success',
+      category: 'social',
+      title: '50 nouveaux abonnés',
+      message: 'Votre page pro a gagné 50 abonnés ce mois',
+      detail: "Suite à votre dernière publication, votre compte professionnel a enregistré 50 nouveaux abonnés particuliers. Ces abonnés verront en priorité vos prochaines publications dans leur fil Découverte.",
+      time: 'Hier',
+      icon: Users,
+      read: true,
+      action: { label: 'Voir le fil', path: '/kauri/social-feed' },
+    },
+    {
+      id: '7',
       type: 'warning',
+      category: 'documents',
       title: 'Signature requise',
       message: 'Transaction de 12 000 € en attente de 2 signatures',
       detail: "Une transaction de 12 000 € initiée par votre co-signataire nécessite votre validation ainsi qu'une autre signature autorisée. La transaction expirera dans 48h si aucune action n'est prise.",
       time: 'Hier',
       icon: AlertCircle,
       read: true,
-      action: { label: 'Valider la transaction', path: '/kauri/multi-signature' },
+      action: { label: 'Valider', path: '/kauri/multi-signature' },
     },
     {
-      id: '5',
-      type: 'success',
-      title: 'Dividendes versés',
-      message: '2 750 € crédités sur votre compte',
-      detail: "La distribution de dividendes du trimestre vient d'être effectuée. Montant net après prélèvements : 2 750 €. Retrouvez le détail complet dans votre espace investissements.",
+      id: '8',
+      type: 'info',
+      category: 'documents',
+      title: 'Document requis',
+      message: 'Rapport financier T2 à soumettre avant le 15 juin',
+      detail: "La plateforme KAURI requiert votre rapport financier du 2ème trimestre pour maintenir la conformité de votre compte Pro. Date limite : 15 juin.",
       time: 'Il y a 2 jours',
+      icon: FileText,
+      read: true,
+      action: { label: 'Gérer les documents', path: '/kauri/pro-manage-account' },
+    },
+    {
+      id: '9',
+      type: 'success',
+      category: 'investisseurs',
+      title: 'Dividendes versés',
+      message: '2 750 € crédités sur votre compte business',
+      detail: "La distribution de rendements du trimestre vient d'être effectuée pour les investisseurs du Palier 2. Montant net crédité sur votre compte business : 2 750 €.",
+      time: 'Il y a 3 jours',
       icon: DollarSign,
       read: true,
-      action: { label: 'Voir les investissements', path: '/kauri/mes-investissements' },
+      action: { label: 'Voir le portefeuille', path: '/kauri/pro-portefeuille' },
     },
     {
-      id: '6',
-      type: 'business',
-      title: 'Opportunité institutionnelle',
-      message: 'Un investisseur institutionnel souhaite vous contacter',
-      detail: "Un fonds d'investissement spécialisé dans les projets diaspora est intéressé par votre profil. Il a demandé à être mis en relation. Consultez votre hub pour voir les détails de cette opportunité.",
-      time: 'Il y a 3 jours',
-      icon: Briefcase,
-      read: true,
-      action: { label: 'Voir l\'opportunité', path: '/kauri/investment-hub' },
-    },
-    {
-      id: '7',
+      id: '10',
       type: 'info',
+      category: 'documents',
       title: 'Vérification KYB renouvelée',
-      message: 'Votre entreprise est de nouveau certifiée',
+      message: 'Votre entreprise est certifiée pour 12 mois',
       detail: "La vérification annuelle de votre entreprise SARL Innovation Caraïbes a été renouvelée avec succès. Votre badge de confiance Pro est actif pour les 12 prochains mois.",
       time: 'Il y a 5 jours',
       icon: ShieldCheck,
@@ -122,6 +174,14 @@ export function ProNotificationsScreen() {
   };
 
   const markAllAsRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+
+  const CATEGORIES: { id: NotifCategory; label: string; icon: any }[] = [
+    { id: 'tout',          label: 'Tout',          icon: Bell },
+    { id: 'investisseurs', label: 'Investisseurs', icon: TrendingUp },
+    { id: 'paliers',       label: 'Paliers',       icon: Trophy },
+    { id: 'social',        label: 'Social',        icon: Play },
+    { id: 'documents',     label: 'Documents',     icon: FileText },
+  ];
 
   const unreadCount = notifications.filter(n => !n.read && (n.status === 'active' || !n.status)).length;
 
@@ -178,12 +238,28 @@ export function ProNotificationsScreen() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-4 px-6 pt-4">
+      {/* Bannière synthèse levées */}
+      <div className="px-6 pt-4">
+        <div className={`rounded-2xl p-4 border grid grid-cols-3 gap-3 ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'} shadow-sm`}>
+          {[
+            { label: 'Total levé', value: '45 000 €', color: '#006D77' },
+            { label: 'Ce mois', value: '+8 200 €', color: '#D4AF37' },
+            { label: 'Palier actuel', value: 'Palier 2', color: '#B05B3B' },
+          ].map(s => (
+            <div key={s.label} className="text-center">
+              <p className="font-bold text-sm" style={{ color: s.color }}>{s.value}</p>
+              <p className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#64748B]'}`}>{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Tabs actives / archivées */}
+      <div className="flex gap-4 px-6 pt-4 border-b border-transparent">
         <button
           onClick={() => setActiveTab('active')}
           className={`pb-2 text-sm font-medium transition-colors border-b-2 ${
-            activeTab === 'active' 
+            activeTab === 'active'
               ? isDarkMode ? 'border-white text-white' : 'border-[#D4AF37] text-[#D4AF37]'
               : 'border-transparent text-[#64748B]'
           }`}
@@ -202,10 +278,44 @@ export function ProNotificationsScreen() {
         </button>
       </div>
 
+      {/* Filtres catégories */}
+      <div className="flex gap-2 overflow-x-auto px-4 pt-3 pb-1 scrollbar-none">
+        {CATEGORIES.map(cat => {
+          const CatIcon = cat.icon;
+          const count = notifications.filter(n =>
+            (cat.id === 'tout' || n.category === cat.id) &&
+            !n.read &&
+            (n.status === 'active' || !n.status)
+          ).length;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full whitespace-nowrap text-xs font-medium transition-all flex-shrink-0 ${
+                activeCategory === cat.id
+                  ? isDarkMode ? 'bg-[#D4AF37] text-white' : 'bg-[#D4AF37] text-white'
+                  : isDarkMode ? 'bg-white/10 text-white/60' : 'bg-white text-[#64748B] border border-[#E2E8F0]'
+              }`}
+            >
+              <CatIcon className="w-3 h-3" />
+              {cat.label}
+              {count > 0 && (
+                <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ${activeCategory === cat.id ? 'bg-white/30 text-white' : 'bg-[#B05B3B] text-white'}`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {/* List */}
-      <div className="px-4 pt-4 space-y-2">
+      <div className="px-4 pt-3 space-y-2">
         {notifications
-          .filter(n => (activeTab === 'archived' ? n.status === 'archived' : (n.status === 'active' || !n.status)))
+          .filter(n =>
+            (activeTab === 'archived' ? n.status === 'archived' : (n.status === 'active' || !n.status)) &&
+            (activeCategory === 'tout' || n.category === activeCategory)
+          )
           .map(n => {
           const Icon = n.icon;
           const expanded = expandedId === n.id;
@@ -244,6 +354,30 @@ export function ProNotificationsScreen() {
                     <p className={`text-xs truncate mt-0.5 ${isDarkMode ? 'text-[#64748B]' : 'text-[#94A3B8]'}`}>
                       {n.message}
                     </p>
+                    {n.meta && (
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {n.meta.palier && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: `${accent}18`, color: accent }}>
+                            {n.meta.palier}
+                          </span>
+                        )}
+                        {n.meta.contributionType === 'investissement' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#006D77]/10 text-[#006D77] font-medium flex items-center gap-0.5">
+                            <TrendingUp className="w-2.5 h-2.5" /> Investissement
+                          </span>
+                        )}
+                        {n.meta.contributionType === 'don' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#B05B3B]/10 text-[#B05B3B] font-medium flex items-center gap-0.5">
+                            <Heart className="w-2.5 h-2.5" /> Don
+                          </span>
+                        )}
+                        {n.meta.montant && (
+                          <span className={`text-[10px] font-bold ${isDarkMode ? 'text-white/50' : 'text-[#94A3B8]'}`}>
+                            {n.meta.montant}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">

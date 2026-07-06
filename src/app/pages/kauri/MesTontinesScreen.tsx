@@ -1,6 +1,8 @@
 import { ArrowLeft, Lock, Globe, Users, Calendar, ChevronRight, Plus, Settings2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useDarkMode } from '../../contexts/DarkModeContext';
+import { useState, useEffect } from 'react';
+import { SERVER_URL, authHeaders } from '../../../utils/supabase';
 
 const TEAL = '#006D77';
 const GOLD = '#D4AF37';
@@ -17,23 +19,24 @@ interface TontineCreee {
   status: 'active' | 'en_attente' | 'complet';
 }
 
-const TONTINES_CREEES: TontineCreee[] = [
-  {
-    id: 'c1', type: 'privee',
-    name: 'Cercle Familial', members: 8, maxMembers: 10,
-    cotisation: 100, nextPayment: '1 juil. 2026', progress: 72, status: 'active',
-  },
-  {
-    id: 'c2', type: 'privee',
-    name: 'Amis Dakar', members: 4, maxMembers: 8,
-    cotisation: 50, nextPayment: '15 juil. 2026', progress: 40, status: 'en_attente',
-  },
-  {
-    id: 'c3', type: 'publique',
-    name: 'Cercle Émeraude', members: 20, maxMembers: 20,
-    cotisation: 150, nextPayment: '10 juil. 2026', progress: 80, status: 'complet',
-  },
-];
+function serverTontineToLocal(t: any): TontineCreee {
+  const memberCount = t.members?.length ?? 0;
+  const progress = Math.round((t.currentRound / t.totalRounds) * 100);
+  const nextDate = t.nextPaymentDate
+    ? new Date(t.nextPaymentDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '—';
+  return {
+    id: t.id,
+    name: t.name,
+    type: t.type === 'public' ? 'publique' : 'privee',
+    members: memberCount,
+    maxMembers: t.maxMembers ?? 10,
+    cotisation: t.contribution ?? 0,
+    nextPayment: nextDate,
+    progress,
+    status: t.status === 'active' ? (memberCount >= t.maxMembers ? 'complet' : 'active') : 'en_attente',
+  };
+}
 
 const STATUS_LABEL: Record<string, { label: string; bg: string; text: string }> = {
   active:     { label: 'Actif',        bg: '#D1FAE5', text: '#16A34A' },
@@ -122,9 +125,21 @@ function TontineCard({ t, isDarkMode }: { t: TontineCreee; isDarkMode: boolean }
 export function MesTontinesScreen() {
   const navigate = useNavigate();
   const { isDarkMode } = useDarkMode();
+  const [tontines, setTontines] = useState<TontineCreee[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const privees   = TONTINES_CREEES.filter(t => t.type === 'privee');
-  const publiques = TONTINES_CREEES.filter(t => t.type === 'publique');
+  useEffect(() => {
+    authHeaders().then(headers =>
+      fetch(`${SERVER_URL}/tontines`, { headers })
+        .then(r => r.ok ? r.json() : [])
+        .then((data: any[]) => setTontines(data.map(serverTontineToLocal)))
+        .catch(() => setTontines([]))
+        .finally(() => setLoading(false))
+    );
+  }, []);
+
+  const privees   = tontines.filter(t => t.type === 'privee');
+  const publiques = tontines.filter(t => t.type === 'publique');
 
   const bg     = isDarkMode ? 'bg-[#0F172A]' : 'bg-[#F8FAFC]';
   const cardBg = isDarkMode ? 'bg-[#1E293B]' : 'bg-white';
@@ -148,7 +163,7 @@ export function MesTontinesScreen() {
           </div>
           <div className="text-right">
             <p className="text-white/60 text-xs mb-0.5">Total créées</p>
-            <p className="text-white text-lg font-bold">{TONTINES_CREEES.length}</p>
+            <p className="text-white text-lg font-bold">{loading ? '…' : tontines.length}</p>
           </div>
         </div>
       </div>

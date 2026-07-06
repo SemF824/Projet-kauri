@@ -1,13 +1,16 @@
-import { ArrowLeft, Lock, Users, Calendar, Euro, Shuffle, Link2, QrCode, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Lock, Users, Calendar, Euro, Shuffle, Link2, QrCode, ChevronDown, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
 import { useDarkMode } from '../../contexts/DarkModeContext';
+import { SERVER_URL, authHeaders } from '../../../utils/supabase';
+import { toast } from 'sonner';
 
 const TEAL = '#006D77';
 
-type Frequence = 'mensuelle' | 'hebdomadaire' | 'bihebdomadaire';
-type OrdrePassage = 'aleatoire' | 'fixe';
+type Frequence     = 'mensuelle' | 'hebdomadaire' | 'bihebdomadaire';
+type OrdrePassage  = 'aleatoire' | 'fixe';
 type ModeInvitation = 'lien' | 'qr' | 'les_deux';
+type Duree         = '3' | '6' | '9' | '12' | '18' | '24';
 
 export function CreerTontinePriveeScreen() {
   const navigate = useNavigate();
@@ -21,20 +24,26 @@ export function CreerTontinePriveeScreen() {
   const [frequence, setFrequence]         = useState<Frequence>('mensuelle');
   const [ordre, setOrdre]                 = useState<OrdrePassage>('aleatoire');
   const [invitation, setInvitation]       = useState<ModeInvitation>('lien');
+  const [duree, setDuree]                 = useState<Duree | ''>('');
   const [showFrequence, setShowFrequence] = useState(false);
+  const [isSubmitting, setIsSubmitting]   = useState(false);
 
-  const bg         = isDarkMode ? '#0F172A' : '#F8FAFC';
-  const cardBg     = isDarkMode ? '#1E293B' : '#ffffff';
-  const border     = isDarkMode ? '#334155' : '#E8EDF2';
-  const textPrimary  = isDarkMode ? '#ffffff' : '#0F172A';
+  const bg            = isDarkMode ? '#0F172A' : '#F8FAFC';
+  const cardBg        = isDarkMode ? '#1E293B' : '#ffffff';
+  const border        = isDarkMode ? '#334155' : '#E8EDF2';
+  const textPrimary   = isDarkMode ? '#ffffff' : '#0F172A';
   const textSecondary = '#94A3B8';
-  const inputBg    = isDarkMode ? '#0F172A' : '#F8FAFC';
+  const inputBg       = isDarkMode ? '#0F172A' : '#F8FAFC';
 
   const FREQUENCES: { value: Frequence; label: string }[] = [
-    { value: 'mensuelle',      label: 'Mensuelle'          },
-    { value: 'hebdomadaire',   label: 'Hebdomadaire'       },
-    { value: 'bihebdomadaire', label: 'Toutes les 2 sem.'  },
+    { value: 'mensuelle',      label: 'Mensuelle'         },
+    { value: 'hebdomadaire',   label: 'Hebdomadaire'      },
+    { value: 'bihebdomadaire', label: 'Toutes les 2 sem.' },
   ];
+
+  const potTotal = cotisation && maxMembres && duree
+    ? parseFloat(cotisation) * parseInt(maxMembres) * parseInt(duree)
+    : null;
 
   function Field({ label, icon: Icon, children }: { label: string; icon: any; children: React.ReactNode }) {
     return (
@@ -56,11 +65,7 @@ export function CreerTontinePriveeScreen() {
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors"
-        style={{
-          backgroundColor: inputBg,
-          border: `1.5px solid ${border}`,
-          color: textPrimary,
-        }}
+        style={{ backgroundColor: inputBg, border: `1.5px solid ${border}`, color: textPrimary }}
       />
     );
   }
@@ -92,7 +97,42 @@ export function CreerTontinePriveeScreen() {
     );
   }
 
-  const isValid = nom.trim() && cotisation && maxMembres && dateDebut;
+  const isValid = nom.trim() && cotisation && maxMembres && dateDebut && duree !== '';
+
+  const handleCreate = async () => {
+    if (!isValid || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const headers = await authHeaders();
+      const res = await fetch(`${SERVER_URL}/tontines`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          name: nom,
+          description,
+          contribution: Number(cotisation),
+          frequency: frequence,
+          maxMembers: Number(maxMembres),
+          duration: Number(duree),
+          startDate: dateDebut,
+          orderType: ordre,
+          invitationMode: invitation,
+          type: 'private',
+        }),
+      });
+      if (res.ok) {
+        toast.success('Tontine créée avec succès !');
+        navigate('/kauri/mes-tontines');
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Erreur lors de la création');
+      }
+    } catch {
+      toast.error('Erreur de connexion');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen pb-10" style={{ backgroundColor: bg }}>
@@ -152,6 +192,26 @@ export function CreerTontinePriveeScreen() {
             </Field>
           </div>
 
+          <Field label="Durée de la tontine" icon={Calendar}>
+            <div className="grid grid-cols-3 gap-2">
+              {(['3', '6', '9', '12', '18', '24'] as Duree[]).map(d => (
+                <button
+                  key={d}
+                  onClick={() => setDuree(d)}
+                  className="py-2.5 rounded-xl text-xs font-semibold transition-all"
+                  style={{
+                    background: duree === d ? TEAL : inputBg,
+                    color: duree === d ? '#fff' : textSecondary,
+                    border: `1.5px solid ${duree === d ? TEAL : border}`,
+                    boxShadow: duree === d ? `0 2px 8px ${TEAL}40` : 'none',
+                  }}
+                >
+                  {d} mois
+                </button>
+              ))}
+            </div>
+          </Field>
+
           <Field label="Fréquence de cotisation" icon={Calendar}>
             <button
               onClick={() => setShowFrequence(v => !v)}
@@ -184,6 +244,22 @@ export function CreerTontinePriveeScreen() {
           <Field label="Date de début" icon={Calendar}>
             <Input value={dateDebut} onChange={setDateDebut} placeholder="" type="date" />
           </Field>
+
+          {/* Pot estimé */}
+          {potTotal !== null && (
+            <div className="rounded-xl p-3.5 flex items-center gap-3"
+              style={{ background: `${TEAL}08`, border: `1.5px solid ${TEAL}25` }}>
+              <TrendingUp style={{ width: 16, height: 16, color: TEAL, flexShrink: 0 }} />
+              <div>
+                <p className="text-xs font-bold" style={{ color: TEAL }}>
+                  Pot total estimé : {potTotal.toLocaleString('fr-FR')} €
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: textSecondary }}>
+                  {cotisation} € × {maxMembres} membres × {duree} mois
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Règles du groupe */}
@@ -208,9 +284,9 @@ export function CreerTontinePriveeScreen() {
               onChange={setInvitation}
               color={TEAL}
               options={[
-                { value: 'lien',     label: 'Lien',         icon: Link2  },
-                { value: 'qr',       label: 'QR Code',      icon: QrCode },
-                { value: 'les_deux', label: 'Les deux',      icon: Users  },
+                { value: 'lien',     label: 'Lien',    icon: Link2  },
+                { value: 'qr',       label: 'QR Code', icon: QrCode },
+                { value: 'les_deux', label: 'Les deux', icon: Users  },
               ]}
             />
           </Field>
@@ -218,18 +294,25 @@ export function CreerTontinePriveeScreen() {
 
         {/* CTA */}
         <button
-          disabled={!isValid}
-          className="w-full py-4 rounded-2xl text-white text-sm font-bold shadow-lg transition-opacity"
+          disabled={!isValid || isSubmitting}
+          onClick={handleCreate}
+          className="w-full py-4 rounded-2xl text-white text-sm font-bold shadow-lg transition-opacity flex items-center justify-center gap-2"
           style={{
             background: isValid ? `linear-gradient(135deg, ${TEAL}, #0D9488)` : '#CBD5E1',
             boxShadow: isValid ? `0 4px 16px ${TEAL}44` : 'none',
             opacity: isValid ? 1 : 0.7,
           }}
         >
-          Créer ma tontine privée
+          {isSubmitting ? (
+            <>
+              <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white" style={{ animation: 'spin 0.8s linear infinite' }} />
+              Création…
+            </>
+          ) : 'Créer ma tontine privée'}
         </button>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
-        <p className="text-center text-xs" style={{ color: textSecondary }}>
+        <p className="text-center text-xs pb-4" style={{ color: textSecondary }}>
           Un lien d'invitation sera généré automatiquement après création.
         </p>
       </div>

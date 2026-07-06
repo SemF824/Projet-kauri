@@ -16,8 +16,7 @@ export function BiometricSetupScreen() {
   };
 
   const handleSkip = () => {
-    const targetDashboard = accountType === 'professionnel' ? '/kauri/pro-dashboard' : '/kauri/normal-dashboard';
-    navigate(targetDashboard);
+    navigate(`/kauri/trust-score-intro?type=${accountType}`);
   };
 
   return (

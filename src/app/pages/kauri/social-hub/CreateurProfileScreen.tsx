@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { setFollowPro, checkFollowingPro } from '../../../../utils/supabase';
 import { ArrowLeft, Heart, MessageCircle, Bookmark, Share2, ExternalLink, Users, TrendingUp, Star, ChevronRight, CheckCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -192,9 +193,21 @@ export default function CreateurProfileScreen() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followCount, setFollowCount] = useState(creator.followers);
 
-  function toggleFollow() {
-    setIsFollowing(f => !f);
-    setFollowCount(c => isFollowing ? c - 1 : c + 1);
+  useEffect(() => {
+    checkFollowingPro(creator.id).then(following => {
+      setIsFollowing(following);
+      setFollowCount(c => following ? c : c);
+    }).catch(() => null);
+  }, [creator.id]);
+
+  async function toggleFollow() {
+    const nowFollowing = !isFollowing;
+    setIsFollowing(nowFollowing);
+    setFollowCount(c => nowFollowing ? c + 1 : c - 1);
+    await setFollowPro(creator.id, nowFollowing).catch(() => {
+      setIsFollowing(!nowFollowing);
+      setFollowCount(c => nowFollowing ? c - 1 : c + 1);
+    });
   }
 
   // bg gradients per type

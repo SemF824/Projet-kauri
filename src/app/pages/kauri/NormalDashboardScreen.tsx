@@ -3,6 +3,8 @@ import kauriLogo from '../../../imports/image-9.png';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useDarkMode } from '../../contexts/DarkModeContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { SERVER_URL, authHeaders } from '../../../utils/supabase';
 
 // ── Custom social icon: planet + interconnected people ───────────────────────
 function SocialIcon({ color, size = 22 }: { color: string; size?: number }) {
@@ -113,27 +115,36 @@ export function NormalDashboardScreen() {
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const { isDarkMode, toggleDarkMode, resetDarkMode } = useDarkMode();
+  const { profile, signOut, refreshProfile } = useAuth();
+  const [tontinesCount, setTontinesCount] = useState<number | null>(null);
+  const [investmentsCount, setInvestmentsCount] = useState<number | null>(null);
 
-  const trustScore = 88;
+  const trustScore = Math.round((profile?.trustScore ?? 3.5) * (100 / 5));
   const paymentStreak = 6;
-  const userStatus = 'Membre Émérite';
+  const userStatus = trustScore >= 80 ? 'Membre Émérite' : trustScore >= 60 ? 'Membre Actif' : 'Nouveau Membre';
+  const firstName = profile?.firstName ?? 'Vous';
+  const balance = profile?.balance ?? 0;
+  const initials = profile ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase() : 'KA';
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+    return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); };
   }, []);
 
-  const handleLogout = () => {
+  useEffect(() => {
+    refreshProfile();
+    authHeaders().then(headers => {
+      fetch(`${SERVER_URL}/tontines`, { headers }).then(r => r.ok ? r.json() : []).then((data: any[]) => setTontinesCount(data.length)).catch(() => setTontinesCount(0));
+      fetch(`${SERVER_URL}/user/investments`, { headers }).then(r => r.ok ? r.json() : []).then((data: any[]) => setInvestmentsCount(data.length)).catch(() => setInvestmentsCount(0));
+    });
+  }, []);
+
+  const handleLogout = async () => {
     resetDarkMode();
-    localStorage.removeItem('kauri_account_type');
+    await signOut();
     navigate('/kauri/login');
   };
 
@@ -147,10 +158,10 @@ export function NormalDashboardScreen() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center border-2 border-white shadow-xl">
-              <span className="text-white text-lg font-bold">JD</span>
+              <span className="text-white text-lg font-bold">{initials}</span>
             </div>
             <div>
-              <h2 className="text-white text-lg font-semibold">Bonjour, Jean</h2>
+              <h2 className="text-white text-lg font-semibold">Bonjour, {firstName}</h2>
               <p className="text-[#E0F2FE] text-sm">Bon retour sur KAURI</p>
             </div>
           </div>
@@ -238,7 +249,7 @@ export function NormalDashboardScreen() {
             </button>
           </div>
           <h1 className="text-white text-3xl mb-4">
-            {balanceVisible ? '2 450,00 €' : '•••••'}
+            {balanceVisible ? `${balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €` : '•••••'}
           </h1>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -302,7 +313,7 @@ export function NormalDashboardScreen() {
                 <Users className="w-6 h-6 text-[#006D77]" />
               </div>
               <p className={`text-xs ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Tontines</p>
-              <p className={`text-sm ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>3 actives</p>
+              <p className={`text-sm ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{tontinesCount !== null ? `${tontinesCount} active${tontinesCount !== 1 ? 's' : ''}` : '…'}</p>
             </button>
 
             <button
