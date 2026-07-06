@@ -1,16 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowRight, Fingerprint, Eye, EyeOff, Phone, ChevronLeft } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Mail, Lock, Phone, User, Fingerprint } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
 
 export function KauriLoginScreen() {
   const navigate = useNavigate();
   const { signIn, user, profile, loading } = useAuth();
-  const [step, setStep] = useState<'welcome' | 'phone' | 'pin'>('welcome');
+
+  // Gestion des modes et étapes
+  const [step, setStep] = useState<'welcome' | 'form'>('welcome');
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+
+  // Formulaires
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
-  const [pin, setPin] = useState('');
-  const [showPin, setShowPin] = useState(false);
+
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [animateIn, setAnimateIn] = useState(false);
@@ -20,7 +29,7 @@ export function KauriLoginScreen() {
     return () => clearTimeout(t);
   }, []);
 
-  // Redirect authenticated users
+  // Redirection automatique si session valide
   useEffect(() => {
     if (!loading && user && profile) {
       localStorage.setItem('kauri_account_type', profile.accountType);
@@ -32,38 +41,64 @@ export function KauriLoginScreen() {
     }
   }, [user, profile, loading, navigate]);
 
-  const handlePhoneNext = () => {
-    if (phone.replace(/\s/g, '').length < 8) {
-      setError('Numéro de téléphone invalide');
-      return;
-    }
-    setError('');
-    setStep('pin');
-  };
+  // Validations strictes
+  const validateEmail = (emailStr: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
+  const isPasswordRobust = (pass: string) => pass.length >= 8 && /[A-Z]/.test(pass) && /[0-9]/.test(pass);
 
-  const handlePinLogin = async () => {
-    if (pin.length < 4) {
-      setError('Le code PIN doit contenir au moins 4 chiffres');
-      return;
-    }
+  const isFormValid = mode === 'login'
+    ? validateEmail(email) && password.length > 0
+    : firstName.trim() && lastName.trim() && validateEmail(email) && isPasswordRobust(password);
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isFormValid || isLoading) return;
+
     setError('');
     setIsLoading(true);
+
     try {
-      await signIn(phone, pin);
-      // Navigation handled by the useEffect above after profile loads
-    } catch (e: any) {
-      console.error('Login error:', e);
-      setError('Numéro ou code PIN incorrect. Vérifiez vos informations.');
-      toast.error('Échec de la connexion');
+      if (mode === 'login') {
+        // La fonction signIn de ton AuthContext mis à jour gère l'appel natif Supabase
+        await signIn(email.trim(), password);
+      } else {
+        const supabase = getSupabaseInstance();
+        
+        // Inscription avec métadonnées réelles pour ton déclencheur SQL profiles
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password: password,
+          options: {
+            data: {
+              full_name: `${firstName.trim()} ${lastName.trim()}`,
+              phone: phone.trim() || null,
+            },
+          },
+        });
+
+        if (signUpError) throw signUpError;
+
+        toast.success('Inscription réussie ! Connexion...');
+        await signIn(email.trim(), password);
+      }
+    } catch (err: any) {
+      console.error('Auth error:', err);
+      setError(err.message || 'Identifiants incorrects ou erreur réseau.');
+      toast.error("Échec de l'authentification");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Helper local pour l'inscription autonome au cas où getSupabase() n'est pas importable directement
+  const getSupabaseInstance = () => {
+    const { getSupabase } = require('../../utils/supabase');
+    return getSupabase();
+  };
+
   const handleBiometric = () => {
-    // Biometric requires prior login — redirect to phone flow
-    setStep('phone');
-    toast.info('Entrez votre numéro pour vous connecter');
+    setMode('login');
+    setStep('form');
+    toast.info('Veuillez renseigner vos identifiants pour synchroniser la biométrie');
   };
 
   if (loading) {
@@ -80,6 +115,7 @@ export function KauriLoginScreen() {
       className="min-h-screen flex flex-col overflow-hidden"
       style={{ background: 'linear-gradient(165deg, #006D77 0%, #004E57 55%, #003A42 100%)' }}
     >
+      {/* Cowrie Animations en arrière-plan */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: 12 }).map((_, i) => (
           <svg
@@ -100,189 +136,210 @@ export function KauriLoginScreen() {
         ))}
       </div>
 
+      {/* Brand Header */}
       <div
-        className="relative z-10 flex flex-col items-center pt-14 pb-8 px-6"
+        className="relative z-10 flex flex-col items-center pt-14 pb-6 px-6"
         style={{
           opacity: animateIn ? 1 : 0,
           transform: animateIn ? 'translateY(0)' : 'translateY(-20px)',
           transition: 'opacity 0.6s ease, transform 0.6s ease',
         }}
       >
-        <div className="relative mb-4">
+        <div className="relative mb-3">
           <div className="absolute inset-0 rounded-full" style={{ background: '#D4AF37', opacity: 0.25, transform: 'scale(1.35)', animation: 'pulse 2.5s ease-in-out infinite' }} />
-          <div className="relative w-20 h-20 rounded-full flex items-center justify-center shadow-2xl" style={{ background: 'linear-gradient(135deg, #D4AF37, #F59E0B)' }}>
-            <svg viewBox="0 0 100 100" className="w-12 h-12 text-white">
+          <div className="relative w-16 h-20 rounded-full flex items-center justify-center shadow-2xl" style={{ background: 'linear-gradient(135deg, #D4AF37, #F59E0B)' }}>
+            <svg viewBox="0 0 100 100" className="w-11 h-11 text-white">
               <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
             </svg>
           </div>
         </div>
-        <h1 className="text-white tracking-widest mb-1" style={{ fontSize: '2rem', fontWeight: 700, letterSpacing: '0.2em' }}>KAURI</h1>
-        <p className="text-white/70 text-sm">L'Unité dans la Finance</p>
+        <h1 className="text-white tracking-widest mb-1" style={{ fontSize: '1.8rem', fontWeight: 700, letterSpacing: '0.2em' }}>KAURI</h1>
+        <p className="text-white/70 text-xs">L'Unité dans la Finance</p>
       </div>
 
+      {/* Main Container Card */}
       <div
-        className="relative z-10 flex-1 mx-4 mb-6 rounded-3xl overflow-hidden"
+        className="relative z-10 flex-1 mx-4 mb-6 rounded-3xl overflow-hidden shadow-2xl"
         style={{
           background: '#F9F9F9',
-          boxShadow: '0 -4px 40px rgba(0,0,0,0.3)',
           opacity: animateIn ? 1 : 0,
           transform: animateIn ? 'translateY(0)' : 'translateY(30px)',
           transition: 'opacity 0.7s ease 0.15s, transform 0.7s ease 0.15s',
         }}
       >
-        <div className="p-6 flex flex-col h-full">
-          {step !== 'welcome' && (
-            <button onClick={() => { setStep(step === 'pin' ? 'phone' : 'welcome'); setError(''); }} className="flex items-center gap-1 mb-4" style={{ color: '#006D77' }}>
-              <ChevronLeft className="w-4 h-4" />
-              <span className="text-sm">Retour</span>
-            </button>
-          )}
-
-          {step === 'welcome' && (
+        <div className="p-6 flex flex-col h-full overflow-y-auto">
+          {step === 'welcome' ? (
             <div className="flex flex-col flex-1">
-              <h2 className="mb-1" style={{ color: '#0F172A', fontSize: '1.4rem', fontWeight: 700 }}>Bon retour ! 👋</h2>
-              <p className="text-sm mb-8" style={{ color: '#4A4A4A' }}>Connectez-vous à votre compte KAURI pour continuer.</p>
+              <h2 className="mb-1" style={{ color: '#0F172A', fontSize: '1.3rem', fontWeight: 700 }}>Bienvenue sur KAURI 👋</h2>
+              <p className="text-xs mb-6" style={{ color: '#4A4A4A' }}>Sélectionnez votre méthode d'accès sécurisé.</p>
 
               <button
                 onClick={handleBiometric}
-                disabled={isLoading}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl mb-4 border-2 transition-all active:scale-95"
-                style={{ background: 'linear-gradient(135deg, #006D77, #0D9488)', borderColor: '#006D77', color: 'white' }}
+                className="w-full flex items-center gap-4 p-4 rounded-2xl mb-4 border-2 transition-all active:scale-95 text-white"
+                style={{ background: 'linear-gradient(135deg, #006D77, #0D9488)', borderColor: '#006D77' }}
               >
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
                   <Fingerprint className="w-6 h-6" />
                 </div>
                 <div className="text-left flex-1">
-                  <p style={{ fontWeight: 600, fontSize: '0.95rem' }}>Connexion biométrique</p>
-                  <p className="text-white/80 text-xs">Face ID • Empreinte digitale</p>
+                  <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>Accès Biométrique</p>
+                  <p className="text-white/80 text-[11px]">Face ID • Empreinte digitale</p>
                 </div>
                 <ArrowRight className="w-5 h-5 opacity-70" />
               </button>
 
               <div className="flex items-center gap-3 my-2 mb-4">
                 <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
-                <span className="text-xs" style={{ color: '#94A3B8' }}>ou</span>
+                <span className="text-xs text-[#94A3B8]">ou</span>
                 <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
               </div>
 
               <button
-                onClick={() => setStep('phone')}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl mb-6 border-2 transition-all active:scale-95"
-                style={{ borderColor: '#006D77', background: 'white' }}
+                onClick={() => { setMode('login'); setStep('form'); }}
+                className="w-full flex items-center gap-4 p-4 rounded-2xl mb-6 border-2 transition-all active:scale-95 bg-white"
+                style={{ borderColor: '#006D77' }}
               >
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: '#E6F4F5' }}>
-                  <Phone className="w-6 h-6" style={{ color: '#006D77' }} />
+                  <Mail className="w-6 h-6" style={{ color: '#006D77' }} />
                 </div>
                 <div className="text-left flex-1">
-                  <p style={{ fontWeight: 600, fontSize: '0.95rem', color: '#0F172A' }}>Numéro de téléphone</p>
-                  <p className="text-xs" style={{ color: '#4A4A4A' }}>Connexion par code PIN</p>
+                  <p style={{ fontWeight: 600, fontSize: '0.9rem', color: '#0F172A' }}>Adresse e-mail & Password</p>
+                  <p className="text-xs text-gray-500">Connexion standard sécurisée</p>
                 </div>
                 <ArrowRight className="w-5 h-5" style={{ color: '#006D77' }} />
               </button>
 
               <div className="mt-auto pt-4" style={{ borderTop: '1px solid #F1F5F9' }}>
-                <p className="text-center text-sm mb-3" style={{ color: '#4A4A4A' }}>Pas encore de compte KAURI ?</p>
+                <p className="text-center text-xs mb-3" style={{ color: '#4A4A4A' }}>Nouveau sur la plateforme ?</p>
                 <button
-                  onClick={() => navigate('/kauri')}
-                  className="w-full py-3 rounded-2xl text-sm transition-all active:scale-95"
-                  style={{ background: 'linear-gradient(135deg, #D4AF37, #F59E0B)', color: 'white', fontWeight: 600 }}
+                  onClick={() => { setMode('register'); setStep('form'); }}
+                  className="w-full py-3 rounded-2xl text-xs transition-all active:scale-95 text-white"
+                  style={{ background: 'linear-gradient(135deg, #D4AF37, #F59E0B)', fontWeight: 600 }}
                 >
-                  Créer un compte
+                  Rejoindre l'écosystème KAURI
                 </button>
               </div>
             </div>
-          )}
-
-          {step === 'phone' && (
-            <div className="flex flex-col flex-1">
-              <h2 className="mb-1" style={{ color: '#0F172A', fontSize: '1.4rem', fontWeight: 700 }}>Votre numéro</h2>
-              <p className="text-sm mb-6" style={{ color: '#4A4A4A' }}>Entrez votre numéro de téléphone enregistré sur KAURI.</p>
-
-              <div className="flex items-center gap-2 rounded-2xl px-4 py-3 mb-3 border-2" style={{ borderColor: error ? '#B05B3B' : '#006D77', background: 'white' }}>
-                <span className="text-sm shrink-0" style={{ color: '#4A4A4A', fontWeight: 600 }}>🇫🇷 +33</span>
-                <div className="w-px h-5 mx-1" style={{ background: '#E2E8F0' }} />
-                <input
-                  type="tel"
-                  placeholder="6 12 34 56 78"
-                  value={phone}
-                  onChange={e => { setPhone(e.target.value); setError(''); }}
-                  className="flex-1 outline-none bg-transparent text-sm"
-                  style={{ color: '#0F172A' }}
-                  autoFocus
-                />
-              </div>
-
-              {error && <p className="text-xs mb-3" style={{ color: '#B05B3B' }}>{error}</p>}
-
-              <button
-                onClick={handlePhoneNext}
-                className="w-full py-4 rounded-2xl mt-2 transition-all active:scale-95"
-                style={{ background: 'linear-gradient(135deg, #006D77, #0D9488)', color: 'white', fontWeight: 600 }}
-              >
-                Continuer
-              </button>
-            </div>
-          )}
-
-          {step === 'pin' && (
-            <div className="flex flex-col flex-1">
-              <h2 className="mb-1" style={{ color: '#0F172A', fontSize: '1.4rem', fontWeight: 700 }}>Code PIN</h2>
-              <p className="text-sm mb-6" style={{ color: '#4A4A4A' }}>Entrez votre code PIN KAURI à 4–6 chiffres.</p>
-
-              <div className="flex items-center gap-2 rounded-2xl px-4 py-3 mb-3 border-2" style={{ borderColor: error ? '#B05B3B' : '#006D77', background: 'white' }}>
-                <input
-                  type={showPin ? 'text' : 'password'}
-                  placeholder="••••••"
-                  value={pin}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  onChange={e => { const val = e.target.value.replace(/\D/g, ''); setPin(val); setError(''); }}
-                  className="flex-1 outline-none bg-transparent text-sm tracking-widest"
-                  style={{ color: '#0F172A' }}
-                  autoFocus
-                />
-                <button onClick={() => setShowPin(!showPin)}>
-                  {showPin ? <EyeOff className="w-4 h-4" style={{ color: '#94A3B8' }} /> : <Eye className="w-4 h-4" style={{ color: '#94A3B8' }} />}
+          ) : (
+            <form onSubmit={handleAuthSubmit} className="flex flex-col flex-1 space-y-4">
+              {/* Sélecteur de mode interne */}
+              <div className="flex justify-center gap-6 border-b pb-2 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => { setMode('login'); setError(''); }}
+                  className={`pb-1 ${mode === 'login' ? 'text-[#006D77] border-b-2 border-[#006D77]' : 'text-gray-400'}`}
+                >
+                  Connexion
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMode('register'); setError(''); }}
+                  className={`pb-1 ${mode === 'register' ? 'text-[#006D77] border-b-2 border-[#006D77]' : 'text-gray-400'}`}
+                >
+                  Inscription
                 </button>
               </div>
 
-              <div className="flex justify-center gap-3 mb-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="w-3 h-3 rounded-full transition-all" style={{ background: i < pin.length ? '#006D77' : '#E2E8F0', transform: i < pin.length ? 'scale(1.2)' : 'scale(1)' }} />
-                ))}
+              {mode === 'register' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Prénom</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text" value={firstName} onChange={e => setFirstName(e.target.value)}
+                        placeholder="Sem" className="w-full rounded-xl pl-9 pr-3 py-2 text-xs border border-[#E2E8F0] outline-none text-[#0F172A]"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-500 mb-1">Nom</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text" value={lastName} onChange={e => setLastName(e.target.value)}
+                        placeholder="M'VOUAMA" className="w-full rounded-xl pl-9 pr-3 py-2 text-xs border border-[#E2E8F0] outline-none text-[#0F172A]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-500 mb-1">Adresse e-mail</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                  <input
+                    type="email" value={email} onChange={e => setEmail(e.target.value)}
+                    placeholder="name@domain.com" className="w-full rounded-xl pl-9 pr-3 py-2.5 text-xs border border-[#E2E8F0] outline-none text-[#0F172A]"
+                    required
+                  />
+                </div>
               </div>
 
-              {error && <p className="text-xs mb-3" style={{ color: '#B05B3B' }}>{error}</p>}
+              {mode === 'register' && (
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-500 mb-1">Téléphone (Optionnel)</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                    <input
+                      type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                      placeholder="+33 6 12 34 56 78" className="w-full rounded-xl pl-9 pr-3 py-2.5 text-xs border border-[#E2E8F0] outline-none text-[#0F172A]"
+                    />
+                  </div>
+                </div>
+              )}
 
-              <button
-                onClick={handlePinLogin}
-                disabled={isLoading || pin.length < 4}
-                className="w-full py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2"
-                style={{
-                  background: pin.length < 4 ? '#CBD5E1' : 'linear-gradient(135deg, #006D77, #0D9488)',
-                  color: 'white',
-                  fontWeight: 600,
-                  cursor: pin.length < 4 ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white" style={{ animation: 'spin 0.8s linear infinite' }} />
-                    Connexion en cours…
-                  </>
-                ) : 'Se connecter'}
-              </button>
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-500 mb-1">Mot de passe</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                  <input
+                    type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••" className="w-full rounded-xl pl-9 pr-10 py-2.5 text-xs border border-[#E2E8F0] outline-none text-[#0F172A]"
+                    required
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-gray-400">
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {mode === 'register' && password.length > 0 && !isPasswordRobust(password) && (
+                  <p className="text-[10px] text-red-500 mt-1 font-medium leading-relaxed">
+                    Exigence : Min. 8 caractères, 1 Majuscule, 1 Chiffre.
+                  </p>
+                )}
+              </div>
 
-              <button className="text-center text-xs mt-4" style={{ color: '#006D77' }}>
-                Code PIN oublié ?
-              </button>
-            </div>
+              {error && <p className="text-[11px] text-red-500 font-semibold">{error}</p>}
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button" onClick={() => { setStep('welcome'); setError(''); }}
+                  className="flex-1 py-3 text-xs font-bold rounded-xl border-2 border-gray-300 text-gray-500"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit" disabled={!isFormValid || isLoading}
+                  className="flex-[2] py-3 text-xs font-bold text-white rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:bg-gray-300"
+                  style={{ background: isFormValid ? 'linear-gradient(135deg, #006D77, #0D9488)' : '#CBD5E1' }}
+                >
+                  {isLoading ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  ) : (
+                    <>
+                      <span>{mode === 'login' ? 'Se connecter' : 'Valider inscription'}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           )}
         </div>
       </div>
 
-      <p className="relative z-10 text-center text-xs pb-6" style={{ color: 'rgba(255,255,255,0.5)' }}>
+      <p className="relative z-10 text-center text-[10px] pb-6" style={{ color: 'rgba(255,255,255,0.4)' }}>
         KAURI · Fondé par Laura Monlouis-Bonnaire
       </p>
 
