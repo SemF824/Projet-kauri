@@ -2,7 +2,7 @@ import { ArrowLeft, Globe, Users, Calendar, Euro, Shuffle, ShieldCheck, ChevronD
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
 import { useDarkMode } from '../../contexts/DarkModeContext';
-import { SERVER_URL, authHeaders } from '../../../utils/supabase';
+import { getSupabase } from '../../../utils/supabase';
 import { toast } from 'sonner';
 
 const GOLD = '#D4AF37';
@@ -112,34 +112,55 @@ export function CreerTontinePubliqueScreen() {
   const handleCreate = async () => {
     if (!isValid || isSubmitting) return;
     setIsSubmitting(true);
+    
     try {
-      const headers = await authHeaders();
-      const res = await fetch(`${SERVER_URL}/tontines`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
+      const supabase = getSupabase();
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) throw new Error("Session introuvable. Reconnectez-vous.");
+
+      // 1. Insertion de la Tontine Publique avec contraintes de confiance
+      const { data: newTontine, error: tontineError } = await supabase
+        .from('tontines')
+        .insert({
+          creator_id: user.id,
           name: nom,
-          description,
-          contribution: Number(cotisation),
+          description: description || null,
+          contribution_amount: Number(cotisation),
           frequency: frequence,
-          maxMembers: Number(maxMembres),
-          duration: Number(duree),
-          startDate: dateDebut,
-          orderType: ordre,
+          max_members: Number(maxMembres),
+          duration_months: Number(duree),
+          start_date: dateDebut,
+          order_type: ordre,
           category: categorie,
-          minTrustScore: Number(trustMin),
-          type: 'public',
-        }),
-      });
-      if (res.ok) {
-        toast.success('Tontine publique créée !');
-        navigate('/kauri/mes-tontines');
-      } else {
-        const data = await res.json();
-        toast.error(data.error || 'Erreur lors de la création');
-      }
-    } catch {
-      toast.error('Erreur de connexion');
+          min_trust_score: Number(trustMin),
+          type: 'publique',
+          status: 'en_attente',
+          current_round: 0,
+          total_rounds: Number(maxMembres)
+        })
+        .select()
+        .single();
+
+      if (tontineError) throw tontineError;
+
+      // 2. Enregistrement automatique de l'admin
+      const { error: memberError } = await supabase
+        .from('tontine_members')
+        .insert({
+          tontine_id: newTontine.id,
+          user_id: user.id,
+          role: 'admin',
+          payout_order: 1
+        });
+
+      if (memberError) throw memberError;
+
+      toast.success('Tontine publique créée !');
+      navigate('/kauri/mes-tontines');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Erreur Supabase');
     } finally {
       setIsSubmitting(false);
     }
@@ -147,7 +168,6 @@ export function CreerTontinePubliqueScreen() {
 
   return (
     <div className="min-h-screen pb-10" style={{ backgroundColor: bg }}>
-
       {/* Header */}
       <div
         className="px-5 pt-14 pb-6 shadow-xl"
@@ -169,7 +189,6 @@ export function CreerTontinePubliqueScreen() {
       </div>
 
       <div className="px-5 pt-5 space-y-4">
-
         {/* Infos générales */}
         <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: cardBg, border: `1.5px solid ${border}` }}>
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: GOLD }}>Informations générales</p>
@@ -195,7 +214,7 @@ export function CreerTontinePubliqueScreen() {
                 <button
                   key={cat.value}
                   onClick={() => setCategorie(cat.value)}
-                  className="flex flex-col items-center py-3 rounded-xl text-xs font-medium transition-all"
+                  className="flex flex-col items-center py-3 rounded-xl text-xs font-medium transition-all cursor-pointer"
                   style={{
                     backgroundColor: categorie === cat.value ? `${GOLD}20` : inputBg,
                     border: `1.5px solid ${categorie === cat.value ? GOLD : border}`,
@@ -335,7 +354,7 @@ export function CreerTontinePubliqueScreen() {
         <button
           disabled={!isValid || isSubmitting}
           onClick={handleCreate}
-          className="w-full py-4 rounded-2xl text-white text-sm font-bold shadow-lg transition-opacity flex items-center justify-center gap-2"
+          className="w-full py-4 rounded-2xl text-white text-sm font-bold shadow-lg transition-opacity flex items-center justify-center gap-2 cursor-pointer"
           style={{
             background: isValid ? `linear-gradient(135deg, #B8860B, ${GOLD})` : '#CBD5E1',
             boxShadow: isValid ? `0 4px 16px ${GOLD}44` : 'none',
@@ -344,12 +363,11 @@ export function CreerTontinePubliqueScreen() {
         >
           {isSubmitting ? (
             <>
-              <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white" style={{ animation: 'spin 0.8s linear infinite' }} />
+              <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white安全 animate-spin" />
               Création…
             </>
           ) : 'Créer ma tontine publique'}
         </button>
-        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
         <p className="text-center text-xs pb-4" style={{ color: textSec }}>
           Votre tontine sera visible par tous les membres KAURI ayant le Trust Score requis.
