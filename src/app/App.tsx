@@ -2,12 +2,18 @@ import { RouterProvider } from 'react-router';
 import { Toaster } from 'sonner';
 import { router } from './routes';
 import { DarkModeProvider } from './contexts/DarkModeContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProDataProvider } from './contexts/ProDataContext';
+import { ProPublicationsProvider } from './contexts/ProPublicationsContext';
 
 export default function App() {
   return (
-    <DarkModeProvider>
-      <RouterProvider router={router} />
-      <Toaster
+    <AuthProvider>
+      <ProDataProvider>
+      <ProPublicationsProvider>
+      <DarkModeProvider>
+        <RouterProvider router={router} />
+        <Toaster
         position="bottom-center"
         toastOptions={{
           style: {
@@ -24,7 +30,10 @@ export default function App() {
             fontWeight: 700,
           },
         }}
-      />
-    </DarkModeProvider>
+        />
+        </DarkModeProvider>
+      </ProPublicationsProvider>
+      </ProDataProvider>
+    </AuthProvider>
   );
 }
