@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
-import { getSupabase, SERVER_URL, authHeaders, pinToPassword } from '../../utils/supabase';
+import { getSupabase, pinToPassword } from '../../utils/supabase';
 
 export interface KauriUserProfile {
   id: string;
@@ -28,20 +28,20 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// Build a minimal profile from Supabase user_metadata so the UI never shows "Vous"
-function profileFromMeta(user: User): KauriUserProfile {
+// Construit un profil de secours si la table de la base de données est en cours de synchronisation
+function profileFromMeta(user: User, dbProfile: any = null): KauriUserProfile {
   const m = user.user_metadata ?? {};
   return {
     id: user.id,
-    phone: m.phone ?? '',
-    firstName: m.firstName ?? m.full_name?.split(' ')[0] ?? 'Utilisateur',
-    lastName: m.lastName ?? m.full_name?.split(' ').slice(1).join(' ') ?? '',
-    accountType: m.accountType ?? 'particulier',
-    businessName: m.businessName,
-    trustScore: 3.5,
-    balance: 0,
+    phone: dbProfile?.phone_number ?? m.phone ?? '',
+    firstName: dbProfile?.full_name?.split(' ')[0] ?? m.firstName ?? m.full_name?.split(' ')[0] ?? 'Utilisateur',
+    lastName: dbProfile?.full_name?.split(' ').slice(1).join(' ') ?? m.lastName ?? m.full_name?.split(' ').slice(1).join(' ') ?? '',
+    accountType: dbProfile?.account_type ?? m.accountType ?? 'particulier',
+    businessName: dbProfile?.business_name ?? m.businessName,
+    trustScore: dbProfile?.trust_score ? Number(dbProfile.trust_score) : 100,
+    balance: dbProfile?.balance ? Number(dbProfile.balance) : 0,
     currency: 'EUR',
-    kycCompleted: false,
+    kycCompleted: dbProfile?.kyc_completed ?? false,
     createdAt: user.created_at ?? new Date().toISOString(),
   };
 }
@@ -52,42 +52,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<KauriUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (accessToken: string, fallbackUser?: User) => {
+  const fetchProfile = async (currentUser: User) => {
     try {
-      const res = await fetch(`${SERVER_URL}/user/profile`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        // Merge: prefer KV data but fill blanks from metadata
-        if (fallbackUser && (!data.firstName || data.firstName === 'Utilisateur')) {
-          const meta = profileFromMeta(fallbackUser);
-          setProfile({ ...meta, ...data, firstName: data.firstName || meta.firstName, lastName: data.lastName || meta.lastName });
-        } else {
-          setProfile(data);
-        }
-      } else if (fallbackUser) {
-        // KV fetch failed — use metadata profile so name is always shown
-        setProfile(profileFromMeta(fallbackUser));
+      const supabase = getSupabase();
+      
+      // Requête directe PostgreSQL protégée par RLS
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setProfile(profileFromMeta(currentUser, data));
+      } else {
+        setProfile(profileFromMeta(currentUser));
       }
     } catch (e) {
-      console.error('Failed to fetch profile:', e);
-      if (fallbackUser) setProfile(profileFromMeta(fallbackUser));
+      console.error('Failed to fetch profile from PostgreSQL:', e);
+      setProfile(profileFromMeta(currentUser));
     }
   };
 
   useEffect(() => {
     const supabase = getSupabase();
+    
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        // Show metadata-based profile immediately, then enrich from KV
-        setProfile(profileFromMeta(session.user));
-        fetchProfile(session.access_token, session.user).finally(() => setLoading(false));
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        fetchProfile(currentUser).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
@@ -95,10 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        setProfile(profileFromMeta(session.user)); // immediate
-        fetchProfile(session.access_token, session.user);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        fetchProfile(currentUser);
       } else {
         setProfile(null);
       }
@@ -116,41 +113,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    // Account doesn't exist yet — create it then sign in
+    // Inscription automatique si premier Onboarding
     if (error && error.message.toLowerCase().includes('invalid login credentials')) {
-      const { error: signUpError } = await supabase.auth.signUp({ email, password });
+      const { error: signUpError } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            full_name: 'Nouvel Utilisateur',
+            phone: normalized
+          }
+        }
+      });
       if (signUpError) throw new Error(signUpError.message);
+      
       const retry = await supabase.auth.signInWithPassword({ email, password });
       data = retry.data;
       error = retry.error;
     }
 
     if (error) throw new Error(error.message);
-    if (data.user) setProfile(profileFromMeta(data.user));
-    if (data.session?.access_token) {
-      await fetchProfile(data.session.access_token, data.user ?? undefined);
+    
+    if (data.user) {
+      setUser(data.user);
+      await fetchProfile(data.user);
     }
   };
 
   const signOut = async () => {
     const supabase = getSupabase();
     await supabase.auth.signOut();
+    setUser(null);
     setProfile(null);
     localStorage.removeItem('kauri_account_type');
   };
 
   const refreshProfile = async () => {
-    const headers = await authHeaders();
-    const res = await fetch(`${SERVER_URL}/user/profile`, { headers });
-    if (res.ok) {
-      const data = await res.json();
-      setProfile(prev => {
-        // Keep the metadata-derived firstName if KV returns a blank
-        if (prev && (!data.firstName || data.firstName === 'Utilisateur') && prev.firstName) {
-          return { ...data, firstName: prev.firstName, lastName: prev.lastName };
-        }
-        return data;
-      });
+    if (user) {
+      await fetchProfile(user);
     }
   };
 
