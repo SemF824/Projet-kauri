@@ -20,7 +20,8 @@ type Method = 'app' | 'sms' | null;
 export function Setup2FAScreen() {
   const navigate = useNavigate();
   
-  const { user, profile, refreshProfile } = useAuth();
+  // Récupération de l'état de chargement 'loading' de la session globale
+  const { user, profile, refreshProfile, loading: authContextLoading } = useAuth();
   
   const [step, setStep] = useState<Step>('intro');
   const [method, setMethod] = useState<Method>(null);
@@ -38,11 +39,13 @@ export function Setup2FAScreen() {
   
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Garde-fou strict : Redirection uniquement si le contexte a fini de charger et qu'aucun utilisateur n'existe
   useEffect(() => {
-    if (!user) {
+    if (!authContextLoading && !user) {
+      toast.error("Session expirée. Veuillez vous reconnecter.");
       navigate('/kauri/login');
     }
-  }, [user, navigate]);
+  }, [user, authContextLoading, navigate]);
 
   useEffect(() => {
     if (step === 'verify') {
@@ -55,6 +58,12 @@ export function Setup2FAScreen() {
     setMethod(selectedMethod);
     if (selectedMethod === 'sms') {
       setStep('setup');
+      return;
+    }
+
+    // 🎯 Blindage : Si la session n'est pas encore prête, on bloque pour éviter la 403
+    if (!user) {
+      toast.error("Session introuvable. Veuillez patienter ou vous reconnecter.");
       return;
     }
 
@@ -99,7 +108,7 @@ export function Setup2FAScreen() {
     if (!val && idx > 0) inputRefs.current[idx - 1]?.focus();
   }
 
-  // Vérification cryptographique finale auprès de Supabase via la méthode officielle .verify()
+  // Vérification cryptographique finale auprès de Supabase
   async function verifyCode() {
     const fullCode = code.join('');
     if (fullCode.length < 6) return;
@@ -110,11 +119,9 @@ export function Setup2FAScreen() {
     try {
       const supabase = getSupabase();
 
-      // 🎯 Correction de l'API Supabase : On appelle .verify() pour valider le code de Google Authenticator
       const { data: verifyData, error: verifyError } = await supabase.auth.mfa.verify({
         factorId: factorId,
         code: fullCode,
-        challengeId: undefined // Optionnel en TOTP, Supabase le gère automatiquement en interne
       });
 
       if (verifyError) throw verifyError;
@@ -145,6 +152,18 @@ export function Setup2FAScreen() {
     navigator.clipboard.writeText(recoveryCodes.join('\n')).catch(() => null);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  // Écran d'attente pendant la réhydratation asynchrone du AuthContext
+  if (authContextLoading) {
+    return (
+      <div style={{ minHeight: '100dvh', background: BG, maxWidth: 430, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <RefreshCw size={32} className="animate-spin" style={{ color: TEAL }} />
+          <p style={{ color: TEXT_S, fontSize: 13, fontStyle: 'italic' }}>Sécurisation du canal d'accès...</p>
+        </div>
+      </div>
+    );
   }
 
   const titleByStep: Record<Step, string> = {
@@ -356,7 +375,7 @@ export function Setup2FAScreen() {
               <span style={{ fontSize: 32 }}>🔑</span>
             </div>
 
-            <h3 style={{ color: TEXT_P, fontSize: 20, fontWeight: 800, textAlign: 'center', margin: '0 0 8px' }}>Entrez le code</h3>
+            <h3 style={{ color: TEXT_P, fontSize: 20, fontweight: 800, textAlign: 'center', margin: '0 0 8px' }}>Entrez le code</h3>
             <p style={{ color: TEXT_S, fontSize: 13, textAlign: 'center', margin: '0 0 32px', lineHeight: 1.5 }}>
               Saisissez le code à 6 chiffres pour valider l'association.
             </p>
