@@ -38,7 +38,6 @@ export function Setup2FAScreen() {
   
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Redirection stricte si aucun utilisateur n'est connecté au niveau du contexte global
   useEffect(() => {
     if (!authContextLoading && !user) {
       toast.error("Session expirée. Veuillez vous reconnecter.");
@@ -52,7 +51,7 @@ export function Setup2FAScreen() {
     }
   }, [step]);
 
-  // Initialisation de la double authentification (MFA Enroll)
+  // Initialisation et nettoyage défensif de la double authentification
   const handleStartSetup = async (selectedMethod: Method) => {
     setMethod(selectedMethod);
     if (selectedMethod === 'sms') {
@@ -64,18 +63,41 @@ export function Setup2FAScreen() {
     try {
       const supabase = getSupabase();
       
-      // 🎯 FORCE RE-SYNC : On demande à l'instance Supabase de rafraîchir son jeton d'accès en cache local
+      // Force le rafraîchissement de la session locale pour parer aux pertes de jetons
       const { data: sessionData } = await supabase.auth.getSession();
-      
       if (!sessionData?.session) {
-        throw new Error("Jeton d'authentification manquant sur le client Supabase local.");
+        throw new Error("Jeton de session introuvable sur le client d'authentification.");
       }
 
-      // Lancement de l'enrôlement avec une session active validée
+      const friendlyNameTarget = user?.email || 'Compte Kauri';
+
+      // 🎯 ÉTAPE DE BLINDAGE : On liste les facteurs existants pour éliminer les doublons unverified (Erreur 422)
+      const { data: factorList, error: listError } = await supabase.auth.mfa.listFactors();
+      
+      if (!listError && factorList?.all) {
+        // Recherche d'un facteur préexistant qui porte le même nom
+        const existingConflictingFactor = factorList.all.find(
+          (f) => f.friendlyName === friendlyNameTarget
+        );
+
+        if (existingConflictingFactor) {
+          if (existingConflictingFactor.status === 'verified') {
+            toast.info("La double authentification est déjà active sur ce compte.");
+            setStep('success');
+            setVerifying(false);
+            return;
+          } else {
+            // Si le facteur existe mais n'est pas vérifié (le cas de ta 422), on le révoque instantanément
+            await supabase.auth.mfa.unenroll({ factorId: existingConflictingFactor.id });
+          }
+        }
+      }
+
+      // Lancement de l'enrôlement sur un canal Supabase totalement purgé
       const { data, error: enrollError } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
         issuer: 'KAURI Fintech',
-        friendlyName: user?.email || 'Compte Kauri'
+        friendlyName: friendlyNameTarget
       });
 
       if (enrollError) throw enrollError;
@@ -109,7 +131,7 @@ export function Setup2FAScreen() {
     if (!val && idx > 0) inputRefs.current[idx - 1]?.focus();
   }
 
-  // Vérification cryptographique finale auprès de Supabase
+  // Saisie et vérification finale du TOTP
   async function verifyCode() {
     const fullCode = code.join('');
     if (fullCode.length < 6) return;
@@ -120,14 +142,14 @@ export function Setup2FAScreen() {
     try {
       const supabase = getSupabase();
 
-      const { data: verifyData, error: verifyError } = await supabase.auth.mfa.verify({
+      const { error: verifyError } = await supabase.auth.mfa.verify({
         factorId: factorId,
         code: fullCode,
       });
 
       if (verifyError) throw verifyError;
 
-      // Génération des codes de secours locaux
+      // Génération sécurisée des codes de secours
       setRecoveryCodes([
         'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
         'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
@@ -155,7 +177,6 @@ export function Setup2FAScreen() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  // Écran d'attente pendant la réhydratation asynchrone du AuthContext
   if (authContextLoading) {
     return (
       <div style={{ minHeight: '100dvh', background: BG, maxWidth: 430, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
