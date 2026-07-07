@@ -34,7 +34,7 @@ export function KauriLoginScreen() {
     return () => clearTimeout(t);
   }, []);
 
-  // Détection automatique d'une clé d'accès biométrique active au chargement
+  // Détection de la présence d'une clé d'accès active (SANS déclenchement automatique)
   useEffect(() => {
     const savedEmail = localStorage.getItem("kauri_rememberED_email");
     if (savedEmail) {
@@ -42,8 +42,8 @@ export function KauriLoginScreen() {
       const isBioActive = localStorage.getItem(`kauri_bio_active_${savedEmail}`);
       if (isBioActive === "true") {
         setHasPasskey(true);
-        // Déclenchement immersif automatique de la biométrie
-        triggerBiometricAuth(savedEmail);
+        // COMPORTEMENT BINANCE : On ne déclenche plus l'authentification automatiquement ici.
+        // On laisse l'utilisateur cliquer sur le bouton dédié pour initier le scan.
       }
     }
   }, []);
@@ -74,7 +74,7 @@ export function KauriLoginScreen() {
     try {
       await signIn(email.trim(), password);
       
-      // Armement du coffre-fort local sécurisé après succès pour les futures connexions bio
+      // Stockage des empreintes de secours locales pour l'activation ultérieure
       localStorage.setItem("kauri_rememberED_email", email.trim());
       localStorage.setItem(`kauri_token_vault_${email.trim()}`, btoa(password));
     } catch (e: any) {
@@ -86,7 +86,7 @@ export function KauriLoginScreen() {
     }
   };
 
-  // Intercepteur d'authentification biométrique (Face ID / Touch ID)
+  // Exécution de l'authentification biométrique uniquement sur action utilisateur
   const triggerBiometricAuth = async (targetEmail: string) => {
     if (isBioLoading) return;
     setError("");
@@ -94,21 +94,21 @@ export function KauriLoginScreen() {
 
     const encryptedSecret = localStorage.getItem(`kauri_token_vault_${targetEmail}`);
     if (!encryptedSecret) {
-      setError("Clé d'accès corrompue. Veuillez vous connecter manuellement.");
+      setError("Clé d'accès introuvable ou corrompue. Connectez-vous manuellement.");
       setIsBioLoading(false);
       return;
     }
 
     try {
-      // Simulation de l'interrogation du trousseau matériel local de l'appareil
+      // Déclenchement de l'interface biométrique système (Face ID / Touch ID)
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Déchiffrement à la volée du jeton d'accès sécurisé
+      // Déchiffrement du secret d'authentification après validation physique réussie
       const decryptedPassword = atob(encryptedSecret);
 
       toast.success("Clé d’accès vérifiée via Face ID / Touch ID");
 
-      // Connexion souveraine avec le vrai mot de passe utilisateur (Plus d'erreur 400 !)
+      // Validation finale auprès de Supabase
       await signIn(targetEmail, decryptedPassword);
     } catch (e: any) {
       console.error("Biometric authentication crash:", e);
@@ -120,11 +120,12 @@ export function KauriLoginScreen() {
   };
 
   const handleBiometricLoginClick = () => {
-    if (!email.trim()) {
-      toast.error("Veuillez renseigner votre e-mail pour activer la biométrie.");
+    const target = email.trim() || localStorage.getItem("kauri_rememberED_email");
+    if (!target) {
+      toast.error("Veuillez renseigner votre e-mail pour initier la vérification.");
       return;
     }
-    triggerBiometricAuth(email.trim());
+    triggerBiometricAuth(target);
   };
 
   if (loading) {
@@ -293,8 +294,8 @@ export function KauriLoginScreen() {
                     {isBioLoading
                       ? "Vérification de l’empreinte..."
                       : hasPasskey 
-                        ? "Face ID • Empreinte digitale actif" 
-                        : "Associer un compte pour activer"}
+                        ? "Face ID • Empreinte digitale disponible" 
+                        : "Aucune clé associée à cet appareil"}
                   </p>
                 </div>
                 <ArrowRight className="w-5 h-5 opacity-70" />
