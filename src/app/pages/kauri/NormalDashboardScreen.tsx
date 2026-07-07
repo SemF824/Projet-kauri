@@ -1,29 +1,22 @@
 import { Eye, EyeOff, Users, Wallet, Bell, User, RefreshCcw, TrendingUp, LogOut, WifiOff, Moon, Sun, Compass, Flame, Crown, CheckCircle, Leaf, Home } from 'lucide-react';
-import kauriLogo from '../../../imports/image-9.png';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useDarkMode } from '../../contexts/DarkModeContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { SERVER_URL, authHeaders } from '../../../utils/supabase';
+import { getSupabase } from '../../../utils/supabase';
 
 // ── Custom social icon: planet + interconnected people ───────────────────────
 function SocialIcon({ color, size = 22 }: { color: string; size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* Globe */}
       <circle cx="12" cy="12" r="9.5" stroke={color} strokeWidth="1.6" />
-      {/* Latitude arc */}
       <path d="M3 12 Q7 9.5 12 9.5 Q17 9.5 21 12" stroke={color} strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.5" />
-      {/* Left person */}
       <circle cx="7" cy="10.5" r="1.1" fill={color} />
       <path d="M5.8 13.5 Q7 12.5 8.2 13.5" stroke={color} strokeWidth="1.1" strokeLinecap="round" fill="none" />
-      {/* Right person */}
       <circle cx="17" cy="10.5" r="1.1" fill={color} />
       <path d="M15.8 13.5 Q17 12.5 18.2 13.5" stroke={color} strokeWidth="1.1" strokeLinecap="round" fill="none" />
-      {/* Top person */}
       <circle cx="12" cy="6.5" r="1.1" fill={color} />
       <path d="M10.8 9.5 Q12 8.5 13.2 9.5" stroke={color} strokeWidth="1.1" strokeLinecap="round" fill="none" />
-      {/* Connection lines */}
       <line x1="8" y1="11" x2="11" y2="7.5" stroke={color} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />
       <line x1="16" y1="11" x2="13" y2="7.5" stroke={color} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />
       <line x1="8.5" y1="12" x2="15.5" y2="12" stroke={color} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />
@@ -40,17 +33,17 @@ function KauriBottomNav({ active, isDarkMode, navigate }: { active: NavTab; isDa
   const border = isDarkMode ? '#334155' : '#E8EDF2';
   const inactive = isDarkMode ? '#475569' : '#94A3B8';
 
-  const tabs: { id: NavTab; icon: React.ElementType; label: string; path?: string; isCenter?: boolean }[] = [
-    { id: 'accueil',        icon: Home,              label: 'Accueil',       path: '/kauri/normal-dashboard'   },
-    { id: 'investissement', icon: Wallet,             label: 'Investissement',path: '/kauri/investissement'     },
-    { id: 'kauri',          icon: Leaf,              label: 'Kauri',         path: '/kauri/tontines-actives', isCenter: true },
-    { id: 'social',         icon: null,              label: 'Social',        path: '/kauri/social-hub-gateway' },
-    { id: 'profil',         icon: User,              label: 'Profil',        path: '/kauri/profil-particulier' },
+  const tabs: { id: NavTab; icon: React.ElementType | null; label: string; path?: string; isCenter?: boolean }[] = [
+    { id: 'accueil',        icon: Home,              label: 'Accueil',        path: '/kauri/normal-dashboard'   },
+    { id: 'investissement', icon: Wallet,            label: 'Investissement', path: '/kauri/investissement'     },
+    { id: 'kauri',          icon: Leaf,              label: 'Kauri',          path: '/kauri/tontines-actives', isCenter: true },
+    { id: 'social',         icon: null,              label: 'Social',         path: '/kauri/social-hub-gateway' },
+    { id: 'profil',         icon: User,              label: 'Profil',         path: '/kauri/profil-particulier' },
   ];
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 max-w-md mx-auto"
+      className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50"
       style={{ backgroundColor: bg, borderTop: `1px solid ${border}`, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-end justify-around px-2 pt-1.5 pb-3">
@@ -64,6 +57,7 @@ function KauriBottomNav({ active, isDarkMode, navigate }: { active: NavTab; isDa
                 key={tab.id}
                 onClick={() => tab.path && navigate(tab.path)}
                 aria-label="Kauri"
+                className="cursor-pointer"
                 style={{
                   width: 56, height: 56, borderRadius: '50%',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -78,8 +72,8 @@ function KauriBottomNav({ active, isDarkMode, navigate }: { active: NavTab; isDa
                 }}
               >
                 <svg viewBox="0 0 100 100" style={{ width: 28, height: 28, color: '#fff' }}>
-                    <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
-                  </svg>
+                  <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
+                </svg>
               </button>
             );
           }
@@ -89,13 +83,12 @@ function KauriBottomNav({ active, isDarkMode, navigate }: { active: NavTab; isDa
               key={tab.id}
               onClick={() => tab.path && navigate(tab.path)}
               aria-label={tab.label}
-              className="flex flex-col items-center gap-0.5 relative"
+              className="flex flex-col items-center gap-0.5 relative cursor-pointer"
               style={{ minWidth: 44, paddingTop: 6, paddingBottom: 2 }}
             >
               {tab.id === 'social'
                 ? <SocialIcon color={isActive ? TEAL : inactive} size={22} />
-                : Icon && <Icon style={{ width: 22, height: 22, color: isActive ? TEAL : inactive, strokeWidth: isActive ? 2.2 : 1.8, transition: 'color 0.15s' }} />
-              }
+                : Icon && <Icon style={{ width: 22, height: 22, color: isActive ? TEAL : inactive, strokeWidth: isActive ? 2.2 : 1.8, transition: 'color 0.15s' }} />}
               <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 400, color: isActive ? TEAL : inactive, transition: 'color 0.15s' }}>
                 {tab.label}
               </span>
@@ -114,43 +107,62 @@ export function NormalDashboardScreen() {
   const navigate = useNavigate();
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  const { isDarkMode, toggleDarkMode, resetDarkMode } = useDarkMode();
-  const { profile, signOut, refreshProfile } = useAuth();
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
+  const { profile, user, refreshProfile } = useAuth();
   const [tontinesCount, setTontinesCount] = useState<number | null>(null);
   const [investmentsCount, setInvestmentsCount] = useState<number | null>(null);
 
-  const trustScore = Math.round((profile?.trustScore ?? 3.5) * (100 / 5));
+  // Correction chirurgicale : trustScore lu directement sur l'échelle 0-100 réelle de PostgreSQL
+  const trustScore = profile?.trustScore !== undefined ? Math.round(profile.trustScore) : 100;
   const paymentStreak = 6;
   const userStatus = trustScore >= 80 ? 'Membre Émérite' : trustScore >= 60 ? 'Membre Actif' : 'Nouveau Membre';
   const firstName = profile?.firstName ?? 'Vous';
   const balance = profile?.balance ?? 0;
   const initials = profile ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase() : 'KA';
 
+  // Calcul du cercle de progression pour Trust Score (Rayon = 28)
+  const circumference = 2 * Math.PI * 28;
+  const strokeDashoffset = circumference - (trustScore / 100) * circumference;
+
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); };
+    return () => { 
+      window.removeEventListener('online', handleOnline); 
+      window.removeEventListener('offline', handleOffline); 
+    };
   }, []);
 
   useEffect(() => {
     refreshProfile();
-    authHeaders().then(headers => {
-      fetch(`${SERVER_URL}/tontines`, { headers }).then(r => r.ok ? r.json() : []).then((data: any[]) => setTontinesCount(data.length)).catch(() => setTontinesCount(0));
-      fetch(`${SERVER_URL}/user/investments`, { headers }).then(r => r.ok ? r.json() : []).then((data: any[]) => setInvestmentsCount(data.length)).catch(() => setInvestmentsCount(0));
-    });
-  }, []);
+    const fetchCounts = async () => {
+      if (!user) return;
+      try {
+        const supabase = getSupabase();
+        
+        // Requête Supabase native pour le nombre de tontines rejointes
+        const { count: tCount, error: tError } = await supabase
+          .from('tontine_members')
+          .select('tontine_id', { count: 'exact', head: true })
+          .eq('user_id', user.id);
 
-  const handleLogout = async () => {
-    resetDarkMode();
-    await signOut();
-    navigate('/kauri/login');
-  };
+        if (!tError && tCount !== null) setTontinesCount(tCount);
 
-  // Calcul du cercle de progression pour Trust Score
-  const circumference = 2 * Math.PI * 45;
-  const strokeDashoffset = circumference - (trustScore / 100) * circumference;
+        // Requête Supabase native pour le nombre d'investissements
+        const { count: iCount, error: iError } = await supabase
+          .from('investments')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        if (!iError && iCount !== null) setInvestmentsCount(iCount);
+      } catch (err) {
+        console.error('Erreur synchronisation compteurs dashboard:', err);
+      }
+    };
+    fetchCounts();
+  }, [user]);
 
   return (
     <div className={`min-h-screen pb-24 transition-colors ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#F9F9F9]'}`}>
@@ -173,14 +185,14 @@ export function NormalDashboardScreen() {
             </div>
             <button
               onClick={toggleDarkMode}
-              className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
+              className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center cursor-pointer"
               title={isDarkMode ? 'Mode Clair' : 'Mode Sombre'}
             >
               {isDarkMode ? <Sun className="w-5 h-5 text-white" /> : <Moon className="w-5 h-5 text-white" />}
             </button>
             <button
               onClick={() => navigate('/kauri/notifications')}
-              className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
+              className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center cursor-pointer"
             >
               <Bell className="w-5 h-5 text-white" />
             </button>
@@ -190,7 +202,7 @@ export function NormalDashboardScreen() {
         {/* Trust Score & Streak compacts */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           {/* Trust Score */}
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-3 border border-white/20">
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-3 border border-white/20 cursor-pointer" onClick={() => navigate('/kauri/trust-score-intro')}>
             <div className="flex items-center gap-3">
               <div className="relative w-16 h-16 flex-shrink-0">
                 <svg className="w-full h-full -rotate-90">
@@ -243,7 +255,7 @@ export function NormalDashboardScreen() {
             <span className="text-[#E0F2FE] text-sm">Solde total</span>
             <button
               onClick={() => setBalanceVisible(!balanceVisible)}
-              className="text-white"
+              className="text-white cursor-pointer"
             >
               {balanceVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             </button>
@@ -254,13 +266,13 @@ export function NormalDashboardScreen() {
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => navigate('/kauri/portefeuille')}
-              className="bg-white text-[#006D77] py-3 rounded-xl text-sm font-medium"
+              className="bg-white text-[#006D77] py-3 rounded-xl text-sm font-medium cursor-pointer transition-transform active:scale-98"
             >
               Détails
             </button>
             <button
               onClick={() => navigate('/kauri/send-money')}
-              className="bg-[#D4AF37] text-white py-3 rounded-xl text-sm font-medium"
+              className="bg-[#D4AF37] text-white py-3 rounded-xl text-sm font-medium cursor-pointer transition-transform active:scale-98"
             >
               Envoyer
             </button>
@@ -268,7 +280,7 @@ export function NormalDashboardScreen() {
         </div>
 
         {/* Avantage Elite */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-[#D4AF37]/30">
+        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-[#D4AF37]/30 mt-3">
           <div className="flex items-start gap-3">
             <CheckCircle className="w-5 h-5 text-[#D4AF37] flex-shrink-0 mt-0.5" />
             <div>
@@ -299,39 +311,39 @@ export function NormalDashboardScreen() {
 
       <div className="px-6 py-6 space-y-6">
         <div>
-          <h3 className={`mb-4 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+          <h3 className={`mb-4 flex items-center gap-2 font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
             <div className="w-1 h-5 bg-[#D4AF37] rounded-full"></div>
             Tableau de bord
           </h3>
 
           <div className="grid grid-cols-2 gap-3 mb-3">
             <button
-              onClick={() => navigate('/kauri/tontines-actives')}
-              className={`rounded-xl p-4 text-center shadow-sm border hover:shadow-md transition-shadow ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}
+              onClick={() => navigate('/kauri/mes-tontines')}
+              className={`rounded-xl p-4 text-center shadow-sm border hover:shadow-md transition-shadow cursor-pointer ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}
             >
               <div className="w-12 h-12 mx-auto mb-2 bg-[#006D77]/10 rounded-xl flex items-center justify-center">
                 <Users className="w-6 h-6 text-[#006D77]" />
               </div>
               <p className={`text-xs ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Tontines</p>
-              <p className={`text-sm ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{tontinesCount !== null ? `${tontinesCount} active${tontinesCount !== 1 ? 's' : ''}` : '…'}</p>
+              <p className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{tontinesCount !== null ? `${tontinesCount} active${tontinesCount !== 1 ? 's' : ''}` : '…'}</p>
             </button>
 
             <button
-              onClick={() => navigate('/kauri/projets-impacts')}
-              className={`rounded-xl p-4 text-center shadow-sm border hover:shadow-md transition-shadow ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}
+              onClick={() => navigate('/kauri/mes-investissements')}
+              className={`rounded-xl p-4 text-center shadow-sm border hover:shadow-md transition-shadow cursor-pointer ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}
             >
               <div className="w-12 h-12 mx-auto mb-2 bg-[#D4AF37]/10 rounded-xl flex items-center justify-center">
                 <Leaf className="w-6 h-6 text-[#D4AF37]" />
               </div>
               <p className={`text-xs ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Projets</p>
-              <p className={`text-sm ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>d'impacts</p>
+              <p className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{investmentsCount !== null ? `${investmentsCount} actif${investmentsCount !== 1 ? 's' : ''}` : '…'}</p>
             </button>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => navigate('/kauri/historique-swaps')}
-              className={`rounded-xl p-4 text-center shadow-sm border hover:shadow-md transition-shadow ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}
+              className={`rounded-xl p-4 text-center shadow-sm border hover:shadow-md transition-shadow cursor-pointer ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}
             >
               <div className="w-12 h-12 mx-auto mb-2 bg-[#F59E0B]/10 rounded-xl flex items-center justify-center">
                 <RefreshCcw className="w-6 h-6 text-[#F59E0B]" />
@@ -342,7 +354,7 @@ export function NormalDashboardScreen() {
 
             <button
               onClick={() => navigate('/kauri/discover-circles')}
-              className={`rounded-xl p-4 text-center shadow-sm border hover:shadow-md transition-shadow ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}
+              className={`rounded-xl p-4 text-center shadow-sm border hover:shadow-md transition-shadow cursor-pointer ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}
             >
               <div className="w-12 h-12 mx-auto mb-2 bg-[#006D77]/10 rounded-xl flex items-center justify-center">
                 <Compass className="w-6 h-6 text-[#006D77]" />
@@ -354,7 +366,7 @@ export function NormalDashboardScreen() {
         </div>
 
         <div>
-          <h3 className={`mb-4 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+          <h3 className={`mb-4 flex items-center gap-2 font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
             <div className="w-1 h-5 bg-[#006D77] rounded-full"></div>
             Mes Tontines Privées
           </h3>
@@ -362,14 +374,14 @@ export function NormalDashboardScreen() {
           <div className="space-y-3">
             <div className={`rounded-xl p-4 shadow-md border ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}>
               <div className="flex items-center justify-between mb-3">
-                <h4 className={isDarkMode ? 'text-white' : 'text-[#0F172A]'}>Cercle Familial</h4>
-                <span className="px-3 py-1 bg-[#D1FAE5] text-[#006D77] text-xs rounded-full">
+                <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Cercle Familial</h4>
+                <span className="px-3 py-1 bg-[#D1FAE5] text-[#006D77] text-xs rounded-full font-bold">
                   Actif
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm mb-2">
                 <span className={isDarkMode ? 'text-[#94A3B8]' : 'text-[#64748B]'}>Prochain pot</span>
-                <span className={isDarkMode ? 'text-white' : 'text-[#0F172A]'}>500,00 €</span>
+                <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>500,00 €</span>
               </div>
               <div className={`h-2 rounded-full overflow-hidden ${isDarkMode ? 'bg-[#334155]' : 'bg-[#F1F5F9]'}`}>
                 <div className="h-full bg-gradient-to-r from-[#006D77] to-[#0D9488] w-4/5"></div>
@@ -378,15 +390,13 @@ export function NormalDashboardScreen() {
           </div>
         </div>
 
-
         <button
           onClick={() => navigate('/kauri/emergency-swap')}
-          className="w-full bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg"
+          className="w-full bg-gradient-to-r from-[#F59E0B] to-[#D97706] hover:from-[#D97706] hover:to-[#B45309] text-white py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-98 font-bold cursor-pointer"
         >
           <RefreshCcw className="w-5 h-5" />
           <span>Échanger ma position d'urgence</span>
         </button>
-
       </div>
 
       <KauriBottomNav active="accueil" isDarkMode={isDarkMode} navigate={navigate} />
