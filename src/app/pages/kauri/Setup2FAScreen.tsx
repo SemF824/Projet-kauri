@@ -20,7 +20,6 @@ type Method = 'app' | 'sms' | null;
 export function Setup2FAScreen() {
   const navigate = useNavigate();
   
-  // Correction chirurgicale : Extraction explicite de 'profile' pour alimenter les variables d'affichages
   const { user, profile, refreshProfile } = useAuth();
   
   const [step, setStep] = useState<Step>('intro');
@@ -100,7 +99,7 @@ export function Setup2FAScreen() {
     if (!val && idx > 0) inputRefs.current[idx - 1]?.focus();
   }
 
-  // Vérification cryptographique finale auprès de Supabase
+  // Vérification cryptographique finale auprès de Supabase via la méthode officielle .verify()
   async function verifyCode() {
     const fullCode = code.join('');
     if (fullCode.length < 6) return;
@@ -111,30 +110,23 @@ export function Setup2FAScreen() {
     try {
       const supabase = getSupabase();
 
-      // 1. Création du challenge matériel
-      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
-        factorId: factorId
-      });
-
-      if (challengeError) throw challengeError;
-
-      // 2. Vérification de la signature du jeton
-      const { error: verifyError } = await supabase.auth.mfa.challengeVerify({
+      // 🎯 Correction de l'API Supabase : On appelle .verify() pour valider le code de Google Authenticator
+      const { data: verifyData, error: verifyError } = await supabase.auth.mfa.verify({
         factorId: factorId,
-        challengeId: challengeData.id,
-        code: fullCode
+        code: fullCode,
+        challengeId: undefined // Optionnel en TOTP, Supabase le gère automatiquement en interne
       });
 
       if (verifyError) throw verifyError;
 
-      // 3. Génération des codes de secours adaptatifs locaux
+      // Génération des codes de secours locaux
       setRecoveryCodes([
-        'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
-        'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
-        'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
-        'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
-        'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
-        'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase()
+        'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
+        'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
+        'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
+        'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
+        'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
+        'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase()
       ]);
 
       await refreshProfile();
