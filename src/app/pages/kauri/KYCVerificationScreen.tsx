@@ -75,8 +75,12 @@ export function KYCVerificationScreen() {
     );
 
     try {
-      // Simulation active pour éviter le crash RLS du stockage
+      // 🎯 MODE SIMULATION ACTIVE : On évite le crash RLS de Supabase Storage pendant les tests.
+      // On imite le délai d'exécution de la signature de l'enclave cryptographique locale.
       await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      // Ligne d'origine désactivée temporairement pour le Sandbox Mode :
+      // await uploadKYCDocument(profile.id, type, file);
 
       toast.success(
         "Document sécurisé et téléversé dans le coffre local avec succès !",
@@ -131,6 +135,7 @@ export function KYCVerificationScreen() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-24">
+      {/* Inputs Fichiers Invisibles natifs compatibles Caméra native Mobile */}
       <input
         type="file"
         ref={identityInputRef}
@@ -143,7 +148,7 @@ export function KYCVerificationScreen() {
         ref={selfieInputRef}
         onChange={(e) => handleFileChange(e, "selfie")}
         accept="image/*"
-        capture="user"
+        capture="user" // Force la caméra frontale sur smartphone
         className="hidden"
       />
 
@@ -242,7 +247,8 @@ export function KYCVerificationScreen() {
                   Scannez votre document
                 </h4>
                 <p className="text-[#64748B] text-sm mb-4">
-                  Positionnez votre pièce d'identité dans le cadre
+                  Positionnez votre pièce d'identité dans le
+                  cadre
                 </p>
                 <button
                   onClick={() =>
@@ -262,7 +268,8 @@ export function KYCVerificationScreen() {
 
               <div className="bg-[#FEF3C7] rounded-xl p-4 border border-[#D4AF37]/30">
                 <p className="text-[#92400E] text-xs leading-relaxed">
-                  ✓ Le fichier est rendu illisible avant envoi grâce à la clé Kauri RSA.
+                  ✓ Le fichier est rendu illisible avant envoi
+                  grâce à la clé Kauri RSA.
                   <br />
                   ✓ Assurez-vous que le document est lisible.
                   <br />✓ Évitez les reflets de lumière directs.
@@ -318,19 +325,25 @@ export function KYCVerificationScreen() {
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-sm text-[#64748B]">
                   <div className="w-6 h-6 rounded-full bg-[#D1FAE5] flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs text-[#006D77]">1</span>
+                    <span className="text-xs text-[#006D77]">
+                      1
+                    </span>
                   </div>
                   <span>Regardez directement la caméra</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-[#64748B]">
                   <div className="w-6 h-6 rounded-full bg-[#D1FAE5] flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs text-[#006D77]">2</span>
+                    <span className="text-xs text-[#006D77]">
+                      2
+                    </span>
                   </div>
                   <span>Tournez lentement la tête</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm text-[#64748B]">
                   <div className="w-6 h-6 rounded-full bg-[#D1FAE5] flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs text-[#006D77]">3</span>
+                    <span className="text-xs text-[#006D77]">
+                      3
+                    </span>
                   </div>
                   <span>Souriez naturellement</span>
                 </div>
@@ -437,7 +450,9 @@ export function KYCVerificationScreen() {
 
               <div className="mt-6 bg-[#E0F2FE] rounded-xl p-4 border border-[#006D77]/30">
                 <p className="text-[#0369A1] text-xs leading-relaxed">
-                  ℹ️ Un justificatif de domicile pourra être demandé ultérieurement (facture, attestation de résidence) pour confirmer ces informations.
+                  ℹ️ Un justificatif de domicile pourra être
+                  demandé ultérieurement (facture, attestation
+                  de résidence) pour confirmer ces informations.
                 </p>
               </div>
             </div>
@@ -455,6 +470,3 @@ export function KYCVerificationScreen() {
     </div>
   );
 }
-
-// 🎯 DOUBLE PROTECTION EXPORT POUR LE COMPILATEUR VERCEL
-export default KYCVerificationScreen;
