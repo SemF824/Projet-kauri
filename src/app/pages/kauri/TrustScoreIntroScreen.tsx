@@ -1,5 +1,5 @@
 import { ArrowLeft, Shield, CheckCircle2, Info, Star, Circle } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
 import { useDarkMode } from '../../contexts/DarkModeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -21,16 +21,17 @@ const LOCKED = [
 export function TrustScoreIntroScreen() {
   const navigate = useNavigate();
   const { isDarkMode } = useDarkMode();
-  const [searchParams] = useSearchParams();
-  const { profile } = useAuth();
+  const { profile, loading } = useAuth();
   
-  const accountType = searchParams.get('type') || 'particulier';
-  
-  // Correction chirurgicale : Utilisation du score réel (0-100) fourni par la base de données
+  // Correction chirurgicale : On extrait le score réel de la base (100 par défaut via le trigger)
+  // Si le profil charge encore, on anticipe la valeur nominale de 100 pour éviter le flash à 40
   const targetScore = profile?.trustScore !== undefined ? Math.round(profile.trustScore) : 100;
   const [score, setScore] = useState(0);
 
   useEffect(() => {
+    // On attend que le AuthContext ait fini de valider le profil pour lancer l'animation finale
+    if (loading) return;
+
     const interval = setInterval(() => {
       setScore(prev => {
         if (prev >= targetScore) { 
@@ -39,25 +40,18 @@ export function TrustScoreIntroScreen() {
         }
         return prev + 1;
       });
-    }, 15);
+    }, 12); // Accélération légère de l'animation pour une sensation de réactivité accrue
+    
     return () => clearInterval(interval);
-  }, [targetScore]);
-
-  const handleContinue = () => {
-    if (accountType === 'professionnel') {
-      navigate(`/kauri/wallet-creation?type=${accountType}`);
-    } else {
-      navigate(`/kauri/preferences-contenu?type=${accountType}`);
-    }
-  };
+  }, [targetScore, loading]);
 
   const getScoreColor = (s: number) => {
-    if (s >= 80) return '#10B981'; // Émeraude / Vert succès
+    if (s >= 80) return '#10B981'; // Vert Émeraude / Succès
     if (s >= 60) return '#D4AF37'; // Or Kauri
     return '#F59E0B';
   };
 
-  // Calcul du nombre d'étoiles proportionnel au score réel (ex: 100/100 -> 5 étoiles)
+  // Calcul dynamique des étoiles basé sur la note réelle (ex: 100/100 = 5 étoiles)
   const starCount = Math.min(5, Math.floor(score / 20));
 
   const bg = isDarkMode ? 'bg-[#0F172A]' : 'bg-[#F8FAFC]';
@@ -70,7 +64,7 @@ export function TrustScoreIntroScreen() {
     <div className={`min-h-screen pb-12 ${bg}`}>
       {/* Header */}
       <div className="px-5 pt-14 pb-6 rounded-b-[28px] shadow-xl bg-gradient-to-br from-[#006D77] to-[#0D9488]">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/80 hover:text-white mb-4 transition-colors">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/80 hover:text-white mb-4 transition-colors cursor-pointer">
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm font-medium">Retour</span>
         </button>
@@ -88,13 +82,15 @@ export function TrustScoreIntroScreen() {
       <div className="px-5 pt-6 space-y-6">
         {/* Current score circle card */}
         <div className={`rounded-3xl p-6 text-center border ${cardBg} ${border}`} style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-          <p className="text-xs uppercase tracking-wider font-bold mb-4 style={{ color: TEAL }}">Votre score actuel</p>
+          <p className="text-xs uppercase tracking-wider font-bold mb-4" style={{ color: TEAL }}>Votre score actuel</p>
           
           <div className="relative w-44 h-44 mx-auto mb-4">
             <svg className="transform -rotate-90 w-44 h-44">
               <circle cx="88" cy="88" r="72" stroke={isDarkMode ? '#334155' : '#F1F5F9'} strokeWidth="14" fill="none" />
               <circle
-                cx="88" cy="88" r="72"
+                cx="88"
+                cy="88"
+                r="72"
                 stroke={getScoreColor(score)}
                 strokeWidth="14" fill="none"
                 strokeDasharray={`${(score / 100) * 452} 452`}
@@ -118,10 +114,10 @@ export function TrustScoreIntroScreen() {
 
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-semibold mb-2">
             <CheckCircle2 className="w-3.5 h-3.5" />
-            Profil Vérifié
+            Profil Certifié de Confiance
           </div>
           <p className={`text-xs leading-relaxed max-w-xs mx-auto ${textSecondary}`}>
-            Félicitations ! Votre score vous donne accès à 100% des tontines de la plateforme.
+            Félicitations ! Votre score vous donne accès à 100% des opportunités de la plateforme.
           </p>
         </div>
 
@@ -175,11 +171,11 @@ export function TrustScoreIntroScreen() {
 
         {/* CTA */}
         <button
-          onClick={handleContinue}
+          onClick={() => navigate(-1)}
           className="w-full py-4 rounded-xl text-white text-sm font-bold shadow-lg mt-2 flex items-center justify-center gap-2 cursor-pointer"
           style={{ background: `linear-gradient(135deg, ${TEAL}, #0D9488)` }}
         >
-          <span>Accéder à mon espace KAURI</span>
+          <span>Retour</span>
         </button>
       </div>
     </div>
