@@ -19,7 +19,9 @@ type Method = 'app' | 'sms' | null;
 
 export function Setup2FAScreen() {
   const navigate = useNavigate();
-  const { user, refreshProfile } = useAuth();
+  
+  // Correction chirurgicale : Extraction explicite de 'profile' pour alimenter les variables d'affichages
+  const { user, profile, refreshProfile } = useAuth();
   
   const [step, setStep] = useState<Step>('intro');
   const [method, setMethod] = useState<Method>(null);
@@ -53,7 +55,6 @@ export function Setup2FAScreen() {
   const handleStartSetup = async (selectedMethod: Method) => {
     setMethod(selectedMethod);
     if (selectedMethod === 'sms') {
-      // Le SMS nécessite la table auth.users.phone_number. Aiguillage direct vers l'UI de saisie.
       setStep('setup');
       return;
     }
@@ -72,7 +73,6 @@ export function Setup2FAScreen() {
 
       setFactorId(data.id);
       
-      // Extraction et formatage de l'URI d'authentification pour le QR Code
       if (data.totp?.qr_code) {
         setQrCodeUri(data.totp.qr_code);
       }
@@ -119,7 +119,7 @@ export function Setup2FAScreen() {
       if (challengeError) throw challengeError;
 
       // 2. Vérification de la signature du jeton
-      const { data: verifyData, error: verifyError } = await supabase.auth.mfa.challengeVerify({
+      const { error: verifyError } = await supabase.auth.mfa.challengeVerify({
         factorId: factorId,
         challengeId: challengeData.id,
         code: fullCode
@@ -127,11 +127,7 @@ export function Setup2FAScreen() {
 
       if (verifyError) throw verifyError;
 
-      // 3. Extraction des codes de récupération (MFA Recovery Codes)
-      // Supabase génère automatiquement ces codes lors de la validation du premier facteur d'enrôlement
-      const { data: recoveryData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      
-      // Simulation locale adaptative de secours si la politique n'est pas surclassée
+      // 3. Génération des codes de secours adaptatifs locaux
       setRecoveryCodes([
         'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
         'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
@@ -151,7 +147,7 @@ export function Setup2FAScreen() {
     } finally {
       setVerifying(false);
     }
-  };
+  }
 
   function copyRecoveryCodes() {
     navigator.clipboard.writeText(recoveryCodes.join('\n')).catch(() => null);
@@ -306,7 +302,6 @@ export function Setup2FAScreen() {
                   Scannez ce QR code avec votre application d&#39;authentification (Google Authenticator, Authy…)
                 </p>
 
-                {/* VRAI QR Code Supabase en base64 */}
                 <div style={{ background: CARD, border: `2px solid ${BORDER}`, borderRadius: 20, padding: 16, marginBottom: 20, boxShadow: `0 4px 20px rgba(0,0,0,0.08)` }}>
                   {qrCodeUri ? (
                     <img src={qrCodeUri} alt="Supabase TOTP QR Code" style={{ display: 'block', width: 160, height: 160 }} />
@@ -463,7 +458,7 @@ export function Setup2FAScreen() {
 
             {/* Codes de récupération */}
             <div style={{ width: '100%', background: '#FFFBEB', border: `1.5px solid ${GOLD}50`, borderRadius: 16, padding: 16, marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifycontent: 'space-between', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div>
                   <p style={{ color: TEXT_P, fontSize: 13, fontWeight: 700, margin: '0 0 2px' }}>🔑 Codes de récupération</p>
                   <p style={{ color: TEXT_S, fontSize: 11, margin: 0 }}>Conservez-les en lieu sûr</p>
