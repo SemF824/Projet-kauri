@@ -51,7 +51,6 @@ export function Setup2FAScreen() {
     }
   }, [step]);
 
-  // Initialisation et nettoyage défensif de la double authentification
   const handleStartSetup = async (selectedMethod: Method) => {
     setMethod(selectedMethod);
     if (selectedMethod === 'sms') {
@@ -63,7 +62,6 @@ export function Setup2FAScreen() {
     try {
       const supabase = getSupabase();
       
-      // Force le rafraîchissement de la session locale pour parer aux pertes de jetons
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session) {
         throw new Error("Jeton de session introuvable sur le client d'authentification.");
@@ -71,11 +69,9 @@ export function Setup2FAScreen() {
 
       const friendlyNameTarget = user?.email || 'Compte Kauri';
 
-      // 🎯 ÉTAPE DE BLINDAGE : On liste les facteurs existants pour éliminer les doublons unverified (Erreur 422)
       const { data: factorList, error: listError } = await supabase.auth.mfa.listFactors();
       
       if (!listError && factorList?.all) {
-        // Recherche d'un facteur préexistant qui porte le même nom
         const existingConflictingFactor = factorList.all.find(
           (f) => f.friendlyName === friendlyNameTarget
         );
@@ -87,13 +83,11 @@ export function Setup2FAScreen() {
             setVerifying(false);
             return;
           } else {
-            // Si le facteur existe mais n'est pas vérifié (le cas de ta 422), on le révoque instantanément
             await supabase.auth.mfa.unenroll({ factorId: existingConflictingFactor.id });
           }
         }
       }
 
-      // Lancement de l'enrôlement sur un canal Supabase totalement purgé
       const { data, error: enrollError } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
         issuer: 'KAURI Fintech',
@@ -131,7 +125,7 @@ export function Setup2FAScreen() {
     if (!val && idx > 0) inputRefs.current[idx - 1]?.focus();
   }
 
-  // Saisie et vérification finale du TOTP
+  // 🎯 SÉCURISATION DU PROTOCOLE AVEC SÉCURITÉ DE PROPAGATION ASYNCHRONE
   async function verifyCode() {
     const fullCode = code.join('');
     if (fullCode.length < 6) return;
@@ -142,14 +136,26 @@ export function Setup2FAScreen() {
     try {
       const supabase = getSupabase();
 
+      // Étape 1 : Création du challenge éphémère auprès de l'API Supabase
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId: factorId
+      });
+
+      if (challengeError) throw challengeError;
+
+      // ⚡ LA SÉCURITÉ : Une micro-pause de 350ms pour laisser le temps aux serveurs de Supabase
+      // de propager et indexer l'ID du challenge avant l'interrogation immédiate de la route /verify.
+      await new Promise((resolve) => setTimeout(resolve, 350));
+
+      // Étape 2 : Transmission cryptographique de vérification
       const { error: verifyError } = await supabase.auth.mfa.verify({
         factorId: factorId,
         code: fullCode,
+        challengeId: challengeData.id
       });
 
       if (verifyError) throw verifyError;
 
-      // Génération sécurisée des codes de secours
       setRecoveryCodes([
         'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
         'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
@@ -165,7 +171,7 @@ export function Setup2FAScreen() {
     } catch (err: any) {
       console.error('[MFA Verification Error]:', err);
       setCodeError(true);
-      toast.error('Code de sécurité invalide ou expiré.');
+      toast.error('Code de sécurité incorrect ou expiré.');
     } finally {
       setVerifying(false);
     }
@@ -222,7 +228,6 @@ export function Setup2FAScreen() {
       </div>
 
       <AnimatePresence mode="wait">
-        {/* ── INTRO ── */}
         {step === 'intro' && (
           <motion.div key="intro" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.22 }} style={{ flex: 1, padding: '32px 24px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{ width: 88, height: 88, borderRadius: 24, background: `${TEAL}14`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
@@ -259,7 +264,6 @@ export function Setup2FAScreen() {
           </motion.div>
         )}
 
-        {/* ── METHOD ── */}
         {step === 'method' && (
           <motion.div key="method" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.22 }} style={{ flex: 1, padding: '32px 24px' }}>
             <p style={{ color: TEXT_S, fontSize: 14, textAlign: 'center', margin: '0 0 28px', lineHeight: 1.5 }}>
@@ -306,29 +310,28 @@ export function Setup2FAScreen() {
                   opacity: verifying ? 0.7 : 1
                 }}
               >
-                <div style={{ width: 48, height: 48, borderRadius: 14, background: opt.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: opt.bg, display: 'flex', alignItems: 'center', justifycontent: 'center', flexShrink: 0 }}>
                   {opt.id === 'app' && verifying ? (
-                    <div style={{ width: 16, height: 16, border: '2px solid rgba(0,109,119,0.3)', borderTopColor: TEAL, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                  ) : opt.icon}
+                    <div className="w-16 h-16 rounded-full border-2 border-[#006D77] border-t-transparent animate-spin" />
+                  ) : (
+                    <opt.icon style={{ width: 24, height: 24, color: opt.color }} />
+                  )}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                    <p style={{ color: TEXT_P, fontSize: 15, fontWeight: 700, margin: 0 }}>{opt.title}</p>
-                    {opt.badge && (
-                      <span style={{ background: `${opt.badgeColor}14`, color: opt.badgeColor, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10 }}>{opt.badge}</span>
-                    )}
+                <div className="text-left flex-1">
+                  <div className="flex items-center gap-2">
+                    <p style={{ fontWeight: 600, fontSize: "0.95rem", color: TEXT_P }}>{opt.title}</p>
+                    {opt.badge && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${TEAL}15`, color: TEAL }}>{opt.badge}</span>}
                   </div>
-                  <p style={{ color: TEXT_S, fontSize: 12, margin: 0 }}>{opt.subtitle}</p>
+                  <p className="text-xs" style={{ color: TEXT_S }}>{opt.subtitle}</p>
                 </div>
-                <ChevronRight size={16} color={TEXT_S} />
+                <ChevronRight style={{ width: 16, height: 16, color: TEXT_S }} />
               </button>
             ))}
           </motion.div>
         )}
 
-        {/* ── SETUP ── */}
         {step === 'setup' && (
-          <motion.div key="setup" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.22 }} style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <motion.div key="setup" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.22 }} style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', items: 'center' }}>
             {method === 'app' ? (
               <>
                 <p style={{ color: TEXT_S, fontSize: 13, textAlign: 'center', margin: '0 0 24px', lineHeight: 1.6 }}>
@@ -355,7 +358,7 @@ export function Setup2FAScreen() {
 
                 <button
                   onClick={() => setStep('verify')}
-                  style={{ width: '100%', background: `linear-gradient(135deg, ${TEAL}, #004E57)`, border: 'none', borderRadius: 16, padding: '16px', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+                  className="w-full py-4 bg-[#006D77] text-white text-sm font-bold rounded-xl shadow-md cursor-pointer"
                 >
                   J&#39;ai scanné le code
                 </button>
@@ -381,7 +384,7 @@ export function Setup2FAScreen() {
 
                 <button
                   onClick={() => setStep('verify')}
-                  style={{ width: '100%', background: '#8B5CF6', border: 'none', borderRadius: 16, padding: '16px', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+                  className="w-full py-4 bg-[#8B5CF6] text-white text-sm font-bold rounded-xl shadow-md cursor-pointer"
                 >
                   Continuer
                 </button>
@@ -390,9 +393,8 @@ export function Setup2FAScreen() {
           </motion.div>
         )}
 
-        {/* ── VERIFY ── */}
         {step === 'verify' && (
-          <motion.div key="verify" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.22 }} style={{ flex: 1, padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <motion.div key="verify" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.22 }} style={{ flex: 1, padding: '32px 24px', display: 'flex', flexDirection: 'column', items: 'center' }}>
             <div style={{ width: 72, height: 72, borderRadius: 20, background: `${TEAL}14`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
               <span style={{ fontSize: 32 }}>🔑</span>
             </div>
@@ -471,7 +473,6 @@ export function Setup2FAScreen() {
           </motion.div>
         )}
 
-        {/* ── SUCCESS ── */}
         {step === 'success' && (
           <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} style={{ flex: 1, padding: '32px 24px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <motion.div
@@ -489,7 +490,6 @@ export function Setup2FAScreen() {
               <strong>{method === 'app' ? "une application TOTP" : "SMS"}</strong>.
             </p>
 
-            {/* Codes de récupération */}
             <div style={{ width: '100%', background: '#FFFBEB', border: `1.5px solid ${GOLD}50`, borderRadius: 16, padding: 16, marginBottom: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div>
