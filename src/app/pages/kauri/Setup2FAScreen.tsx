@@ -20,7 +20,6 @@ type Method = 'app' | 'sms' | null;
 export function Setup2FAScreen() {
   const navigate = useNavigate();
   
-  // Récupération de l'état de chargement 'loading' de la session globale
   const { user, profile, refreshProfile, loading: authContextLoading } = useAuth();
   
   const [step, setStep] = useState<Step>('intro');
@@ -39,7 +38,7 @@ export function Setup2FAScreen() {
   
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Garde-fou strict : Redirection uniquement si le contexte a fini de charger et qu'aucun utilisateur n'existe
+  // Redirection stricte si aucun utilisateur n'est connecté au niveau du contexte global
   useEffect(() => {
     if (!authContextLoading && !user) {
       toast.error("Session expirée. Veuillez vous reconnecter.");
@@ -61,16 +60,18 @@ export function Setup2FAScreen() {
       return;
     }
 
-    // 🎯 Blindage : Si la session n'est pas encore prête, on bloque pour éviter la 403
-    if (!user) {
-      toast.error("Session introuvable. Veuillez patienter ou vous reconnecter.");
-      return;
-    }
-
     setVerifying(true);
     try {
       const supabase = getSupabase();
       
+      // 🎯 FORCE RE-SYNC : On demande à l'instance Supabase de rafraîchir son jeton d'accès en cache local
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData?.session) {
+        throw new Error("Jeton d'authentification manquant sur le client Supabase local.");
+      }
+
+      // Lancement de l'enrôlement avec une session active validée
       const { data, error: enrollError } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
         issuer: 'KAURI Fintech',
@@ -375,7 +376,7 @@ export function Setup2FAScreen() {
               <span style={{ fontSize: 32 }}>🔑</span>
             </div>
 
-            <h3 style={{ color: TEXT_P, fontSize: 20, fontweight: 800, textAlign: 'center', margin: '0 0 8px' }}>Entrez le code</h3>
+            <h3 style={{ color: TEXT_P, fontSize: 20, fontWeight: 800, textAlign: 'center', margin: '0 0 8px' }}>Entrez le code</h3>
             <p style={{ color: TEXT_S, fontSize: 13, textAlign: 'center', margin: '0 0 32px', lineHeight: 1.5 }}>
               Saisissez le code à 6 chiffres pour valider l'association.
             </p>
