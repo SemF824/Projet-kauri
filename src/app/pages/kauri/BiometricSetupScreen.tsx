@@ -16,15 +16,21 @@ export function BiometricSetupScreen() {
 
   // Gestion de l'activation biométrique (Simulation Enclave Locale / Passkey)
   const handleActivateBiometrics = async () => {
-    if (!profile?.id) {
-      toast.error("Session utilisateur introuvable. Veuillez vous reconnecter.");
-      return;
-    }
-
     setIsActivating(true);
     const toastId = toast.loading("Interrogation des capteurs biométriques de l'appareil...");
 
     try {
+      // 🎯 CORRECTIF FLUX INSCRIPTION : Si useAuth subit un retard de rafraîchissement,
+      // on récupère instantanément l'ID de l'utilisateur à la racine de la session Supabase.
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const targetUserId = profile?.id || authUser?.id;
+
+      if (!targetUserId) {
+        toast.error("Session utilisateur introuvable. Veuillez vous reconnecter.", { id: toastId });
+        setIsActivating(false);
+        return;
+      }
+
       // Simulation du délai de réponse de Face ID / Touch ID de l'appareil
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
@@ -35,7 +41,7 @@ export function BiometricSetupScreen() {
           biometrics_enabled: true,
           updated_at: new Date().toISOString()
         })
-        .eq('id', profile.id);
+        .eq('id', targetUserId);
 
       if (error) throw error;
 
