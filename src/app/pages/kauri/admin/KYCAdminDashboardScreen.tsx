@@ -78,7 +78,7 @@ export function KYCAdminDashboardScreen() {
     } catch (err: any) {
       console.error('[KYC Fetch Error]:', err);
       toast.error("Erreur de synchronisation des tables nominatives.");
-    } filter {
+    } finally {
       setIsLoading(false);
     }
   };
@@ -123,7 +123,6 @@ export function KYCAdminDashboardScreen() {
         setIsIdentityEncrypted(isEnc);
 
         if (isEnc && !isKeyLoaded) {
-          // Fichier chiffré sans clé chargée -> on ne peut pas l'afficher
           setDecryptedIdentityUrl(null);
         } else {
           const { data: blob, error } = await supabase.storage
@@ -135,7 +134,6 @@ export function KYCAdminDashboardScreen() {
           }
         }
       } else {
-        // Fallback dégradé si aucun fichier n'existe
         setDecryptedIdentityUrl("https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?auto=format&fit=crop&w=400&q=80");
       }
 
@@ -162,7 +160,7 @@ export function KYCAdminDashboardScreen() {
     } catch (err: any) {
       console.error('[Decryption or List Error]:', err);
       toast.error("Erreur lors de la récupération des pièces physiques.");
-    } filter {
+    } finally {
       setIsDecrypting(false);
     }
   };
@@ -189,7 +187,7 @@ export function KYCAdminDashboardScreen() {
     } catch (err: any) {
       console.error('[KYC Status Update Error]:', err);
       toast.error("Échec de la modification d'état.");
-    } filter {
+    } finally {
       setIsActionLoading(false);
     }
   };
@@ -202,7 +200,7 @@ export function KYCAdminDashboardScreen() {
   return (
     <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col font-sans">
       
-      {/* HEADER */}
+      {/* HEADER PANNEAU ADMINISTRATIF */}
       <div className="border-b border-slate-800 bg-[#1E293B]/60 backdrop-blur-xl px-8 py-5 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
@@ -220,7 +218,7 @@ export function KYCAdminDashboardScreen() {
 
       <div className="flex-1 flex overflow-hidden">
         
-        {/* LISTE DOSSIERS */}
+        {/* COLONNE GAUCHE : DOSSIERS */}
         <div className="w-2/5 border-r border-slate-800 p-6 flex flex-col space-y-4 overflow-y-auto">
           <div className="relative">
             <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
@@ -270,7 +268,7 @@ export function KYCAdminDashboardScreen() {
           )}
         </div>
 
-        {/* DETAILS INSPECTION */}
+        {/* COLONNE DROITE : INSPECTION */}
         <div className="w-3/5 p-6 overflow-y-auto bg-[#090D1A]">
           
           {!isKeyLoaded && (isIdentityEncrypted || isSelfieEncrypted) && (
