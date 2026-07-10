@@ -21,7 +21,7 @@ export function Setup2FAScreen() {
   const navigate = useNavigate();
   const { user, profile, refreshProfile, loading: authContextLoading } = useAuth();
   
-  // 🎯 UNIFICATION CLIENT : Une seule instance constante pour tout le cycle de vie du composant
+  // Instance unifiée du client d'authentification
   const supabase = getSupabase();
   
   const [step, setStep] = useState<Step>('intro');
@@ -32,7 +32,7 @@ export function Setup2FAScreen() {
   const [verifying, setVerifying] = useState(false);
   const [codeError, setCodeError] = useState(false);
   
-  // États d'enrôlement Supabase MFA
+  // États d'enrôlement Supabase MFA (Zéro valeur en dur)
   const [factorId, setFactorId] = useState('');
   const [qrCodeUri, setQrCodeUri] = useState('');
   const [secretCode, setSecretCode] = useState('');
@@ -69,7 +69,7 @@ export function Setup2FAScreen() {
 
       const friendlyNameTarget = user?.email || 'Compte Kauri';
 
-      // Purge des résidus de facteurs pour éviter la 422 d'enrôlement doublon
+      // Purge des résidus de facteurs pour éliminer les conflits 422
       const { data: factorList, error: listError } = await supabase.auth.mfa.listFactors();
       
       if (!listError && factorList?.all) {
@@ -126,7 +126,6 @@ export function Setup2FAScreen() {
     if (!val && idx > 0) inputRefs.current[idx - 1]?.focus();
   }
 
-  // Verification finale immunisée contre les crashs de requêtes concurrentes
   async function verifyCode() {
     const fullCode = code.join('');
     if (fullCode.length < 6) return;
@@ -139,21 +138,15 @@ export function Setup2FAScreen() {
     setCodeError(false);
 
     try {
-      // Étape 1 : Création du challenge éphémère auprès de l'API Supabase
       const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
         factorId: factorId
       });
 
       if (challengeError) throw challengeError;
-      if (!challengeData?.id) {
-        throw new Error("Le serveur n'a pas renvoyé d'identifiant de challenge valide.");
-      }
 
-      // ⚡ PROTECTION DE PROPAGATION : Latence étendue à 600ms pour garantir l'indexation 
-      // de l'ID du challenge sur l'instance de production et encaisser la gigue réseau (jitter).
+      // Latence réseau adaptative anti-gigue
       await new Promise((resolve) => setTimeout(resolve, 600));
 
-      // Étape 2 : Validation finale du TOTP Google Authenticator raccordé au challenge vérifié
       const { error: verifyError } = await supabase.auth.mfa.verify({
         factorId: factorId,
         code: fullCode,
@@ -162,7 +155,6 @@ export function Setup2FAScreen() {
 
       if (verifyError) throw verifyError;
 
-      // Mutation des codes de secours locaux
       setRecoveryCodes([
         'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
         'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
@@ -483,15 +475,30 @@ export function Setup2FAScreen() {
           </motion.div>
         )}
 
+        {/* ── SUCCESS ── */}
         {step === 'success' && (
           <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} style={{ flex: 1, padding: '32px 24px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            
+            {/* 🎯 LOGO INTÉGRÉ EN PLACE DE L'EMOJI : Design Institutionnel Premium */}
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
-              style={{ width: 96, height: 96, borderRadius: '50%', background: `${TEAL}14`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
+              style={{ 
+                width: 96, 
+                height: 96, 
+                borderRadius: '50%', 
+                background: `linear-gradient(135deg, ${GOLD}, #F59E0B)`, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                marginBottom: 24,
+                boxShadow: `0 8px 24px rgba(212,175,55,0.3)`
+              }}
             >
-              <span style={{ fontSize: 44 }}>✅</span>
+              <svg viewBox="0 0 100 100" style={{ width: 48, height: 48, color: '#FFFFFF' }}>
+                <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
+              </svg>
             </motion.div>
 
             <h2 style={{ color: TEXT_P, fontSize: 22, fontWeight: 800, textAlign: 'center', margin: '0 0 10px' }}>2FA activé avec succès !</h2>
@@ -500,6 +507,7 @@ export function Setup2FAScreen() {
               <strong>{method === 'app' ? "une application TOTP" : "SMS"}</strong>.
             </p>
 
+            {/* Codes de récupération */}
             <div style={{ width: '100%', background: '#FFFBEB', border: `1.5px solid ${GOLD}50`, borderRadius: 16, padding: 16, marginBottom: 24 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div>
