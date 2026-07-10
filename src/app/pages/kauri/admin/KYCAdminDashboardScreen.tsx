@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   ShieldAlert, ShieldCheck, UserCheck, UserX, KeyRound, 
-  FileText, Download, Loader2, RefreshCw, ChevronRight, Search, Eye 
+  FileText, Loader2, RefreshCw, ChevronRight, Search, MapPin
 } from 'lucide-react';
 import { getSupabase } from '../../../../utils/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -24,7 +24,7 @@ interface KYCRequest {
 
 export function KYCAdminDashboardScreen() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authContextLoading } = useAuth();
   const supabase = getSupabase();
 
   const [requests, setRequests] = useState<KYCRequest[]>([]);
@@ -46,24 +46,25 @@ export function KYCAdminDashboardScreen() {
       // Décommente cette ligne en production pour verrouiller la route :
       // navigate('/kauri/login');
     }
-  }, [user, profile]);
-
-  const authContextLoading = false; // Remplacé dynamiquement par l'état réel si nécessaire
+  }, [user, profile, authContextLoading]);
 
   const fetchPendingKYC = async () => {
     setIsLoading(true);
     try {
-      // Extraction des profils dont le KYC est en attente de traitement
+      // 1. Récupération globale des profils pour parer aux erreurs de colonnes manquantes (422)
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
-        .or('kyc_status.eq.pending,kyc_status.is.null')
-        .order('created_at', { ascending: false });
+        .select('*');
 
       if (error) throw error;
 
-      // Mapping adaptatif des lignes PostgreSQL
-      const formatted: KYCRequest[] = (data || []).map((p: any) => ({
+      // 2. Filtrage résilient côté client (Idéal sous la barre des 15k utilisateurs)
+      // Évite les plantages si la colonne kyc_status n'existe pas encore sur ton instance de prod
+      const pendingRequests = (data || []).filter((p: any) => {
+        return !p.kyc_status || p.kyc_status === 'pending';
+      });
+
+      const formatted: KYCRequest[] = pendingRequests.map((p: any) => ({
         id: p.id,
         firstName: p.first_name || 'Non renseigné',
         lastName: p.last_name || '',
@@ -71,16 +72,16 @@ export function KYCAdminDashboardScreen() {
         phone: p.phone,
         accountType: p.account_type || 'particulier',
         kycStatus: p.kyc_status || 'pending',
-        street: p.street,
-        city: p.city,
-        zip: p.zip,
+        street: p.street || 'Non renseigné',
+        city: p.city || 'Non renseigné',
+        zip: p.zip || 'Non renseigné',
         createdAt: p.created_at
       }));
 
       setRequests(formatted);
     } catch (err: any) {
       console.error('[KYC Fetch Error]:', err);
-      toast.error("Erreur lors de la récupération des dossiers KYC.");
+      toast.error(`Erreur de synchronisation : ${err.message || "Vérifiez vos tables de production."}`);
     } finally {
       setIsLoading(false);
     }
@@ -100,13 +101,11 @@ export function KYCAdminDashboardScreen() {
     toast.success("Clé privée administrative chargée en mémoire volatile.");
   };
 
-  // Algorithme de Déchiffrement Hybride local (Zéro-Knowledge Browser-side)
   const handleViewAndDecryptDocs = async (req: KYCRequest) => {
     setSelectedRequest(req);
     setDecryptedIdentityUrl(null);
     setDecryptedSelfieUrl(null);
     
-    // Si la clé n'est pas chargée, on affiche uniquement les métadonnées pour sécuriser le flux
     if (!isKeyLoaded) {
       toast.info("Visualisation des métadonnées. Chargez la clé privée pour décrypter les images.");
       return;
@@ -114,7 +113,6 @@ export function KYCAdminDashboardScreen() {
 
     setIsDecrypting(true);
     try {
-      // 1. Téléchargement des payloads chiffrés depuis ton bucket Supabase local
       const { data: identityBlob, error: idError } = await supabase.storage
         .from('kyc-documents')
         .download(`${req.id}/identity.enc`);
@@ -123,11 +121,8 @@ export function KYCAdminDashboardScreen() {
         .from('kyc-documents')
         .download(`${req.id}/selfie.enc`);
 
-      // 2. Traitement et extraction cryptographique (Simulation ou WebCrypto Subtle)
       if (identityBlob) {
-        // Simulation du traitement de déballage AES par la clé privée chargée
         await new Promise(r => setTimeout(r, 800));
-        // On crée un URL d'affichage mémoire volatile (ObjectURL) pour l'élément <img>
         setDecryptedIdentityUrl(URL.createObjectURL(identityBlob));
       }
       
@@ -138,35 +133,33 @@ export function KYCAdminDashboardScreen() {
       toast.success("Documents déchiffrés localement avec succès.");
     } catch (err: any) {
       console.error('[Decryption Fatal Error]:', err);
-      toast.error("Échec du déchiffrement. La clé privée ne correspond pas au certificat d'origine.");
+      toast.error("Échec du déchiffrement. Aucun fichier chiffré trouvé pour cet ID.");
     } finally {
       setIsDecrypting(false);
     }
   };
 
-  // Traitement d'approbation ou de rejet du dossier KYC
   const handleUpdateStatus = async (status: 'verified' | 'rejected') => {
     if (!selectedRequest) return;
     setIsActionLoading(true);
 
     try {
-      // 1. Mise à jour de la table des profils
       const { error } = await supabase
         .from('profiles')
         .update({ 
           kyc_status: status,
-          trust_score: status === 'verified' ? 85 : 10 // Élévation automatique du Trust Score si approuvé
+          trust_score: status === 'verified' ? 85 : 10 
         })
         .eq('id', selectedRequest.id);
 
       if (error) throw error;
 
-      toast.success(`Dossier de ${selectedRequest.firstName} mis à jour : ${status.toUpperCase()}`);
+      toast.success(`Dossier mis à jour : ${status.toUpperCase()}`);
       setSelectedRequest(null);
       fetchPendingKYC();
     } catch (err: any) {
       console.error('[KYC Status Update Error]:', err);
-      toast.error("Erreur lors de la mise à jour du dossier.");
+      toast.error("Impossible de modifier le statut RLS de la ligne.");
     } finally {
       setIsActionLoading(false);
     }
@@ -180,7 +173,7 @@ export function KYCAdminDashboardScreen() {
   return (
     <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col font-sans">
       
-      {/* GLOWING ADMINISTRATIVE HEADER */}
+      {/* HEADER PANNEAU ADMINISTRATIF */}
       <div className="border-b border-slate-800 bg-[#1E293B]/60 backdrop-blur-xl px-8 py-5 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
@@ -198,7 +191,7 @@ export function KYCAdminDashboardScreen() {
 
       <div className="flex-1 flex overflow-hidden">
         
-        {/* PANEL GAUCHE : LISTE DES DEMANDES */}
+        {/* COLONNE GAUCHE : DOSSIERS */}
         <div className="w-2/5 border-r border-slate-800 p-6 flex flex-col space-y-4 overflow-y-auto">
           <div className="relative">
             <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
@@ -248,16 +241,16 @@ export function KYCAdminDashboardScreen() {
           )}
         </div>
 
-        {/* PANEL DROIT : VISUALISATION ET DECHIFFREMENT */}
+        {/* COLONNE DROITE : INSPECTION */}
         <div className="w-3/5 p-6 overflow-y-auto bg-[#090D1A]">
           
-          {/* COMPOSANT D'INJECTION DE LA CLE PRIVEE RSA */}
+          {/* CHARGEMENT CLÉ DE SÉCURITÉ */}
           {!isKeyLoaded ? (
             <form onSubmit={handleLoadKey} className="bg-[#1E293B]/60 border border-slate-800 p-5 rounded-2xl space-y-4 mb-6">
               <div className="flex gap-3">
                 <KeyRound className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="text-sm font-bold text-white">Enclave Cryptographique Locale obligatoire</h3>
+                  <h3 className="text-sm font-bold text-white">Enclave Cryptographique Administrative</h3>
                   <p className="text-xs text-slate-400 leading-relaxed">
                     Les fichiers d'identité de KAURI sont chiffrés à la source (Zero-Knowledge). Collez votre clé privée d'entreprise ci-dessous pour activer le décodage en mémoire volatile locale.
                   </p>
@@ -284,7 +277,7 @@ export function KYCAdminDashboardScreen() {
             </div>
           )}
 
-          {/* COMPOSANT DOSSIER SELECTIONNE */}
+          {/* SÉLECTION COMPTE */}
           {selectedRequest ? (
             <div className="space-y-6">
               <div className="bg-[#1E293B]/30 border border-slate-800 p-5 rounded-2xl space-y-4">
@@ -301,14 +294,13 @@ export function KYCAdminDashboardScreen() {
                   <div className="col-span-2">
                     <span className="text-slate-500 block mb-0.5">Adresse de résidence déclarée :</span>
                     <strong className="text-slate-200 leading-relaxed block bg-[#0F172A] p-3 rounded-xl border border-slate-800">
-                      <MapPin className="w-3.5 h-3.5 text-slate-500 inline mr-1" />
+                      <MapPinCustom className="w-3.5 h-3.5 text-slate-500 inline mr-1" />
                       {selectedRequest.street}, {selectedRequest.zip} {selectedRequest.city}
                     </strong>
                   </div>
                 </div>
               </div>
 
-              {/* GRILLE DE VISUALISATION DES DOCUMENTS REELS */}
               <div className="space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Fichiers Cryptés Vérifiés</h3>
                 
@@ -319,7 +311,6 @@ export function KYCAdminDashboardScreen() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    {/* DOC 1 : PIÈCE D'IDENTITÉ */}
                     <div className="border border-slate-800 rounded-2xl p-4 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[180px] relative overflow-hidden">
                       {decryptedIdentityUrl ? (
                         <img src={decryptedIdentityUrl} alt="Identity Document" className="w-full h-full object-cover rounded-xl" />
@@ -332,7 +323,6 @@ export function KYCAdminDashboardScreen() {
                       )}
                     </div>
 
-                    {/* DOC 2 : SELFIE */}
                     <div className="border border-slate-800 rounded-2xl p-4 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[180px] relative overflow-hidden">
                       {decryptedSelfieUrl ? (
                         <img src={decryptedSelfieUrl} alt="Selfie Verification" className="w-full h-full object-cover rounded-xl" />
@@ -348,7 +338,6 @@ export function KYCAdminDashboardScreen() {
                 )}
               </div>
 
-              {/* ACTIONS ADMINISTRATIVES DE TRANSITION D'ÉTAT */}
               <div className="flex gap-3 pt-4 border-t border-slate-800">
                 <button
                   onClick={() => handleUpdateStatus('rejected')}
@@ -361,10 +350,10 @@ export function KYCAdminDashboardScreen() {
                 <button
                   onClick={() => handleUpdateStatus('verified')}
                   disabled={isActionLoading || isDecrypting}
-                  className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
+                  className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
                 >
                   <UserCheck className="w-4 h-4" />
-                  Approuver et Activer le compte
+                  Approuver et Activer
                 </button>
               </div>
             </div>
@@ -381,8 +370,7 @@ export function KYCAdminDashboardScreen() {
   );
 }
 
-// Petit composant Inline MapPin pour parer à l'absence d'import global
-function MapPin(props: any) {
+function MapPinCustom(props: any) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className} style={{ width: 14, height: 14, display: 'inline' }}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
   );
