@@ -10,7 +10,8 @@ import { toast } from 'sonner';
 
 interface KYCRequest {
   id: string;
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone?: string;
   accountType: string;
@@ -58,10 +59,11 @@ export function KYCAdminDashboardScreen() {
         return !p.kyc_status || p.kyc_status === 'pending';
       });
 
-      // Alignement chirurgical sur les clés réelles de ta table : full_name et phone_number
+      // Cartographie adaptative alignée sur l'architecture séparée (first_name / last_name)
       const formatted: KYCRequest[] = pendingRequests.map((p: any) => ({
         id: p.id,
-        fullName: p.full_name || 'Non renseigné',
+        firstName: p.first_name || 'Non renseigné',
+        lastName: p.last_name || '',
         email: p.email || 'Inconnu',
         phone: p.phone_number || 'Non communiqué',
         accountType: p.account_type || 'particulier',
@@ -75,7 +77,7 @@ export function KYCAdminDashboardScreen() {
       setRequests(formatted);
     } catch (err: any) {
       console.error('[KYC Fetch Error]:', err);
-      toast.error("Erreur de synchronisation des tables.");
+      toast.error("Erreur de synchronisation des tables nominatives.");
     } finally {
       setIsLoading(false);
     }
@@ -148,13 +150,13 @@ export function KYCAdminDashboardScreen() {
         .update({ 
           kyc_status: status,
           trust_score: status === 'verified' ? 85 : 10,
-          kyc_completed: status === 'verified' // Met à jour ton indicateur booléen d'origine
+          kyc_completed: status === 'verified'
         })
         .eq('id', selectedRequest.id);
 
       if (error) throw error;
 
-      toast.success(`Dossier de ${selectedRequest.fullName} mis à jour : ${status.toUpperCase()}`);
+      toast.success(`Dossier de ${selectedRequest.firstName} ${selectedRequest.lastName} mis à jour : ${status.toUpperCase()}`);
       setSelectedRequest(null);
       fetchPendingKYC();
     } catch (err: any) {
@@ -166,7 +168,8 @@ export function KYCAdminDashboardScreen() {
   };
 
   const filteredRequests = requests.filter(r => 
-    r.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     r.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -226,7 +229,7 @@ export function KYCAdminDashboardScreen() {
                   }`}
                 >
                   <div className="space-y-1 truncate flex-1 pr-3">
-                    <p className="text-xs font-bold text-white uppercase tracking-wide">{req.fullName}</p>
+                    <p className="text-xs font-bold text-white uppercase tracking-wide">{req.firstName} {req.lastName}</p>
                     <p className="text-[11px] text-slate-400 truncate">{req.email}</p>
                     <span className={`inline-block text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${
                       req.accountType === 'professionnel' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
@@ -285,7 +288,7 @@ export function KYCAdminDashboardScreen() {
                 <div className="grid grid-cols-2 gap-4 text-xs">
                   <div>
                     <span className="text-slate-500 block mb-0.5">Identité complète :</span>
-                    <strong className="text-white text-sm">{selectedRequest.fullName}</strong>
+                    <strong className="text-white text-sm">{selectedRequest.firstName} {selectedRequest.lastName}</strong>
                   </div>
                   <div>
                     <span className="text-slate-500 block mb-0.5">Téléphone :</span>
