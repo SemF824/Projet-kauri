@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   ShieldAlert, ShieldCheck, UserCheck, UserX, KeyRound, 
-  FileText, Loader2, RefreshCw, ChevronRight, Search, MapPin
+  FileText, Loader2, RefreshCw, ChevronRight, Search, User 
 } from 'lucide-react';
 import { getSupabase } from '../../../../utils/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -51,15 +51,12 @@ export function KYCAdminDashboardScreen() {
   const fetchPendingKYC = async () => {
     setIsLoading(true);
     try {
-      // 1. Récupération globale des profils pour parer aux erreurs de colonnes manquantes (422)
       const { data, error } = await supabase
         .from('profiles')
         .select('*');
 
       if (error) throw error;
 
-      // 2. Filtrage résilient côté client (Idéal sous la barre des 15k utilisateurs)
-      // Évite les plantages si la colonne kyc_status n'existe pas encore sur ton instance de prod
       const pendingRequests = (data || []).filter((p: any) => {
         return !p.kyc_status || p.kyc_status === 'pending';
       });
@@ -350,7 +347,7 @@ export function KYCAdminDashboardScreen() {
                 <button
                   onClick={() => handleUpdateStatus('verified')}
                   disabled={isActionLoading || isDecrypting}
-                  className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
+                  className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
                 >
                   <UserCheck className="w-4 h-4" />
                   Approuver et Activer
