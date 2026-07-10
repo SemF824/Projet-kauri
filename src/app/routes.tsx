@@ -102,6 +102,7 @@ import { CircleJoinSuccessScreen } from './pages/kauri/CircleJoinSuccessScreen';
 import { ProCreerTontineScreen } from './pages/kauri/ProCreerTontineScreen';
 import { BadgesScreen } from './pages/kauri/BadgesScreen';
 import { Setup2FAScreen } from './pages/kauri/Setup2FAScreen';
+import { KYCAdminDashboardScreen } from './pages/kauri/admin/KYCAdminDashboardScreen';
 
 export const router = createBrowserRouter([
   {
@@ -535,4 +536,8 @@ export const router = createBrowserRouter([
     path: '*',
     element: <Navigate to="/kauri/login" replace />,
   },
+  {
+  path: "/kauri/admin/kyc",
+  element: <KYCAdminDashboardScreen />
+},
 ]);
