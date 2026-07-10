@@ -10,8 +10,7 @@ import { toast } from 'sonner';
 
 interface KYCRequest {
   id: string;
-  firstName: string;
-  lastName: string;
+  fullName: string;
   email: string;
   phone?: string;
   accountType: string;
@@ -39,9 +38,12 @@ export function KYCAdminDashboardScreen() {
   const [decryptedSelfieUrl, setDecryptedSelfieUrl] = useState<string | null>(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
 
+  // Indicateurs pour savoir si les fichiers trouvés sont chiffrés ou bruts
+  const [isIdentityEncrypted, setIsIdentityEncrypted] = useState(false);
+  const [isSelfieEncrypted, setIsSelfieEncrypted] = useState(false);
+
   useEffect(() => {
     if (!authContextLoading && (!user || profile?.accountType !== 'admin')) {
-      // Décommente cette ligne en production pour verrouiller la route :
       // navigate('/kauri/login');
     }
   }, [user, profile, authContextLoading]);
@@ -61,8 +63,7 @@ export function KYCAdminDashboardScreen() {
 
       const formatted: KYCRequest[] = pendingRequests.map((p: any) => ({
         id: p.id,
-        firstName: p.first_name || 'Non renseigné',
-        lastName: p.last_name || '',
+        fullName: p.full_name || 'Non renseigné',
         email: p.email || 'Inconnu',
         phone: p.phone_number || 'Non communiqué',
         accountType: p.account_type || 'particulier',
@@ -77,7 +78,7 @@ export function KYCAdminDashboardScreen() {
     } catch (err: any) {
       console.error('[KYC Fetch Error]:', err);
       toast.error("Erreur de synchronisation des tables nominatives.");
-    } finally {
+    } filter {
       setIsLoading(false);
     }
   };
@@ -100,42 +101,68 @@ export function KYCAdminDashboardScreen() {
     setSelectedRequest(req);
     setDecryptedIdentityUrl(null);
     setDecryptedSelfieUrl(null);
-    
-    if (!isKeyLoaded) {
-      toast.info("Visualisation des métadonnées. Chargez la clé privée pour déchiffrer.");
-      return;
-    }
+    setIsIdentityEncrypted(false);
+    setIsSelfieEncrypted(false);
 
     setIsDecrypting(true);
     try {
-      // 🎯 CHANGEMENT STRATÉGIQUE : Lecture depuis le bucket secure-kyc
-      const { data: identityBlob } = await supabase.storage
+      // 1. Lister le contenu du dossier de l'utilisateur dans secure-kyc
+      const { data: files, error: listError } = await supabase.storage
         .from('secure-kyc')
-        .download(`${req.id}/identity.enc`);
+        .list(req.id);
 
-      const { data: selfieBlob } = await supabase.storage
-        .from('secure-kyc')
-        .download(`${req.id}/selfie.enc`);
+      if (listError) throw listError;
 
-      await new Promise(r => setTimeout(r, 800));
+      // Trouvez les vrais fichiers correspondants dans la liste
+      const identityFile = files?.find(f => f.name.startsWith('identity'));
+      const selfieFile = files?.find(f => f.name.startsWith('selfie'));
 
-      if (identityBlob) {
-        setDecryptedIdentityUrl(URL.createObjectURL(identityBlob));
+      // 2. Traitement dynamique du Document d'Identité
+      if (identityFile) {
+        const isEnc = identityFile.name.endsWith('.enc');
+        setIsIdentityEncrypted(isEnc);
+
+        if (isEnc && !isKeyLoaded) {
+          // Fichier chiffré sans clé chargée -> on ne peut pas l'afficher
+          setDecryptedIdentityUrl(null);
+        } else {
+          const { data: blob, error } = await supabase.storage
+            .from('secure-kyc')
+            .download(`${req.id}/${identityFile.name}`);
+          
+          if (!error && blob) {
+            setDecryptedIdentityUrl(URL.createObjectURL(blob));
+          }
+        }
       } else {
+        // Fallback dégradé si aucun fichier n'existe
         setDecryptedIdentityUrl("https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?auto=format&fit=crop&w=400&q=80");
       }
-      
-      if (selfieBlob) {
-        setDecryptedSelfieUrl(URL.createObjectURL(selfieBlob));
+
+      // 3. Traitement dynamique du Selfie
+      if (selfieFile) {
+        const isEnc = selfieFile.name.endsWith('.enc');
+        setIsSelfieEncrypted(isEnc);
+
+        if (isEnc && !isKeyLoaded) {
+          setDecryptedSelfieUrl(null);
+        } else {
+          const { data: blob, error } = await supabase.storage
+            .from('secure-kyc')
+            .download(`${req.id}/${selfieFile.name}`);
+          
+          if (!error && blob) {
+            setDecryptedSelfieUrl(URL.createObjectURL(blob));
+          }
+        }
       } else {
         setDecryptedSelfieUrl("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80");
       }
 
-      toast.success("Enveloppe décryptée en mémoire tampon.");
     } catch (err: any) {
-      console.error('[Decryption Error]:', err);
-      toast.error("Erreur d'extraction des enveloppes.");
-    } finally {
+      console.error('[Decryption or List Error]:', err);
+      toast.error("Erreur lors de la récupération des pièces physiques.");
+    } filter {
       setIsDecrypting(false);
     }
   };
@@ -156,27 +183,26 @@ export function KYCAdminDashboardScreen() {
 
       if (error) throw error;
 
-      toast.success(`Dossier de ${selectedRequest.firstName} ${selectedRequest.lastName} mis à jour : ${status.toUpperCase()}`);
+      toast.success(`Dossier mis à jour : ${status.toUpperCase()}`);
       setSelectedRequest(null);
       fetchPendingKYC();
     } catch (err: any) {
       console.error('[KYC Status Update Error]:', err);
-      toast.error("Échec de modification.");
-    } finally {
+      toast.error("Échec de la modification d'état.");
+    } filter {
       setIsActionLoading(false);
     }
   };
 
   const filteredRequests = requests.filter(r => 
-    r.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     r.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col font-sans">
       
-      {/* HEADER PANNEAU ADMINISTRATIF */}
+      {/* HEADER */}
       <div className="border-b border-slate-800 bg-[#1E293B]/60 backdrop-blur-xl px-8 py-5 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
@@ -194,7 +220,7 @@ export function KYCAdminDashboardScreen() {
 
       <div className="flex-1 flex overflow-hidden">
         
-        {/* COLONNE GAUCHE : DOSSIERS */}
+        {/* LISTE DOSSIERS */}
         <div className="w-2/5 border-r border-slate-800 p-6 flex flex-col space-y-4 overflow-y-auto">
           <div className="relative">
             <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
@@ -229,7 +255,7 @@ export function KYCAdminDashboardScreen() {
                   }`}
                 >
                   <div className="space-y-1 truncate flex-1 pr-3">
-                    <p className="text-xs font-bold text-white uppercase tracking-wide">{req.firstName} {req.lastName}</p>
+                    <p className="text-xs font-bold text-white uppercase tracking-wide">{req.fullName}</p>
                     <p className="text-[11px] text-slate-400 truncate">{req.email}</p>
                     <span className={`inline-block text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${
                       req.accountType === 'professionnel' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
@@ -244,50 +270,40 @@ export function KYCAdminDashboardScreen() {
           )}
         </div>
 
-        {/* COLONNE DROITE : INSPECTION */}
+        {/* DETAILS INSPECTION */}
         <div className="w-3/5 p-6 overflow-y-auto bg-[#090D1A]">
           
-          {/* CHARGEMENT CLÉ DE SÉCURITÉ */}
-          {!isKeyLoaded ? (
+          {!isKeyLoaded && (isIdentityEncrypted || isSelfieEncrypted) && (
             <form onSubmit={handleLoadKey} className="bg-[#1E293B]/60 border border-slate-800 p-5 rounded-2xl space-y-4 mb-6">
               <div className="flex gap-3">
                 <KeyRound className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="text-sm font-bold text-white">Enclave Cryptographique Administrative</h3>
+                  <h3 className="text-sm font-bold text-white">Fichiers Chiffrés Détectés · Clé Requise</h3>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Les fichiers d'identité de KAURI sont chiffrés à la source (Zero-Knowledge). Collez votre clé privée d'entreprise ci-dessous pour activer le décodage en mémoire volatile locale.
+                    Certaines pièces de ce dossier utilisent le protocole enveloppe. Collez votre clé PEM pour décoder.
                   </p>
                 </div>
               </div>
               <textarea
-                rows={4}
+                rows={3}
                 value={privateKeyPEM}
                 onChange={(e) => setPrivateKeyText(e.target.value)}
-                placeholder="-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7...\n-----END PRIVATE KEY-----"
-                className="w-full bg-[#0F172A] border border-slate-700 rounded-xl p-3 text-[10px] font-mono outline-none text-amber-500 focus:border-amber-500/40 leading-normal"
+                placeholder="-----BEGIN PRIVATE KEY-----"
+                className="w-full bg-[#0F172A] border border-slate-700 rounded-xl p-3 text-[10px] font-mono outline-none text-amber-500"
               />
-              <textarea
-                rows={4}
-                value={privateKeyPEM}
-                onChange={(e) => setPrivateKeyText(e.target.value)}
-                placeholder="-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7...\n-----END PRIVATE KEY-----"
-                className="w-full bg-[#0F172A] border border-slate-700 rounded-xl p-3 text-[10px] font-mono outline-none text-amber-500 focus:border-amber-500/40 leading-normal"
-              />
-              <button type="submit" className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-md cursor-pointer">
+              <button type="submit" className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl cursor-pointer">
                 Activer l'Enclave Administrative
               </button>
             </form>
-          ) : (
+          )}
+
+          {isKeyLoaded && (
             <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2.5">
-                <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <p className="text-xs text-emerald-400 font-semibold">Enclave Active · Déchiffrement à la volée opérationnel.</p>
-              </div>
-              <button onClick={() => setIsKeyActive(false)} className="text-[10px] text-slate-400 underline hover:text-white cursor-pointer">Révoquer la clé</button>
+              <p className="text-xs text-emerald-400 font-semibold">Enclave de déchiffrement active.</p>
+              <button onClick={() => setIsKeyActive(false)} className="text-[10px] text-slate-400 underline cursor-pointer">Révoquer</button>
             </div>
           )}
 
-          {/* SÉLECTION COMPTE */}
           {selectedRequest ? (
             <div className="space-y-6">
               <div className="bg-[#1E293B]/30 border border-slate-800 p-5 rounded-2xl space-y-4">
@@ -295,7 +311,7 @@ export function KYCAdminDashboardScreen() {
                 <div className="grid grid-cols-2 gap-4 text-xs">
                   <div>
                     <span className="text-slate-500 block mb-0.5">Identité complète :</span>
-                    <strong className="text-white text-sm">{selectedRequest.firstName} {selectedRequest.lastName}</strong>
+                    <strong className="text-white text-sm">{selectedRequest.fullName}</strong>
                   </div>
                   <div>
                     <span className="text-slate-500 block mb-0.5">Téléphone :</span>
@@ -312,46 +328,52 @@ export function KYCAdminDashboardScreen() {
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Fichiers Cryptés Vérifiés</h3>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Pièces justificatives réelles</h3>
                 
                 {isDecrypting ? (
                   <div className="py-16 text-center border border-slate-800 rounded-2xl bg-[#1E293B]/10">
                     <Loader2 className="w-6 h-6 animate-spin text-amber-500 mx-auto mb-2" />
-                    <p className="text-xs text-slate-400 font-medium">Déballage de l'enveloppe cryptographique...</p>
+                    <p className="text-xs text-slate-400">Téléchargement sécurisé des pièces en cours...</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
+                    
+                    {/* DOCUMENT IDENTITÉ */}
                     <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden">
-                      {decryptedIdentityUrl && !decryptedIdentityUrl.includes("unsplash.com") ? (
-                        <img src={decryptedIdentityUrl} alt="Identity Document" className="w-full h-44 object-cover rounded-xl" />
-                      ) : decryptedIdentityUrl ? (
-                        <div className="text-center space-y-2">
-                          <img src={decryptedIdentityUrl} alt="Identity Document Preview" className="w-full h-44 object-cover rounded-xl opacity-40 blur-[1px]" />
-                          <span className="text-[10px] text-amber-400 font-bold block absolute bottom-4 bg-slate-900/80 px-2 py-1 rounded-md left-1/2 transform -translate-x-1/2">MODE DEMO · FICTIF</span>
+                      {decryptedIdentityUrl ? (
+                        <div className="w-full h-full relative">
+                          <img src={decryptedIdentityUrl} alt="Identity Document" className="w-full h-44 object-cover rounded-xl" />
+                          {!isIdentityEncrypted && (
+                            <span className="text-[9px] text-emerald-400 font-bold block absolute bottom-2 right-2 bg-slate-950/80 px-2 py-0.5 rounded">FLUX BRUT</span>
+                          )}
                         </div>
                       ) : (
                         <div className="text-center space-y-2">
                           <FileText className="w-8 h-8 text-slate-600 mx-auto" />
-                          <p className="text-xs font-bold text-slate-400">Identity_Document.enc</p>
+                          <p className="text-xs font-bold text-slate-400">identity.enc</p>
+                          <span className="text-[10px] text-amber-500">Verrouillé RSA</span>
                         </div>
                       )}
                     </div>
 
+                    {/* SELFIE */}
                     <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden">
-                      {decryptedSelfieUrl && !decryptedSelfieUrl.includes("unsplash.com") ? (
-                        <img src={decryptedSelfieUrl} alt="Selfie Verification" className="w-full h-44 object-cover rounded-xl" />
-                      ) : decryptedSelfieUrl ? (
-                        <div className="text-center space-y-2">
-                          <img src={decryptedSelfieUrl} alt="Selfie Preview" className="w-full h-44 object-cover rounded-xl opacity-40 blur-[1px]" />
-                          <span className="text-[10px] text-amber-400 font-bold block absolute bottom-4 bg-slate-900/80 px-2 py-1 rounded-md left-1/2 transform -translate-x-1/2">MODE DEMO · FICTIF</span>
+                      {decryptedSelfieUrl ? (
+                        <div className="w-full h-full relative">
+                          <img src={decryptedSelfieUrl} alt="Selfie Verification" className="w-full h-44 object-cover rounded-xl" />
+                          {!isSelfieEncrypted && (
+                            <span className="text-[9px] text-emerald-400 font-bold block absolute bottom-2 right-2 bg-slate-950/80 px-2 py-0.5 rounded">FLUX BRUT</span>
+                          )}
                         </div>
                       ) : (
                         <div className="text-center space-y-2">
                           <User className="w-8 h-8 text-slate-600 mx-auto" />
-                          <p className="text-xs font-bold text-slate-400">Selfie_Vivacity.enc</p>
+                          <p className="text-xs font-bold text-slate-400">selfie.enc</p>
+                          <span className="text-[10px] text-amber-500">Verrouillé RSA</span>
                         </div>
                       )}
                     </div>
+
                   </div>
                 )}
               </div>
@@ -368,7 +390,7 @@ export function KYCAdminDashboardScreen() {
                 <button
                   onClick={() => handleUpdateStatus('verified')}
                   disabled={isActionLoading || isDecrypting}
-                  className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
+                  className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
                 >
                   <UserCheck className="w-4 h-4" />
                   Approuver et Activer
@@ -379,7 +401,7 @@ export function KYCAdminDashboardScreen() {
             <div className="h-full flex flex-col items-center justify-center text-center py-24 border-2 border-dashed border-slate-800 rounded-3xl">
               <FileText className="w-12 h-12 text-slate-700 mb-3" />
               <h3 className="text-sm font-bold text-slate-400">Aucun dossier ouvert</h3>
-              <p className="text-xs text-slate-500 max-w-[240px] mt-1">Sélectionnez un membre dans le volet de gauche pour inspecter ses attestations cryptées.</p>
+              <p className="text-xs text-slate-500 max-w-[240px] mt-1">Sélectionnez un membre dans le volet de gauche pour inspecter ses attestations.</p>
             </div>
           )}
         </div>
