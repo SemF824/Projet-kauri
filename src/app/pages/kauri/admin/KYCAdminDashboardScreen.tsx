@@ -59,7 +59,6 @@ export function KYCAdminDashboardScreen() {
         return !p.kyc_status || p.kyc_status === 'pending';
       });
 
-      // Cartographie adaptative alignée sur l'architecture séparée (first_name / last_name)
       const formatted: KYCRequest[] = pendingRequests.map((p: any) => ({
         id: p.id,
         firstName: p.first_name || 'Non renseigné',
@@ -109,12 +108,13 @@ export function KYCAdminDashboardScreen() {
 
     setIsDecrypting(true);
     try {
+      // 🎯 CHANGEMENT STRATÉGIQUE : Lecture depuis le bucket secure-kyc
       const { data: identityBlob } = await supabase.storage
-        .from('kyc-documents')
+        .from('secure-kyc')
         .download(`${req.id}/identity.enc`);
 
       const { data: selfieBlob } = await supabase.storage
-        .from('kyc-documents')
+        .from('secure-kyc')
         .download(`${req.id}/selfie.enc`);
 
       await new Promise(r => setTimeout(r, 800));
@@ -161,7 +161,7 @@ export function KYCAdminDashboardScreen() {
       fetchPendingKYC();
     } catch (err: any) {
       console.error('[KYC Status Update Error]:', err);
-      toast.error("Échec de modification : Vérifiez l'application du script SQL.");
+      toast.error("Échec de modification.");
     } finally {
       setIsActionLoading(false);
     }
@@ -266,6 +266,13 @@ export function KYCAdminDashboardScreen() {
                 placeholder="-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7...\n-----END PRIVATE KEY-----"
                 className="w-full bg-[#0F172A] border border-slate-700 rounded-xl p-3 text-[10px] font-mono outline-none text-amber-500 focus:border-amber-500/40 leading-normal"
               />
+              <textarea
+                rows={4}
+                value={privateKeyPEM}
+                onChange={(e) => setPrivateKeyText(e.target.value)}
+                placeholder="-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7...\n-----END PRIVATE KEY-----"
+                className="w-full bg-[#0F172A] border border-slate-700 rounded-xl p-3 text-[10px] font-mono outline-none text-amber-500 focus:border-amber-500/40 leading-normal"
+              />
               <button type="submit" className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-md cursor-pointer">
                 Activer l'Enclave Administrative
               </button>
@@ -315,8 +322,13 @@ export function KYCAdminDashboardScreen() {
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden">
-                      {decryptedIdentityUrl ? (
+                      {decryptedIdentityUrl && !decryptedIdentityUrl.includes("unsplash.com") ? (
                         <img src={decryptedIdentityUrl} alt="Identity Document" className="w-full h-44 object-cover rounded-xl" />
+                      ) : decryptedIdentityUrl ? (
+                        <div className="text-center space-y-2">
+                          <img src={decryptedIdentityUrl} alt="Identity Document Preview" className="w-full h-44 object-cover rounded-xl opacity-40 blur-[1px]" />
+                          <span className="text-[10px] text-amber-400 font-bold block absolute bottom-4 bg-slate-900/80 px-2 py-1 rounded-md left-1/2 transform -translate-x-1/2">MODE DEMO · FICTIF</span>
+                        </div>
                       ) : (
                         <div className="text-center space-y-2">
                           <FileText className="w-8 h-8 text-slate-600 mx-auto" />
@@ -326,8 +338,13 @@ export function KYCAdminDashboardScreen() {
                     </div>
 
                     <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden">
-                      {decryptedSelfieUrl ? (
+                      {decryptedSelfieUrl && !decryptedSelfieUrl.includes("unsplash.com") ? (
                         <img src={decryptedSelfieUrl} alt="Selfie Verification" className="w-full h-44 object-cover rounded-xl" />
+                      ) : decryptedSelfieUrl ? (
+                        <div className="text-center space-y-2">
+                          <img src={decryptedSelfieUrl} alt="Selfie Preview" className="w-full h-44 object-cover rounded-xl opacity-40 blur-[1px]" />
+                          <span className="text-[10px] text-amber-400 font-bold block absolute bottom-4 bg-slate-900/80 px-2 py-1 rounded-md left-1/2 transform -translate-x-1/2">MODE DEMO · FICTIF</span>
+                        </div>
                       ) : (
                         <div className="text-center space-y-2">
                           <User className="w-8 h-8 text-slate-600 mx-auto" />
