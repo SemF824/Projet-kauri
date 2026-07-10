@@ -19,8 +19,10 @@ type Method = 'app' | 'sms' | null;
 
 export function Setup2FAScreen() {
   const navigate = useNavigate();
-  
   const { user, profile, refreshProfile, loading: authContextLoading } = useAuth();
+  
+  // 🎯 UNIFICATION CLIENT : Une seule instance constante pour tout le cycle de vie du composant
+  const supabase = getSupabase();
   
   const [step, setStep] = useState<Step>('intro');
   const [method, setMethod] = useState<Method>(null);
@@ -60,8 +62,6 @@ export function Setup2FAScreen() {
 
     setVerifying(true);
     try {
-      const supabase = getSupabase();
-      
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData?.session) {
         throw new Error("Jeton de session introuvable sur le client d'authentification.");
@@ -69,6 +69,7 @@ export function Setup2FAScreen() {
 
       const friendlyNameTarget = user?.email || 'Compte Kauri';
 
+      // Purge des résidus de facteurs pour éviter la 422 d'enrôlement doublon
       const { data: factorList, error: listError } = await supabase.auth.mfa.listFactors();
       
       if (!listError && factorList?.all) {
@@ -125,29 +126,34 @@ export function Setup2FAScreen() {
     if (!val && idx > 0) inputRefs.current[idx - 1]?.focus();
   }
 
-  // 🎯 SÉCURISATION DU PROTOCOLE AVEC SÉCURITÉ DE PROPAGATION ASYNCHRONE
+  // Verification finale immunisée contre les crashs de requêtes concurrentes
   async function verifyCode() {
     const fullCode = code.join('');
     if (fullCode.length < 6) return;
+    if (!factorId) {
+      toast.error("Identifiant de sécurité perdu. Veuillez recommencer.");
+      return;
+    }
     
     setVerifying(true);
     setCodeError(false);
 
     try {
-      const supabase = getSupabase();
-
       // Étape 1 : Création du challenge éphémère auprès de l'API Supabase
       const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
         factorId: factorId
       });
 
       if (challengeError) throw challengeError;
+      if (!challengeData?.id) {
+        throw new Error("Le serveur n'a pas renvoyé d'identifiant de challenge valide.");
+      }
 
-      // ⚡ LA SÉCURITÉ : Une micro-pause de 350ms pour laisser le temps aux serveurs de Supabase
-      // de propager et indexer l'ID du challenge avant l'interrogation immédiate de la route /verify.
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      // ⚡ PROTECTION DE PROPAGATION : Latence étendue à 600ms pour garantir l'indexation 
+      // de l'ID du challenge sur l'instance de production et encaisser la gigue réseau (jitter).
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
-      // Étape 2 : Transmission cryptographique de vérification
+      // Étape 2 : Validation finale du TOTP Google Authenticator raccordé au challenge vérifié
       const { error: verifyError } = await supabase.auth.mfa.verify({
         factorId: factorId,
         code: fullCode,
@@ -156,6 +162,7 @@ export function Setup2FAScreen() {
 
       if (verifyError) throw verifyError;
 
+      // Mutation des codes de secours locaux
       setRecoveryCodes([
         'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
         'KAURI-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase(),
@@ -273,65 +280,68 @@ export function Setup2FAScreen() {
             {[
               {
                 id: 'app' as Method,
-                icon: <Smartphone size={24} color={TEAL} />,
+                icon: Smartphone,
                 bg: `${TEAL}14`,
+                color: TEAL,
                 title: 'Application TOTP',
                 subtitle: 'Google Authenticator, Authy, 1Password…',
                 badge: '✓ Recommandé',
-                badgeColor: TEAL,
               },
               {
                 id: 'sms' as Method,
-                icon: <MessageSquare size={24} color='#8B5CF6' />,
+                icon: MessageSquare,
                 bg: '#8B5CF614',
+                color: '#8B5CF6',
                 title: 'SMS',
                 subtitle: `Code envoyé sur votre numéro ${profile?.phone || 'associé'}`,
                 badge: null,
-                badgeColor: '',
               },
-            ].map(opt => (
-              <button
-                key={opt.id}
-                onClick={() => handleStartSetup(opt.id)}
-                disabled={verifying}
-                style={{
-                  width: '100%',
-                  background: CARD,
-                  border: `1.5px solid ${method === opt.id ? TEAL : BORDER}`,
-                  borderRadius: 16,
-                  padding: '18px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 14,
-                  cursor: verifying ? 'not-allowed' : 'pointer',
-                  marginBottom: 12,
-                  textAlign: 'left',
-                  transition: 'border-color 0.2s',
-                  opacity: verifying ? 0.7 : 1
-                }}
-              >
-                <div style={{ width: 48, height: 48, borderRadius: 14, background: opt.bg, display: 'flex', alignItems: 'center', justifycontent: 'center', flexShrink: 0 }}>
-                  {opt.id === 'app' && verifying ? (
-                    <div className="w-16 h-16 rounded-full border-2 border-[#006D77] border-t-transparent animate-spin" />
-                  ) : (
-                    <opt.icon style={{ width: 24, height: 24, color: opt.color }} />
-                  )}
-                </div>
-                <div className="text-left flex-1">
-                  <div className="flex items-center gap-2">
-                    <p style={{ fontWeight: 600, fontSize: "0.95rem", color: TEXT_P }}>{opt.title}</p>
-                    {opt.badge && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${TEAL}15`, color: TEAL }}>{opt.badge}</span>}
+            ].map(opt => {
+              const IconComp = opt.icon;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => handleStartSetup(opt.id)}
+                  disabled={verifying}
+                  style={{
+                    width: '100%',
+                    background: CARD,
+                    border: `1.5px solid ${method === opt.id ? TEAL : BORDER}`,
+                    borderRadius: 16,
+                    padding: '18px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
+                    cursor: verifying ? 'not-allowed' : 'pointer',
+                    marginBottom: 12,
+                    textAlign: 'left',
+                    transition: 'border-color 0.2s',
+                    opacity: verifying ? 0.7 : 1
+                  }}
+                >
+                  <div style={{ width: 48, height: 48, borderRadius: 14, background: opt.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {opt.id === 'app' && verifying ? (
+                      <div className="w-5 h-5 rounded-full border-2 border-[#006D77] border-t-transparent animate-spin" />
+                    ) : (
+                      <IconComp style={{ width: 24, height: 24, color: opt.color }} />
+                    )}
                   </div>
-                  <p className="text-xs" style={{ color: TEXT_S }}>{opt.subtitle}</p>
-                </div>
-                <ChevronRight style={{ width: 16, height: 16, color: TEXT_S }} />
-              </button>
-            ))}
+                  <div className="text-left flex-1">
+                    <div className="flex items-center gap-2">
+                      <p style={{ fontWeight: 600, fontSize: "0.95rem", color: TEXT_P }}>{opt.title}</p>
+                      {opt.badge && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${TEAL}15`, color: TEAL }}>{opt.badge}</span>}
+                    </div>
+                    <p className="text-xs" style={{ color: TEXT_S }}>{opt.subtitle}</p>
+                  </div>
+                  <ChevronRight style={{ width: 16, height: 16, color: TEXT_S }} />
+                </button>
+              );
+            })}
           </motion.div>
         )}
 
         {step === 'setup' && (
-          <motion.div key="setup" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.22 }} style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', items: 'center' }}>
+          <motion.div key="setup" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.22 }} style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {method === 'app' ? (
               <>
                 <p style={{ color: TEXT_S, fontSize: 13, textAlign: 'center', margin: '0 0 24px', lineHeight: 1.6 }}>
