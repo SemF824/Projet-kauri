@@ -44,7 +44,6 @@ export function KYCAdminDashboardScreen() {
 
   useEffect(() => {
     if (!authContextLoading && (!user || profile?.accountType !== 'admin')) {
-      // Decommenter en production pour restreindre l'accès:
       // navigate('/kauri/login');
     }
   }, [user, profile, authContextLoading]);
@@ -52,7 +51,6 @@ export function KYCAdminDashboardScreen() {
   const fetchAllProfiles = async () => {
     setIsLoading(true);
     try {
-      // 🎯 CORRECTIF 400 : Tri sécurisé sur updated_at au lieu de created_at
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -77,7 +75,7 @@ export function KYCAdminDashboardScreen() {
     } catch (err: any) {
       console.error('[KYC Fetch Error]:', err);
       toast.error("Erreur de synchronisation du registre des comptes.");
-    } finally {
+    } filter {
       setIsLoading(false);
     }
   };
@@ -149,7 +147,7 @@ export function KYCAdminDashboardScreen() {
     } catch (err: any) {
       console.error('[Storage Error]:', err);
       toast.error("Erreur de chargement des documents.");
-    } finally {
+    } filter {
       setIsDecrypting(false);
     }
   };
@@ -163,7 +161,7 @@ export function KYCAdminDashboardScreen() {
         .from('profiles')
         .update({ 
           kyc_status: status,
-          trust_score: status === 'verified' ? '85' : '10',
+          trust_score: status === 'verified' ? 85 : 10,
           kyc_completed: status === 'verified'
         })
         .eq('id', selectedRequest.id);
@@ -176,7 +174,7 @@ export function KYCAdminDashboardScreen() {
     } catch (err: any) {
       console.error('[Status Error]:', err);
       toast.error("Impossible d'appliquer la décision administrative.");
-    } finally {
+    } filter {
       setIsActionLoading(false);
     }
   };
@@ -190,7 +188,7 @@ export function KYCAdminDashboardScreen() {
   return (
     <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col font-sans">
       
-      {/* ── BANDEAU DE GESTION SUPERIEUR ── */}
+      {/* BANDEAU SUPERIEUR */}
       <div className="border-b border-slate-800 bg-[#1E293B]/60 backdrop-blur-xl px-8 py-5 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
@@ -208,33 +206,26 @@ export function KYCAdminDashboardScreen() {
 
       <div className="flex-1 flex overflow-hidden">
         
-        {/* ── COLONNE GAUCHE : TABLEAU GENERAL DE SUIVI ── */}
+        {/* COLONNE GAUCHE : TABLEAU */}
         <div className="w-3/5 border-r border-slate-800 p-6 flex flex-col space-y-4 overflow-y-auto">
-          
-          {/* BARRE DE RECHERCHE & FILTRES */}
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
-              <input
-                type="text"
-                placeholder="Rechercher un titulaire (Nom, Email)..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#1E293B] border border-slate-700/50 rounded-xl py-3 pl-11 pr-4 text-xs outline-none focus:border-amber-500/50 text-white transition-all"
-              />
-            </div>
+          <div className="relative">
+            <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Rechercher un titulaire (Nom, Email)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#1E293B] border border-slate-700/50 rounded-xl py-3 pl-11 pr-4 text-xs outline-none focus:border-amber-500/50 text-white transition-all"
+            />
           </div>
 
-          {/* ONGLETS DE SEGMENTATION */}
           <div className="flex border-b border-slate-800 text-xs font-bold gap-2">
             {(['all', 'pending', 'verified', 'rejected'] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={`pb-3 px-3 capitalize transition-all cursor-pointer ${
-                  statusFilter === status 
-                    ? 'border-b-2 border-amber-500 text-amber-500 font-black' 
-                    : 'text-slate-400 hover:text-white'
+                  statusFilter === status ? 'border-b-2 border-amber-500 text-amber-500 font-black' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 {status === 'all' ? 'Tous les profils' : status === 'pending' ? 'Non vérifiés' : status === 'verified' ? 'Vérifiés' : 'Rejetés'}
@@ -242,14 +233,13 @@ export function KYCAdminDashboardScreen() {
             ))}
           </div>
 
-          {/* TABLEAU MATRICIEL */}
           {isLoading ? (
             <div className="flex-1 flex items-center justify-center py-24">
               <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
             </div>
           ) : filteredRequests.length === 0 ? (
             <div className="text-center py-16 border-2 border-dashed border-slate-800 rounded-2xl">
-              <p className="text-sm text-slate-400">Aucun profil ne correspond aux critères sélectionnés.</p>
+              <p className="text-sm text-slate-400">Aucun profil ne correspond aux critères.</p>
             </div>
           ) : (
             <div className="bg-[#1E293B]/20 border border-slate-800 rounded-2xl overflow-hidden">
@@ -264,10 +254,7 @@ export function KYCAdminDashboardScreen() {
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-xs">
                   {filteredRequests.map((req) => (
-                    <tr 
-                      key={req.id} 
-                      className={`hover:bg-[#1E293B]/30 transition-colors ${selectedRequest?.id === req.id ? 'bg-amber-500/5' : ''}`}
-                    >
+                    <tr key={req.id} className={`hover:bg-[#1E293B]/30 transition-colors ${selectedRequest?.id === req.id ? 'bg-amber-500/5' : ''}`}>
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-white uppercase">{req.fullName}</div>
                         <div className="text-[10px] text-slate-400 font-mono mt-0.5">{req.email}</div>
@@ -277,11 +264,9 @@ export function KYCAdminDashboardScreen() {
                       </td>
                       <td className="py-3.5 px-4">
                         <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                          req.kycStatus === 'verified' 
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                            : req.kycStatus === 'rejected' 
-                            ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
-                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          req.kycStatus === 'verified' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
+                          req.kycStatus === 'rejected' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 
+                          'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                         }`}>
                           {req.kycStatus === 'pending' ? 'Non vérifié' : req.kycStatus === 'verified' ? 'Vérifié' : 'Rejeté'}
                         </span>
@@ -302,39 +287,8 @@ export function KYCAdminDashboardScreen() {
           )}
         </div>
 
-        {/* ── COLONNE DROITE : STATION D'INSPECTION KYC ── */}
+        {/* COLONNE DROITE : INSPECTION */}
         <div className="w-2/5 p-6 overflow-y-auto bg-[#090D1A]">
-          
-          {/* ENCLAVE CRYPTO */}
-          {!isKeyLoaded && (isIdentityEncrypted || isSelfieEncrypted) && (
-            <form onSubmit={handleLoadKey} className="bg-[#1E293B]/60 border border-slate-800 p-5 rounded-2xl space-y-4 mb-6">
-              <div className="flex gap-3">
-                <KeyRound className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-sm font-bold text-white">Enclave Administrative Requise</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">Ce dossier contient des flux chiffrés. Chargez votre clé privée.</p>
-                </div>
-              </div>
-              <textarea
-                rows={3}
-                value={privateKeyPEM}
-                onChange={(e) => setPrivateKeyText(e.target.value)}
-                placeholder="-----BEGIN PRIVATE KEY-----"
-                className="w-full bg-[#0F172A] border border-slate-700 rounded-xl p-3 text-[10px] font-mono outline-none text-amber-500"
-              />
-              <button type="submit" className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl cursor-pointer">
-                Déverrouiller l'Enclave
-              </button>
-            </form>
-          )}
-
-          {isKeyLoaded && (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex items-center justify-between mb-6">
-              <p className="text-xs text-emerald-400 font-semibold">Enclave de déchiffrement active.</p>
-              <button onClick={() => setIsKeyActive(false)} className="text-[10px] text-slate-400 underline cursor-pointer">Révoquer</button>
-            </div>
-          )}
-
           {selectedRequest ? (
             <div className="space-y-6">
               <div className="bg-[#1E293B]/30 border border-slate-800 p-5 rounded-2xl space-y-4">
@@ -362,8 +316,7 @@ export function KYCAdminDashboardScreen() {
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Vérification des pièces physiques</h3>
-                
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Vérification des pièces</h3>
                 {isDecrypting ? (
                   <div className="py-12 text-center border border-slate-800 rounded-2xl bg-[#1E293B]/10">
                     <Loader2 className="w-6 h-6 animate-spin text-amber-500 mx-auto mb-2" />
@@ -371,8 +324,6 @@ export function KYCAdminDashboardScreen() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    
-                    {/* DOCUMENT IDENTITÉ */}
                     <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden">
                       {decryptedIdentityUrl ? (
                         <div className="w-full h-full relative">
@@ -385,12 +336,10 @@ export function KYCAdminDashboardScreen() {
                         <div className="text-center space-y-2">
                           <FileText className="w-8 h-8 text-slate-600 mx-auto" />
                           <p className="text-xs font-bold text-slate-400">identity.enc</p>
-                          <span className="text-[10px] text-amber-500 font-bold block">CLÉ PEM REQUISE</span>
                         </div>
                       )}
                     </div>
 
-                    {/* SELFIE */}
                     <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden">
                       {decryptedSelfieUrl ? (
                         <div className="w-full h-full relative">
@@ -403,11 +352,9 @@ export function KYCAdminDashboardScreen() {
                         <div className="text-center space-y-2">
                           <User className="w-8 h-8 text-slate-600 mx-auto" />
                           <p className="text-xs font-bold text-slate-400">selfie.enc</p>
-                          <span className="text-[10px] text-amber-500 font-bold block">CLÉ PEM REQUISE</span>
                         </div>
                       )}
                     </div>
-
                   </div>
                 )}
               </div>
@@ -416,18 +363,16 @@ export function KYCAdminDashboardScreen() {
                 <button
                   onClick={() => handleUpdateStatus('rejected')}
                   disabled={isActionLoading || isDecrypting}
-                  className="flex-1 py-4 border border-red-500/30 hover:border-red-500 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
+                  className="flex-1 py-4 border border-red-500/30 hover:border-red-500 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-40"
                 >
-                  <UserX className="w-4 h-4" />
-                  Rejeter et bloquer
+                  <UserX className="w-4 h-4" /> Rejeter et bloquer
                 </button>
                 <button
                   onClick={() => handleUpdateStatus('verified')}
                   disabled={isActionLoading || isDecrypting}
-                  className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
+                  className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-lg flex items-center justify-center gap-2 disabled:opacity-40"
                 >
-                  <UserCheck className="w-4 h-4" />
-                  Confirmer le KYC
+                  <UserCheck className="w-4 h-4" /> Confirmer le KYC
                 </button>
               </div>
             </div>
