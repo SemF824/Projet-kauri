@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, User, Briefcase, Eye, EyeOff, ChevronLeft, Mail, Lock, Phone } from 'lucide-react';
+import { ArrowRight, User, Briefcase, Eye, EyeOff, ChevronLeft, Mail, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { getSupabase, SERVER_URL, publicAnonKey } from '../../../utils/supabase';
 import { toast } from 'sonner';
@@ -28,7 +28,6 @@ export function AccountTypeSelectionScreen() {
     setStep('register');
   };
 
-  // Validations rigoureuses alignées sur le KauriLoginScreen
   const validateEmail = (emailStr: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
   const isPasswordRobust = (pass: string) => pass.length >= 8 && /[A-Z]/.test(pass) && /[0-9]/.test(pass);
 
@@ -50,15 +49,18 @@ export function AccountTypeSelectionScreen() {
     try {
       const supabase = getSupabase();
 
-      // Étape 1 : Inscription native GoTrue avec les métadonnées de secours
+      // 🎯 ÉTAPES 1 & 2 FUSIONNÉES : Transmission complète des métadonnées au serveur
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: form.email.trim(),
         password: form.password,
         options: {
           data: {
+            first_name: form.firstName.trim(),
+            last_name: form.lastName.trim(),
             full_name: `${form.firstName.trim()} ${form.lastName.trim()}`,
             phone: form.phone.trim() || null,
             account_type: accountType,
+            business_name: accountType === 'professionnel' ? form.businessName.trim() : null,
           },
         },
       });
@@ -79,25 +81,9 @@ export function AccountTypeSelectionScreen() {
         return;
       }
 
-      // Étape 2 : Écriture chirurgicale et directe dans ta table PostgreSQL public.profiles
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          full_name: `${form.firstName.trim()} ${form.lastName.trim()}`,
-          phone_number: form.phone.trim() || null,
-          account_type: accountType,
-          business_name: accountType === 'professionnel' ? form.businessName.trim() : null,
-          trust_score: 100,
-          balance: 0,
-          kyc_completed: false
-        });
+      // L'insertion PostgreSQL publique s'effectue ici en arrière-plan de manière invisible via le trigger immunisé.
 
-      if (profileError) {
-        console.error('PostgreSQL Profiles table update error:', profileError);
-      }
-
-      // Étape 3 : Maintien des hooks serveurs existants pour ne rien casser en aval (Portefeuille/Seeds)
+      // Étape 3 : Maintien des hooks serveurs existants (Portefeuille/Seeds)
       const accessToken = signUpData.session?.access_token ?? publicAnonKey;
       
       await fetch(`${SERVER_URL}/wallet/init`, {
@@ -217,7 +203,7 @@ export function AccountTypeSelectionScreen() {
           <button
             onClick={handleRegister}
             disabled={isLoading}
-            className="w-full 本 py-4 rounded-2xl mt-6 flex items-center justify-center gap-2 transition-all active:scale-95 text-white text-xs font-bold shadow-lg cursor-pointer"
+            className="w-full py-4 rounded-2xl mt-6 flex items-center justify-center gap-2 transition-all active:scale-95 text-white text-xs font-bold shadow-lg cursor-pointer border-none"
             style={{ background: 'linear-gradient(135deg, #006D77, #0D9488)', opacity: isLoading ? 0.8 : 1 }}
           >
             {isLoading ? (
@@ -254,7 +240,7 @@ export function AccountTypeSelectionScreen() {
 
         <button
           onClick={() => selectType('particulier')}
-          className="bg-white rounded-3xl p-6 shadow-2xl hover:scale-[1.02] transition-transform text-left cursor-pointer"
+          className="bg-white rounded-3xl p-6 shadow-2xl hover:scale-[1.02] transition-transform text-left cursor-pointer border-none"
         >
           <div className="flex items-start justify-between mb-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#006D77] to-[#0D9488] flex items-center justify-center">
@@ -273,7 +259,7 @@ export function AccountTypeSelectionScreen() {
 
         <button
           onClick={() => selectType('professionnel')}
-          className="bg-gradient-to-br from-[#D4AF37] to-[#F59E0B] rounded-3xl p-6 shadow-2xl hover:scale-[1.02] transition-transform text-left cursor-pointer"
+          className="bg-gradient-to-br from-[#D4AF37] to-[#F59E0B] rounded-3xl p-6 shadow-2xl hover:scale-[1.02] transition-transform text-left cursor-pointer border-none"
         >
           <div className="flex items-start justify-between mb-4">
             <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
@@ -293,7 +279,7 @@ export function AccountTypeSelectionScreen() {
 
       <div className="mt-8 text-center">
         <p className="text-[#E0F2FE] text-[10px] px-6 leading-relaxed">En continuant, vous acceptez nos Conditions Générales et notre Politique de Confidentialité</p>
-        <button onClick={() => navigate('/kauri/login')} className="text-[#D4AF37] text-xs mt-4 underline font-bold cursor-pointer block mx-auto">
+        <button onClick={() => navigate('/kauri/login')} className="text-[#D4AF37] text-xs mt-4 underline font-bold cursor-pointer block mx-auto bg-transparent border-none">
           Déjà un compte ? Se connecter
         </button>
       </div>
