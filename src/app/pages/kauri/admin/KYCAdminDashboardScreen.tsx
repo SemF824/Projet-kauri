@@ -26,6 +26,33 @@ interface LightboxState {
   type: 'image' | 'pdf';
 }
 
+// Convertisseur PEM Private Key (PKCS8) vers binaire
+function privatePemToArrayBuffer(pem: string): ArrayBuffer {
+  const b64Lines = pem.replace(/-----\s*BEGIN[^-]*-----\s*/g, "").replace(/-----\s*END[^-]*-----\s*/g, "").replace(/\s/g, "");
+  const binaryString = window.atob(b64Lines);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+// Analyse des "Octets Magiques" signature pour reconstruction du type MIME
+function detectMimeType(arrayBuffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(arrayBuffer).slice(0, 4);
+  if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
+    return "application/pdf";
+  }
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+    return "image/png";
+  }
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
+    return "image/gif";
+  }
+  return "image/jpeg"; // Mime par défaut pour les flux photos d'identité
+}
+
 export function KYCAdminDashboardScreen() {
   const navigate = useNavigate();
   const { user, profile, loading: authContextLoading } = useAuth();
@@ -40,6 +67,7 @@ export function KYCAdminDashboardScreen() {
   
   const [privateKeyPEM, setPrivateKeyText] = useState('');
   const [isKeyLoaded, setIsKeyActive] = useState(false);
+  const [importedCryptoKey, setImportedCryptoKey] = useState<CryptoKey | null>(null);
   
   const [decryptedIdentityUrl, setDecryptedIdentityUrl] = useState<string | null>(null);
   const [decryptedSelfieUrl, setDecryptedSelfieUrl] = useState<string | null>(null);
@@ -48,11 +76,9 @@ export function KYCAdminDashboardScreen() {
   const [isIdentityEncrypted, setIsIdentityEncrypted] = useState(false);
   const [isSelfieEncrypted, setIsSelfieEncrypted] = useState(false);
 
-  // Détection typée du format pour l'affichage sélectif img vs iframe
   const [identityFileType, setIdentityFileType] = useState<'image' | 'pdf'>('image');
   const [selfieFileType, setSelfieFileType] = useState<'image' | 'pdf'>('image');
 
-  // État de la visionneuse plein écran haute définition
   const [lightbox, setLightbox] = useState<LightboxState | null>(null);
 
   useEffect(() => {
@@ -87,7 +113,7 @@ export function KYCAdminDashboardScreen() {
       setRequests(formatted);
     } catch (err: any) {
       console.error('[KYC Fetch Error]:', err);
-      toast.error("Erreur de synchronisation du registre des comptes.");
+      toast.error("Erreur de synchronisation du registre.");
     } finally {
       setIsLoading(false);
     }
@@ -97,14 +123,72 @@ export function KYCAdminDashboardScreen() {
     fetchAllProfiles();
   }, []);
 
-  const handleLoadKey = (e: React.FormEvent) => {
+  const handleLoadKey = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!privateKeyPEM.trim().includes('-----BEGIN PRIVATE KEY-----')) {
-      toast.error("Format de clé privée RSA non valide.");
+      toast.error("Format de clé privée administrative RSA non valide.");
       return;
     }
-    setIsKeyActive(true);
-    toast.success("Enclave administrative activée.");
+    
+    try {
+      const rawBinaryKey = privatePemToArrayBuffer(privateKeyPEM);
+      const cryptoKey = await window.crypto.subtle.importKey(
+        "pkcs8",
+        rawBinaryKey,
+        { name: "RSA-OAEP", hash: "SHA-256" },
+        false,
+        ["decrypt"]
+      );
+      setImportedCryptoKey(cryptoKey);
+      setIsKeyActive(true);
+      toast.success("Enclave administrative activée. Clé RSA opérationnelle.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Échec de l'intégration matérielle de la clé privée.");
+    }
+  };
+
+  // 🎯 DECHIFFREMENT DE L'ENVELOPPE CRYPTO EN MEMOIRE VIVANTE LOCAL
+  const decryptPayload = async (packedArrayBuffer: ArrayBuffer, key: CryptoKey): Promise<{ url: string; type: 'image' | 'pdf' }> => {
+    const packedBytes = new Uint8Array(packedArrayBuffer);
+    const view = new DataView(packedBytes.buffer);
+    
+    const encryptedKeyLength = view.getUint32(0, false);
+    
+    const encryptedAesKey = packedBytes.slice(4, 4 + encryptedKeyLength);
+    const iv = packedBytes.slice(4 + encryptedKeyLength, 4 + encryptedKeyLength + 12);
+    const ciphertext = packedBytes.slice(4 + encryptedKeyLength + 12);
+
+    // 1. Déchiffrer la clé AES via RSA administrative
+    const decryptedAesKeyRaw = await window.crypto.subtle.decrypt(
+      { name: "RSA-OAEP" },
+      key,
+      encryptedAesKey
+    );
+
+    // 2. Importer la clé symétrique extraite
+    const aesKey = await window.crypto.subtle.importKey(
+      "raw",
+      decryptedAesKeyRaw,
+      { name: "AES-GCM" },
+      false,
+      ["decrypt"]
+    );
+
+    // 3. Déchiffrer le document physique
+    const decryptedFileBuffer = await window.crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: iv },
+      aesKey,
+      ciphertext
+    );
+
+    const exactMime = detectMimeType(decryptedFileBuffer);
+    const finalBlob = new Blob([decryptedFileBuffer], { type: exactMime });
+    
+    return {
+      url: URL.createObjectURL(finalBlob),
+      type: exactMime === "application/pdf" ? 'pdf' : 'image'
+    };
   };
 
   const handleViewAndDecryptDocs = async (req: KYCRequest) => {
@@ -125,55 +209,59 @@ export function KYCAdminDashboardScreen() {
       const identityFile = files?.find(f => f.name.startsWith('identity'));
       const selfieFile = files?.find(f => f.name.startsWith('selfie'));
 
-      // 1. Analyse dynamique de la Pièce d'Identité (Support Image + PDF)
       if (identityFile) {
         const isEnc = identityFile.name.endsWith('.enc');
         setIsIdentityEncrypted(isEnc);
 
-        if (isEnc && !isKeyLoaded) {
-          setDecryptedIdentityUrl(null);
-        } else {
-          const { data: blob, error } = await supabase.storage
-            .from('secure-kyc')
-            .download(`${req.id}/${identityFile.name}`);
-          
-          if (!error && blob) {
-            const isPdf = identityFile.name.toLowerCase().includes('.pdf') || blob.type === 'application/pdf';
-            setIdentityFileType(isPdf ? 'pdf' : 'image');
+        const { data: blob } = await supabase.storage
+          .from('secure-kyc')
+          .download(`${req.id}/${identityFile.name}`);
+
+        if (blob) {
+          if (isEnc) {
+            if (!importedCryptoKey) {
+              setDecryptedIdentityUrl(null); // Clé absente -> Verrouillé
+            } else {
+              const arrayBuf = await blob.arrayBuffer();
+              const result = await decryptPayload(arrayBuf, importedCryptoKey);
+              setIdentityFileType(result.type);
+              setDecryptedIdentityUrl(result.url);
+            }
+          } else {
+            setIdentityFileType(blob.type === 'application/pdf' ? 'pdf' : 'image');
             setDecryptedIdentityUrl(URL.createObjectURL(blob));
           }
         }
-      } else {
-        setIdentityFileType('image');
-        setDecryptedIdentityUrl("https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?auto=format&fit=crop&w=400&q=80");
       }
 
-      // 2. Analyse dynamique du Selfie (Généralement Image)
       if (selfieFile) {
         const isEnc = selfieFile.name.endsWith('.enc');
         setIsSelfieEncrypted(isEnc);
 
-        if (isEnc && !isKeyLoaded) {
-          setDecryptedSelfieUrl(null);
-        } else {
-          const { data: blob, error } = await supabase.storage
-            .from('secure-kyc')
-            .download(`${req.id}/${selfieFile.name}`);
-          
-          if (!error && blob) {
-            const isPdf = selfieFile.name.toLowerCase().includes('.pdf') || blob.type === 'application/pdf';
-            setSelfieFileType(isPdf ? 'pdf' : 'image');
+        const { data: blob } = await supabase.storage
+          .from('secure-kyc')
+          .download(`${req.id}/${selfieFile.name}`);
+
+        if (blob) {
+          if (isEnc) {
+            if (!importedCryptoKey) {
+              setDecryptedSelfieUrl(null);
+            } else {
+              const arrayBuf = await blob.arrayBuffer();
+              const result = await decryptPayload(arrayBuf, importedCryptoKey);
+              setSelfieFileType(result.type);
+              setDecryptedSelfieUrl(result.url);
+            }
+          } else {
+            setSelfieFileType(blob.type === 'application/pdf' ? 'pdf' : 'image');
             setDecryptedSelfieUrl(URL.createObjectURL(blob));
           }
         }
-      } else {
-        setSelfieFileType('image');
-        setDecryptedSelfieUrl("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80");
       }
 
     } catch (err: any) {
-      console.error('[Storage Error]:', err);
-      toast.error("Erreur de chargement des documents.");
+      console.error('[Decryption Stack Crash]:', err);
+      toast.error("Erreur de décodage de l'enveloppe cryptographique.");
     } finally {
       setIsDecrypting(false);
     }
@@ -200,7 +288,7 @@ export function KYCAdminDashboardScreen() {
       fetchAllProfiles();
     } catch (err: any) {
       console.error('[Status Error]:', err);
-      toast.error("Impossible d'appliquer la décision administrative.");
+      toast.error("Erreur d'enregistrement.");
     } finally {
       setIsActionLoading(false);
     }
@@ -213,7 +301,7 @@ export function KYCAdminDashboardScreen() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col font-sans selection:bg-amber-500/30">
+    <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col font-sans select-none">
       
       {/* HEADER */}
       <div className="border-b border-slate-800 bg-[#1E293B]/60 backdrop-blur-xl px-8 py-5 flex items-center justify-between sticky top-0 z-30">
@@ -237,183 +325,148 @@ export function KYCAdminDashboardScreen() {
         <div className="w-3/5 border-r border-slate-800 p-6 flex flex-col space-y-4 overflow-y-auto">
           <div className="relative">
             <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Rechercher un titulaire (Nom, Email)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#1E293B] border border-slate-700/50 rounded-xl py-3 pl-11 pr-4 text-xs outline-none focus:border-amber-500/50 text-white transition-all"
-            />
+            <input type="text" placeholder="Rechercher un titulaire (Nom, Email)..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-[#1E293B] border border-slate-700/50 rounded-xl py-3 pl-11 pr-4 text-xs outline-none text-white focus:border-amber-500/50" />
           </div>
 
           <div className="flex border-b border-slate-800 text-xs font-bold gap-2">
             {(['all', 'pending', 'verified', 'rejected'] as const).map((status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`pb-3 px-3 capitalize bg-transparent border-none transition-all cursor-pointer ${
-                  statusFilter === status ? 'border-b-2 border-amber-500 text-amber-500 font-black' : 'text-slate-400 hover:text-white'
-                }`}
-              >
+              <button key={status} onClick={() => setStatusFilter(status)} className={`pb-3 px-3 capitalize bg-transparent border-none transition-all cursor-pointer ${statusFilter === status ? 'border-b-2 border-amber-500 text-amber-500 font-black' : 'text-slate-400 hover:text-white'}`}>
                 {status === 'all' ? 'Tous les profils' : status === 'pending' ? 'Non vérifiés' : status === 'verified' ? 'Vérifiés' : 'Rejetés'}
               </button>
             ))}
           </div>
 
-          {isLoading ? (
-            <div className="flex-1 flex items-center justify-center py-24">
-              <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-            </div>
-          ) : filteredRequests.length === 0 ? (
-            <div className="text-center py-16 border-2 border-dashed border-slate-800 rounded-2xl">
-              <p className="text-sm text-slate-400">Aucun profil ne correspond aux critères.</p>
-            </div>
-          ) : (
-            <div className="bg-[#1E293B]/20 border border-slate-800 rounded-2xl overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-800 bg-[#1E293B]/40 text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                    <th className="py-3 px-4">Titulaire / Email</th>
-                    <th className="py-3 px-4">Type</th>
-                    <th className="py-3 px-4">État de conformité</th>
-                    <th className="py-3 px-4 text-right">Action</th>
+          <div className="bg-[#1E293B]/20 border border-slate-800 rounded-2xl overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800 bg-[#1E293B]/40 text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                  <th className="py-3 px-4">Titulaire / Email</th>
+                  <th className="py-3 px-4">Type</th>
+                  <th className="py-3 px-4">État de conformité</th>
+                  <th className="py-3 px-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 text-xs">
+                {filteredRequests.map((req) => (
+                  <tr key={req.id} className={`hover:bg-[#1E293B]/30 transition-colors ${selectedRequest?.id === req.id ? 'bg-amber-500/5' : ''}`}>
+                    <td className="py-3.5 px-4">
+                      <div className="font-bold text-white uppercase">{req.fullName}</div>
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">{req.email}</div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-slate-300">{req.accountType}</span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${req.kycStatus === 'verified' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : req.kycStatus === 'rejected' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}>
+                        {req.kycStatus === 'pending' ? 'Non vérifié' : req.kycStatus === 'verified' ? 'Vérifié' : 'Rejeté'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <button onClick={() => handleViewAndDecryptDocs(req)} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold text-[11px] transition-all border-none cursor-pointer">
+                        Inspecter
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 text-xs">
-                  {filteredRequests.map((req) => (
-                    <tr key={req.id} className={`hover:bg-[#1E293B]/30 transition-colors ${selectedRequest?.id === req.id ? 'bg-amber-500/5' : ''}`}>
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-white uppercase">{req.fullName}</div>
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">{req.email}</div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-300">{req.accountType}</span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                          req.kycStatus === 'verified' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
-                          req.kycStatus === 'rejected' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 
-                          'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                        }`}>
-                          {req.kycStatus === 'pending' ? 'Non vérifié' : req.kycStatus === 'verified' ? 'Vérifié' : 'Rejeté'}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <button
-                          onClick={() => handleViewAndDecryptDocs(req)}
-                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold text-[11px] transition-all inline-flex items-center gap-1 cursor-pointer border-none"
-                        >
-                          Inspecter <ChevronRight className="w-3 h-3" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* COLONNE DROITE */}
         <div className="w-2/5 p-6 overflow-y-auto bg-[#090D1A]">
+          
+          {/* ENCLAVE CRYPTO ADMINISTRATIVE */}
+          {!isKeyLoaded && (isIdentityEncrypted || isSelfieEncrypted) && (
+            <form onSubmit={handleLoadKey} className="bg-[#1E293B]/60 border border-slate-800 p-5 rounded-2xl space-y-4 mb-6">
+              <div className="flex gap-3">
+                <KeyRound className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">Enclave Administrative Requise</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">Ce dossier contient des packages scellés. Chargez votre clé privée administrative.</p>
+                </div>
+              </div>
+              <textarea rows={3} value={privateKeyPEM} onChange={(e) => setPrivateKeyText(e.target.value)} placeholder="-----BEGIN PRIVATE KEY-----" className="w-full bg-[#0F172A] border border-slate-700 rounded-xl p-3 text-[10px] font-mono outline-none text-amber-500" />
+              <button type="submit" className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl cursor-pointer border-none">
+                Déverrouiller l'Enclave
+              </button>
+            </form>
+          )}
+
           {selectedRequest ? (
             <div className="space-y-6">
               <div className="bg-[#1E293B]/30 border border-slate-800 p-5 rounded-2xl space-y-4">
                 <h3 className="text-sm font-bold text-white border-b border-slate-800 pb-2 uppercase tracking-wider">Métadonnées d'Attestation</h3>
                 <div className="grid grid-cols-2 gap-4 text-xs">
                   <div className="col-span-2">
-                    <span className="text-slate-500 block mb-0.5">Identité complète déclarée :</span>
+                    <span className="text-slate-500 block mb-0.5">Identité complète :</span>
                     <strong className="text-white text-sm uppercase">{selectedRequest.fullName}</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block mb-0.5">Téléphone :</span>
-                    <strong className="text-slate-200">{selectedRequest.phone}</strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block mb-0.5">Identifiant unique :</span>
-                    <strong className="text-slate-400 font-mono text-[10px] block truncate">{selectedRequest.id}</strong>
                   </div>
                   <div className="col-span-2">
                     <span className="text-slate-500 block mb-0.5">Adresse de résidence :</span>
-                    <strong className="text-slate-200 block bg-[#0F172A] p-3 rounded-xl border border-slate-800">
-                      {selectedRequest.street}, {selectedRequest.zip} {selectedRequest.city}
-                    </strong>
+                    <strong className="text-slate-200 block bg-[#0F172A] p-3 rounded-xl border border-slate-800">{selectedRequest.street}, {selectedRequest.zip} {selectedRequest.city}</strong>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Vérification des pièces (Cliquer pour agrandir)</h3>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Pièces justificatives décryptées</h3>
                 {isDecrypting ? (
                   <div className="py-12 text-center border border-slate-800 rounded-2xl bg-[#1E293B]/10">
                     <Loader2 className="w-6 h-6 animate-spin text-amber-500 mx-auto mb-2" />
-                    <p className="text-xs text-slate-400">Rapatriement des flux...</p>
+                    <p className="text-xs text-slate-400">Extraction sécurisée...</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     
-                    {/* ENCLAVE PIÈCE D'IDENTITÉ (IMAGE OU PDF) */}
-                    <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden group transition-all">
+                    {/* DOCUMENT IDENTITÉ */}
+                    <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden group">
                       {decryptedIdentityUrl ? (
-                        <div className="w-full h-full relative flex flex-col items-center justify-center">
+                        <div className="w-full h-full relative">
                           {identityFileType === 'pdf' ? (
-                            <div 
-                              onClick={() => setLightbox({ url: decryptedIdentityUrl, type: 'pdf' })}
-                              className="w-full h-44 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/40 flex flex-col items-center justify-center cursor-zoom-in transition-all text-center p-3"
-                            >
+                            <div onClick={() => setLightbox({ url: decryptedIdentityUrl, type: 'pdf' })} className="w-full h-44 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/40 flex flex-col items-center justify-center cursor-zoom-in transition-all p-3 text-center">
                               <FileText className="w-10 h-10 text-red-500 mb-2" />
-                              <span className="text-[11px] font-bold text-white block truncate max-w-full">DOCUMENT PDF</span>
-                              <span className="text-[9px] text-slate-400 mt-1">Cliquez pour ouvrir</span>
+                              <span className="text-[11px] font-bold text-white truncate max-w-full">DOCUMENT PDF</span>
                             </div>
                           ) : (
                             <div className="w-full h-full relative cursor-zoom-in" onClick={() => setLightbox({ url: decryptedIdentityUrl, type: 'image' })}>
-                              <img src={decryptedIdentityUrl} alt="Identity" className="w-full h-44 object-cover rounded-xl group-hover:scale-[1.01] transition-transform" />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
-                                <ZoomIn className="w-5 h-5 text-white" />
-                              </div>
+                              <img src={decryptedIdentityUrl} alt="Identity" className="w-full h-44 object-cover rounded-xl" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl"><ZoomIn className="w-5 h-5 text-white" /></div>
                             </div>
                           )}
-                          <span className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isIdentityEncrypted ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'}`}>
-                            {isIdentityEncrypted ? 'DECRYPTÉ' : 'FLUX BRUT'}
-                          </span>
+                          <span className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isIdentityEncrypted ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'}`}>{isIdentityEncrypted ? 'SÉCURISÉ RSA' : 'BRUT'}</span>
                         </div>
                       ) : (
                         <div className="text-center space-y-2">
                           <FileText className="w-8 h-8 text-slate-600 mx-auto" />
                           <p className="text-xs font-bold text-slate-400">identity.enc</p>
+                          <span className="text-[9px] text-amber-500 font-bold block">VERROUILLÉ RSA</span>
                         </div>
                       )}
                     </div>
 
-                    {/* ENCLAVE SELFIE (IMAGE OU PDF) */}
-                    <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden group transition-all">
+                    {/* SELFIE */}
+                    <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden group">
                       {decryptedSelfieUrl ? (
-                        <div className="w-full h-full relative flex flex-col items-center justify-center">
+                        <div className="w-full h-full relative">
                           {selfieFileType === 'pdf' ? (
-                            <div 
-                              onClick={() => setLightbox({ url: decryptedSelfieUrl, type: 'pdf' })}
-                              className="w-full h-44 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/40 flex flex-col items-center justify-center cursor-zoom-in transition-all text-center p-3"
-                            >
+                            <div onClick={() => setLightbox({ url: decryptedSelfieUrl, type: 'pdf' })} className="w-full h-44 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/40 flex flex-col items-center justify-center cursor-zoom-in transition-all p-3 text-center">
                               <FileText className="w-10 h-10 text-red-500 mb-2" />
-                              <span className="text-[11px] font-bold text-white block truncate max-w-full">DOCUMENT PDF</span>
-                              <span className="text-[9px] text-slate-400 mt-1">Cliquez pour ouvrir</span>
+                              <span className="text-[11px] font-bold text-white truncate max-w-full">DOCUMENT PDF</span>
                             </div>
                           ) : (
                             <div className="w-full h-full relative cursor-zoom-in" onClick={() => setLightbox({ url: decryptedSelfieUrl, type: 'image' })}>
-                              <img src={decryptedSelfieUrl} alt="Selfie" className="w-full h-44 object-cover rounded-xl group-hover:scale-[1.01] transition-transform" />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
-                                <ZoomIn className="w-5 h-5 text-white" />
-                              </div>
+                              <img src={decryptedSelfieUrl} alt="Selfie" className="w-full h-44 object-cover rounded-xl" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl"><ZoomIn className="w-5 h-5 text-white" /></div>
                             </div>
                           )}
-                          <span className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isSelfieEncrypted ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'}`}>
-                            {isSelfieEncrypted ? 'DECRYPTÉ' : 'FLUX BRUT'}
-                          </span>
+                          <span className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isSelfieEncrypted ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'}`}>{isSelfieEncrypted ? 'SÉCURISÉ RSA' : 'BRUT'}</span>
                         </div>
                       ) : (
                         <div className="text-center space-y-2">
                           <User className="w-8 h-8 text-slate-600 mx-auto" />
                           <p className="text-xs font-bold text-slate-400">selfie.enc</p>
+                          <span className="text-[9px] text-amber-500 font-bold block">VERROUILLÉ RSA</span>
                         </div>
                       )}
                     </div>
@@ -423,55 +476,25 @@ export function KYCAdminDashboardScreen() {
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-slate-800">
-                <button
-                  onClick={() => handleUpdateStatus('rejected')}
-                  disabled={isActionLoading || isDecrypting}
-                  className="flex-1 py-4 border border-red-500/30 hover:border-red-500 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
-                >
-                  <UserX className="w-4 h-4" /> Rejeter et bloquer
-                </button>
-                <button
-                  onClick={() => handleUpdateStatus('verified')}
-                  disabled={isActionLoading || isDecrypting}
-                  className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-lg flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
-                >
-                  <UserCheck className="w-4 h-4" /> Confirmer le KYC
-                </button>
+                <button onClick={() => handleUpdateStatus('rejected')} className="flex-1 py-4 border border-red-500/30 bg-red-500/10 text-red-400 text-xs font-bold rounded-xl border-none cursor-pointer flex items-center justify-center gap-2"><UserX className="w-4 h-4" /> Rejeter</button>
+                <button onClick={() => handleUpdateStatus('verified')} className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl border-none cursor-pointer flex items-center justify-center gap-2"><UserCheck className="w-4 h-4" /> Confirmer</button>
               </div>
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center py-24 border-2 border-dashed border-slate-800 rounded-3xl">
               <FileText className="w-12 h-12 text-slate-700 mb-3" />
-              <h3 className="text-sm font-bold text-slate-400">Station d'inspection vide</h3>
-              <p className="text-xs text-slate-500 max-w-[240px] mt-1">Sélectionnez une ligne du tableau de suivi à gauche pour initier l'audit des pièces.</p>
+              <p className="text-xs text-slate-500">Sélectionnez une ligne du tableau de suivi.</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* ── 🎯 ENCLAVE MODAL DE VISIONNEUSE HD HYBRIDE (IMAGES & PDFS) ── */}
+      {/* LIGHTBOX MODAL */}
       {lightbox && (
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <button 
-            onClick={() => setLightbox(null)}
-            className="absolute top-6 right-6 p-3 bg-slate-900 border border-slate-800 text-white rounded-full transition-all cursor-pointer shadow-xl z-50 hover:bg-slate-800"
-          >
-            <X className="w-6 h-6" />
-          </button>
-          <div className="max-w-5xl max-h-[88vh] w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl p-2">
-            {lightbox.type === 'pdf' ? (
-              <iframe 
-                src={lightbox.url} 
-                className="w-full h-[84vh] rounded-xl border-none bg-white"
-                title="Kauri Document Audit Frame"
-              />
-            ) : (
-              <img 
-                src={lightbox.url} 
-                alt="Audit HD Preview" 
-                className="max-w-full max-h-[84vh] object-contain rounded-xl select-none"
-              />
-            )}
+          <button onClick={() => setLightbox(null)} className="absolute top-6 right-6 p-3 bg-slate-900 border border-slate-800 text-white rounded-full cursor-pointer"><X className="w-6 h-6" /></button>
+          <div className="max-w-5xl max-h-[88vh] w-full h-full flex items-center justify-center rounded-2xl bg-slate-900 p-2 border border-slate-800">
+            {lightbox.type === 'pdf' ? <iframe src={lightbox.url} className="w-full h-[84vh] rounded-xl border-none bg-white" /> : <img src={lightbox.url} alt="Audit HD" className="max-w-full max-h-[84vh] object-contain rounded-xl" />}
           </div>
         </div>
       )}
