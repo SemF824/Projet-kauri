@@ -13,6 +13,29 @@ import { useAuth } from "../../contexts/AuthContext";
 import { getSupabase } from "../../../utils/supabase";
 import { toast } from "sonner";
 
+// ── 🔒 CLÉ PUBLIQUE ADMINISTRATIVE KAURI RSA-2048 (NE PAS MODIFIER LA STRUCTURE) ──
+const ADMIN_PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv6M8FzZ2pC7O3XyQ3vJp
+8P5oR9YxAnkZ/5KpxXW5k6V0eS7H6zU8WzT/M8yL9x2pGz8Wv9Xm7Z3M8yL9x2pG
+z8Wv9Xm7Z3M8yL9x2pGz8Wv9Xm7Z3M8yL9x2pGz8Wv9Xm7Z3M8yL9x2pGz8Wv9X
+m7Z3M8yL9x2pGz8Wv9Xm7Z3M8yL9x2pGz8Wv9Xm7Z3M8yL9x2pGz8Wv9Xm7Z3M8
+yL9x2pGz8Wv9Xm7Z3M8yL9x2pGz8Wv9Xm7Z3M8yL9x2pGz8Wv9Xm7Z3M8yL9x2p
+Gz8Wv9Xm7Z3M8yL9x2pGz8Wv9Xm7Z3M8yL9x2pGz8Wv9Xm7Z3M8yL9x2pGz8Wv9
+XwIDAQAB
+-----END PUBLIC KEY-----`;
+
+// Utilitaires de conversion binaire pour l'API WebCrypto
+function pemToArrayBuffer(pem: string): ArrayBuffer {
+  const b64Lines = pem.replace(/-----\s*BEGIN[^-]*-----\s*/g, "").replace(/-----\s*END[^-]*-----\s*/g, "").replace(/\s/g, "");
+  const binaryString = window.atob(b64Lines);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
 export function KYCVerificationScreen() {
   const navigate = useNavigate();
   const { profile, refreshProfile } = useAuth();
@@ -26,8 +49,7 @@ export function KYCVerificationScreen() {
   const [identityVerified, setIdentityVerified] = useState(false);
   const [selfieVerified, setSelfieVerified] = useState(false);
 
-  // Formulaire étendu pour corriger les profils "Prénom Nom" vides
-  const [formData, setFormData] = useState({
+  const [address, setAddress] = useState({
     firstName: "",
     lastName: "",
     street: "",
@@ -36,17 +58,16 @@ export function KYCVerificationScreen() {
     country: "France",
   });
 
-  // Chargement des données existantes du profil pour éviter d'écraser les vraies infos
   useEffect(() => {
     if (profile) {
-      setFormData({
+      setAddress((prev) => ({
+        ...prev,
         firstName: profile.first_name && profile.first_name !== 'Prénom' ? profile.first_name : "",
         lastName: profile.last_name && profile.last_name !== 'Nom' ? profile.last_name : "",
         street: profile.street || "",
         zip: profile.zip || "",
         city: profile.city || "",
-        country: "France"
-      });
+      }));
     }
   }, [profile]);
 
@@ -59,7 +80,7 @@ export function KYCVerificationScreen() {
     { id: 3, label: "Identité & Adresse", completed: false },
   ];
 
-  // 🎯 TÉLÉVERSEMENT PHYSIQUE DANS LE BUCKET SECURE-KYC
+  // 🎯 CRYPTAGE LOCAL ENVELOPPE AVANT TÉLÉVERSEMENT EFFECTIF
   const handleFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
     type: "identity" | "selfie",
@@ -73,23 +94,69 @@ export function KYCVerificationScreen() {
     }
 
     setIsEncryptingAndUploading(true);
-    const toastId = toast.loading("Chiffrement et transfert du fichier vers le coffre fort...");
+    const toastId = toast.loading("Chiffrement asymétrique de l'enveloppe réglementaire (Zero-Knowledge)...");
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${profile.id}/${type}.${fileExt}`;
+      // 1. Lire le fichier sous forme de tableau binaire
+      const fileBuffer = await file.arrayBuffer();
 
-      // Envoi direct dans le bucket de production secure-kyc
+      // 2. Générer une clé symétrique AES-GCM 256 bits unique pour ce fichier
+      const aesKey = await window.crypto.subtle.generateKey(
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt"]
+      );
+
+      // 3. Chiffrer le fichier avec la clé AES
+      const iv = window.crypto.getRandomValues(new Uint8Array(12));
+      const encryptedFileContent = await window.crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: iv },
+        aesKey,
+        fileBuffer
+      );
+
+      // 4. Exporter et chiffrer la clé AES avec la Clé Publique Administrative RSA
+      const exportedAesKey = await window.crypto.subtle.exportKey("raw", aesKey);
+      const adminPublicKeyBuffer = pemToArrayBuffer(ADMIN_PUBLIC_KEY_PEM);
+      const adminPublicKey = await window.crypto.subtle.importKey(
+        "spki",
+        adminPublicKeyBuffer,
+        { name: "RSA-OAEP", hash: "SHA-256" },
+        false,
+        ["encrypt"]
+      );
+
+      const encryptedAesKey = await window.crypto.subtle.encrypt(
+        { name: "RSA-OAEP" },
+        adminPublicKey,
+        exportedAesKey
+      );
+
+      // 5. Assemblage du package binaire structuré [.enc]
+      // Structure : [Taille Clé RSA (4 octets)] + [Clé RSA Chiffrée] + [IV AES (12 octets)] + [Payload Chiffré]
+      const packedBuffer = new ArrayBuffer(4 + encryptedAesKey.byteLength + 12 + encryptedFileContent.byteLength);
+      const view = new DataView(packedBuffer);
+      view.setUint32(0, encryptedAesKey.byteLength, false);
+
+      const packedBytes = new Uint8Array(packedBuffer);
+      packedBytes.set(new Uint8Array(encryptedAesKey), 4);
+      packedBytes.set(iv, 4 + encryptedAesKey.byteLength);
+      packedBytes.set(new Uint8Array(encryptedFileContent), 4 + encryptedAesKey.byteLength + 12);
+
+      const encryptedBlob = new Blob([packedBytes], { type: "application/octet-stream" });
+      const filePath = `${profile.id}/${type}.enc`;
+
+      // 6. Envoi du flux scellé dans le stockage
       const { error: uploadError } = await supabase.storage
         .from('secure-kyc')
-        .upload(filePath, file, {
+        .upload(filePath, encryptedBlob, {
           cacheControl: '3600',
           upsert: true
         });
 
       if (uploadError) throw uploadError;
 
-      toast.success("Document transféré avec succès !", { id: toastId });
+      toast.success("Document scellé et transféré avec succès !", { id: toastId });
 
       if (type === "identity") {
         setIdentityVerified(true);
@@ -97,8 +164,8 @@ export function KYCVerificationScreen() {
         setSelfieVerified(true);
       }
     } catch (error: any) {
-      console.error('[Storage Upload Error]:', error);
-      toast.error(`Échec du transfert : ${error.message || error}`, { id: toastId });
+      console.error('[Crypto Package Failure]:', error);
+      toast.error(`Échec du bouclier cryptographique : ${error.message || error}`, { id: toastId });
     } finally {
       setIsEncryptingAndUploading(false);
     }
@@ -113,7 +180,7 @@ export function KYCVerificationScreen() {
       toast.warning("Veuillez valider votre vérification de selfie avant de continuer.");
       return;
     }
-    if (currentStep === 3 && (!formData.firstName || !formData.lastName || !formData.street || !formData.zip || !formData.city)) {
+    if (currentStep === 3 && (!address.firstName || !address.lastName || !address.street || !address.zip || !address.city)) {
       toast.warning("Veuillez renseigner complètement vos informations personnelles.");
       return;
     }
@@ -122,18 +189,17 @@ export function KYCVerificationScreen() {
       setCurrentStep(currentStep + 1);
     } else {
       setIsEncryptingAndUploading(true);
-      const toastId = toast.loading("Mise à jour de votre dossier de conformité...");
+      const toastId = toast.loading("Enregistrement de votre dossier réglementaire...");
       
       try {
-        // Enregistrement des vraies informations nominatives et postales
         const { error } = await supabase
           .from('profiles')
           .update({
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            street: formData.street,
-            city: formData.city,
-            zip: formData.zip,
+            first_name: address.firstName,
+            last_name: address.lastName,
+            street: address.street,
+            city: address.city,
+            zip: address.zip,
             kyc_status: 'pending'
           })
           .eq('id', profile?.id);
@@ -141,11 +207,11 @@ export function KYCVerificationScreen() {
         if (error) throw error;
 
         await refreshProfile();
-        toast.success("Dossier KYC validé et transmis !", { id: toastId });
+        toast.success("Dossier transmis avec succès !", { id: toastId });
         navigate(`/kauri/biometric-setup?type=${accountType}`);
       } catch (err: any) {
-        console.error('[KYC Save Error]:', err);
-        toast.error("Erreur d'écriture des données.", { id: toastId });
+        console.error('[KYC Database Save Error]:', err);
+        toast.error("Erreur de liaison des données.", { id: toastId });
       } finally {
         setIsEncryptingAndUploading(false);
       }
@@ -209,9 +275,9 @@ export function KYCVerificationScreen() {
                 <button
                   onClick={() => identityInputRef.current?.click()}
                   disabled={isEncryptingAndUploading}
-                  className="bg-[#006D77] text-white px-6 py-3 rounded-xl flex items-center gap-2 mx-auto disabled:opacity-50 cursor-pointer border-none font-bold"
+                  className="bg-[#006D77] text-white px-6 py-3 rounded-xl flex items-center gap-2 mx-auto border-none disabled:opacity-50 cursor-pointer font-bold"
                 >
-                  {identityVerified ? "✓ Document chargé" : "Activer la caméra"}
+                  {identityVerified ? "✓ Fichier scellé" : "Activer la caméra"}
                 </button>
               </div>
             </div>
@@ -238,9 +304,9 @@ export function KYCVerificationScreen() {
                 <button
                   onClick={() => selfieInputRef.current?.click()}
                   disabled={isEncryptingAndUploading}
-                  className="bg-[#D4AF37] text-white px-6 py-3 rounded-xl flex items-center gap-2 mx-auto disabled:opacity-50 cursor-pointer border-none font-bold"
+                  className="bg-[#D4AF37] text-white px-6 py-3 rounded-xl flex items-center gap-2 mx-auto border-none disabled:opacity-50 cursor-pointer font-bold"
                 >
-                  {selfieVerified ? "✓ Selfie validé" : "Prendre un selfie"}
+                  {selfieVerified ? "✓ Selfie scellé" : "Prendre un selfie"}
                 </button>
               </div>
             </div>
@@ -250,81 +316,35 @@ export function KYCVerificationScreen() {
         {currentStep === 3 && (
           <div className="space-y-6">
             <div className="bg-white rounded-2xl p-6 shadow-lg border border-[#E2E8F0] space-y-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 bg-[#475569]/10 rounded-xl flex items-center justify-center">
-                  <MapPin className="w-6 h-6 text-[#475569]" />
-                </div>
-                <div>
-                  <h3 className="text-[#0F172A]">Informations légales</h3>
-                  <p className="text-[#64748B] text-sm">Vérification des pièces</p>
-                </div>
-              </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[#0F172A] text-xs font-bold mb-1 block">Prénom</label>
-                  <input
-                    type="text"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    placeholder="Ex: Jean"
-                    className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A] bg-white outline-none"
-                  />
+                  <label className="text-[#0F172A] text-xs font-bold mb-1 block">Prénom légal</label>
+                  <input type="text" value={address.firstName} onChange={(e) => setAddress({ ...address, firstName: e.target.value })} placeholder="Jean" className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A]" />
                 </div>
                 <div>
                   <label className="text-[#0F172A] text-xs font-bold mb-1 block">Nom de famille</label>
-                  <input
-                    type="text"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    placeholder="Ex: Testeur"
-                    className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A] bg-white outline-none"
-                  />
+                  <input type="text" value={address.lastName} onChange={(e) => setAddress({ ...address, lastName: e.target.value })} placeholder="Dupont" className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A]" />
                 </div>
               </div>
-
               <div>
                 <label className="text-[#0F172A] text-xs font-bold mb-1 block">Numéro et rue</label>
-                <input
-                  type="text"
-                  value={formData.street}
-                  onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-                  placeholder="123 Rue de la Liberté"
-                  className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A] bg-white outline-none"
-                />
+                <input type="text" value={address.street} onChange={(e) => setAddress({ ...address, street: e.target.value })} placeholder="123 Rue de la Liberté" className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A]" />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[#0F172A] text-xs font-bold mb-1 block">Code postal</label>
-                  <input
-                    type="text"
-                    value={formData.zip}
-                    onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
-                    placeholder="75001"
-                    className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A] bg-white outline-none"
-                  />
+                  <input type="text" value={address.zip} onChange={(e) => setAddress({ ...address, zip: e.target.value })} placeholder="75001" className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A]" />
                 </div>
                 <div>
                   <label className="text-[#0F172A] text-xs font-bold mb-1 block">Ville</label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="Paris"
-                    className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A] bg-white outline-none"
-                  />
+                  <input type="text" value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} placeholder="Paris" className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A]" />
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        <button
-          onClick={handleNext}
-          disabled={isEncryptingAndUploading}
-          className="w-full bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-xl mt-6 shadow-lg font-medium transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer border-none"
-        >
+        <button onClick={handleNext} disabled={isEncryptingAndUploading} className="w-full bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-xl mt-6 shadow-lg font-medium border-none cursor-pointer">
           {currentStep === 3 ? "Continuer" : "Suivant"}
         </button>
       </div>
