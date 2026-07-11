@@ -6,6 +6,15 @@ import { toast } from 'sonner';
 
 type Step = 'choose' | 'register';
 
+function arrayBufferToBase64(blob: ArrayBuffer): string {
+  const bytes = new Uint8Array(blob);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+
 export function AccountTypeSelectionScreen() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('choose');
@@ -49,9 +58,32 @@ export function AccountTypeSelectionScreen() {
     try {
       const supabase = getSupabase();
 
-      // 🎯 MODIFICATION ARCHITECTURALE FONDAMENTALE : 
-      // Envoi de l'intégralité des champs typés dans l'enclave GoTrue.
-      // L'écriture PostgreSQL est déléguée au serveur via le Trigger, éliminant l'erreur 403.
+      // 🎯 ENCLAVE CRYPTO CLIENT : Génération instantanée d'un couple de clés RSA-2048 pour l'utilisateur
+      const userKeyPair = await window.crypto.subtle.generateKey(
+        {
+          name: "RSA-OAEP",
+          modulusLength: 2048,
+          publicExponent: new Uint8Array([1, 0, 1]),
+          hash: "SHA-256",
+        },
+        true,
+        ["encrypt", "decrypt"]
+      );
+
+      // Exportation des clés au format binaire standard SPKI et PKCS8
+      const pubBuffer = await window.crypto.subtle.exportKey("spki", userKeyPair.publicKey);
+      const privBuffer = await window.crypto.subtle.exportKey("pkcs8", userKeyPair.privateKey);
+
+      const pubB64 = arrayBufferToBase64(pubBuffer);
+      const privB64 = arrayBufferToBase64(privBuffer);
+
+      const userPublicKeyPEM = `-----BEGIN PUBLIC KEY-----\n${pubB64}\n-----END PUBLIC KEY-----`;
+      const userPrivateKeyPEM = `-----BEGIN PRIVATE KEY-----\n${privB64}\n-----END PRIVATE KEY-----`;
+
+      // Sauvegarde locale de la clé privée (Souveraineté Zero-Knowledge)
+      localStorage.setItem(`kauri_client_priv_key`, userPrivateKeyPEM);
+
+      // Transmission complète incluant la clé publique dans les métadonnées de l'inscription
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: form.email.trim(),
         password: form.password,
@@ -63,6 +95,7 @@ export function AccountTypeSelectionScreen() {
             phone: form.phone.trim() || null,
             account_type: accountType,
             business_name: accountType === 'professionnel' ? form.businessName.trim() : null,
+            user_public_key: userPublicKeyPEM // Injecté pour l'admin
           },
         },
       });
@@ -83,7 +116,7 @@ export function AccountTypeSelectionScreen() {
         return;
       }
 
-      // Initialisation des serveurs de portefeuille existants
+      // Initialisation des backends de portefeuille
       const accessToken = signUpData.session?.access_token ?? publicAnonKey;
       
       await fetch(`${SERVER_URL}/wallet/init`, {
@@ -103,8 +136,6 @@ export function AccountTypeSelectionScreen() {
       }).catch(e => console.error('Demo data seed error (non-blocking):', e));
 
       toast.success('Votre compte KAURI a été initialisé !');
-      
-      // Redirection vers la complétion réglementaire KYC
       navigate(`/kauri/kyc-verification?type=${accountType}`);
     } catch (e: any) {
       console.error('[Signup Transaction Error]:', e);
@@ -139,7 +170,7 @@ export function AccountTypeSelectionScreen() {
     return (
       <div className="min-h-screen" style={{ background: 'linear-gradient(165deg, #006D77 0%, #003A42 100%)' }}>
         <div className="px-6 pt-12 pb-4">
-          <button onClick={() => setStep('choose')} className="flex items-center gap-1 text-white/80 mb-4 cursor-pointer">
+          <button onClick={() => setStep('choose')} className="flex items-center gap-1 text-white/80 mb-4 cursor-pointer bg-transparent border-none">
             <ChevronLeft className="w-4 h-4" />
             <span className="text-sm font-medium">Retour</span>
           </button>
@@ -187,7 +218,7 @@ export function AccountTypeSelectionScreen() {
                   onChange={e => { setForm(f => ({ ...f, password: e.target.value })); setErrors(er => ({ ...er, password: '' })); }}
                   className="flex-1 outline-none bg-transparent text-xs text-[#0F172A]"
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-gray-400">
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-gray-400 bg-transparent border-none cursor-pointer">
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -203,13 +234,13 @@ export function AccountTypeSelectionScreen() {
           <button
             onClick={handleRegister}
             disabled={isLoading}
-            className="w-full py-4 rounded-2xl mt-6 flex items-center justify-center gap-2 transition-all active:scale-95 text-white text-xs font-bold shadow-lg cursor-pointer border-none"
+            className="w-full py-4 rounded-2xl mt-6 flex items-center justify-center gap-2 transition-all active:scale-[0.95] text-white text-xs font-bold shadow-lg cursor-pointer border-none"
             style={{ background: 'linear-gradient(135deg, #006D77, #0D9488)', opacity: isLoading ? 0.8 : 1 }}
           >
             {isLoading ? (
               <>
                 <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                Validation de la signature sécurisée…
+                Génération des clés d'accès…
               </>
             ) : 'Créer mon compte Kauri →'}
           </button>
