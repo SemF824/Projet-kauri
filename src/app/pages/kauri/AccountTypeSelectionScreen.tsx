@@ -49,7 +49,9 @@ export function AccountTypeSelectionScreen() {
     try {
       const supabase = getSupabase();
 
-      // 🎯 ÉTAPES 1 & 2 FUSIONNÉES : Transmission complète des métadonnées au serveur
+      // 🎯 MODIFICATION ARCHITECTURALE FONDAMENTALE : 
+      // Envoi de l'intégralité des champs typés dans l'enclave GoTrue.
+      // L'écriture PostgreSQL est déléguée au serveur via le Trigger, éliminant l'erreur 403.
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: form.email.trim(),
         password: form.password,
@@ -81,9 +83,7 @@ export function AccountTypeSelectionScreen() {
         return;
       }
 
-      // L'insertion PostgreSQL publique s'effectue ici en arrière-plan de manière invisible via le trigger immunisé.
-
-      // Étape 3 : Maintien des hooks serveurs existants (Portefeuille/Seeds)
+      // Initialisation des serveurs de portefeuille existants
       const accessToken = signUpData.session?.access_token ?? publicAnonKey;
       
       await fetch(`${SERVER_URL}/wallet/init`, {
@@ -104,7 +104,7 @@ export function AccountTypeSelectionScreen() {
 
       toast.success('Votre compte KAURI a été initialisé !');
       
-      // Étape 4 : Redirection vers le parcours réglementaire KYC
+      // Redirection vers la complétion réglementaire KYC
       navigate(`/kauri/kyc-verification?type=${accountType}`);
     } catch (e: any) {
       console.error('[Signup Transaction Error]:', e);
