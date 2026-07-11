@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   ShieldAlert, ShieldCheck, UserCheck, UserX, KeyRound, 
-  FileText, Loader2, RefreshCw, Search, User, ChevronRight, X, ZoomIn
+  FileText, Loader2, RefreshCw, Search, User, ChevronRight, X, ZoomIn, Upload
 } from 'lucide-react';
 import { getSupabase } from '../../../../utils/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -26,7 +26,6 @@ interface LightboxState {
   type: 'image' | 'pdf';
 }
 
-// Convertisseur PEM Private Key (PKCS8) vers binaire
 function privatePemToArrayBuffer(pem: string): ArrayBuffer {
   const b64Lines = pem.replace(/-----\s*BEGIN[^-]*-----\s*/g, "").replace(/-----\s*END[^-]*-----\s*/g, "").replace(/\s/g, "");
   const binaryString = window.atob(b64Lines);
@@ -38,7 +37,6 @@ function privatePemToArrayBuffer(pem: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-// Analyse des "Octets Magiques" signature pour reconstruction du type MIME
 function detectMimeType(arrayBuffer: ArrayBuffer): string {
   const bytes = new Uint8Array(arrayBuffer).slice(0, 4);
   if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
@@ -50,7 +48,7 @@ function detectMimeType(arrayBuffer: ArrayBuffer): string {
   if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
     return "image/gif";
   }
-  return "image/jpeg"; // Mime par défaut pour les flux photos d'identité
+  return "image/jpeg";
 }
 
 export function KYCAdminDashboardScreen() {
@@ -65,7 +63,6 @@ export function KYCAdminDashboardScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
   
-  const [privateKeyPEM, setPrivateKeyText] = useState('');
   const [isKeyLoaded, setIsKeyActive] = useState(false);
   const [importedCryptoKey, setImportedCryptoKey] = useState<CryptoKey | null>(null);
   
@@ -80,6 +77,30 @@ export function KYCAdminDashboardScreen() {
   const [selfieFileType, setSelfieFileType] = useState<'image' | 'pdf'>('image');
 
   const [lightbox, setLightbox] = useState<LightboxState | null>(null);
+
+  // 🎯 RECUPERATION AUTOMATIQUE DE LA CLE MEMORISÉE AU CHARGEMENT DE L'ÉCRAN
+  useEffect(() => {
+    const initializeSavedKey = async () => {
+      const savedPem = localStorage.getItem('kauri_admin_secure_key');
+      if (!savedPem) return;
+      try {
+        const rawBinaryKey = privatePemToArrayBuffer(savedPem);
+        const cryptoKey = await window.crypto.subtle.importKey(
+          "pkcs8",
+          rawBinaryKey,
+          { name: "RSA-OAEP", hash: "SHA-256" },
+          false,
+          ["decrypt"]
+        );
+        setImportedCryptoKey(cryptoKey);
+        setIsKeyActive(true);
+      } catch (e) {
+        console.error("Auto-import key failed:", e);
+        localStorage.removeItem('kauri_admin_secure_key');
+      }
+    };
+    initializeSavedKey();
+  }, []);
 
   useEffect(() => {
     if (!authContextLoading && (!user || profile?.accountType !== 'admin')) {
@@ -123,15 +144,19 @@ export function KYCAdminDashboardScreen() {
     fetchAllProfiles();
   }, []);
 
-  const handleLoadKey = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!privateKeyPEM.trim().includes('-----BEGIN PRIVATE KEY-----')) {
-      toast.error("Format de clé privée administrative RSA non valide.");
-      return;
-    }
-    
+  // 🎯 CHARGEMENT SIMPLIFIÉ PAR GLISSER-DÉPOSER OU PARCOURIR DU FICHIER .PEM
+  const handleKeyFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     try {
-      const rawBinaryKey = privatePemToArrayBuffer(privateKeyPEM);
+      const pemText = await file.text();
+      if (!pemText.includes('-----BEGIN PRIVATE KEY-----')) {
+        toast.error("Le fichier sélectionné n'est pas une clé privée au format valide.");
+        return;
+      }
+
+      const rawBinaryKey = privatePemToArrayBuffer(pemText);
       const cryptoKey = await window.crypto.subtle.importKey(
         "pkcs8",
         rawBinaryKey,
@@ -139,16 +164,30 @@ export function KYCAdminDashboardScreen() {
         false,
         ["decrypt"]
       );
+
       setImportedCryptoKey(cryptoKey);
       setIsKeyActive(true);
-      toast.success("Enclave administrative activée. Clé RSA opérationnelle.");
+      localStorage.setItem('kauri_admin_secure_key', pemText); // Mémorisation locale
+      toast.success("Enclave opérationnelle. Clé mémorisée pour cette station.");
+      
+      if (selectedRequest) {
+        handleViewAndDecryptDocs(selectedRequest);
+      }
     } catch (err) {
       console.error(err);
-      toast.error("Échec de l'intégration matérielle de la clé privée.");
+      toast.error("Erreur d'importation de la structure de clé.");
     }
   };
 
-  // 🎯 DECHIFFREMENT DE L'ENVELOPPE CRYPTO EN MEMOIRE VIVANTE LOCAL
+  const handleRevokeKey = () => {
+    localStorage.removeItem('kauri_admin_secure_key');
+    setImportedCryptoKey(null);
+    setIsKeyActive(false);
+    setDecryptedIdentityUrl(null);
+    setDecryptedSelfieUrl(null);
+    toast.info("Clé privée administrative révoquée du stockage local.");
+  };
+
   const decryptPayload = async (packedArrayBuffer: ArrayBuffer, key: CryptoKey): Promise<{ url: string; type: 'image' | 'pdf' }> => {
     const packedBytes = new Uint8Array(packedArrayBuffer);
     const view = new DataView(packedBytes.buffer);
@@ -159,14 +198,12 @@ export function KYCAdminDashboardScreen() {
     const iv = packedBytes.slice(4 + encryptedKeyLength, 4 + encryptedKeyLength + 12);
     const ciphertext = packedBytes.slice(4 + encryptedKeyLength + 12);
 
-    // 1. Déchiffrer la clé AES via RSA administrative
     const decryptedAesKeyRaw = await window.crypto.subtle.decrypt(
       { name: "RSA-OAEP" },
       key,
       encryptedAesKey
     );
 
-    // 2. Importer la clé symétrique extraite
     const aesKey = await window.crypto.subtle.importKey(
       "raw",
       decryptedAesKeyRaw,
@@ -175,7 +212,6 @@ export function KYCAdminDashboardScreen() {
       ["decrypt"]
     );
 
-    // 3. Déchiffrer le document physique
     const decryptedFileBuffer = await window.crypto.subtle.decrypt(
       { name: "AES-GCM", iv: iv },
       aesKey,
@@ -220,7 +256,7 @@ export function KYCAdminDashboardScreen() {
         if (blob) {
           if (isEnc) {
             if (!importedCryptoKey) {
-              setDecryptedIdentityUrl(null); // Clé absente -> Verrouillé
+              setDecryptedIdentityUrl(null);
             } else {
               const arrayBuf = await blob.arrayBuffer();
               const result = await decryptPayload(arrayBuf, importedCryptoKey);
@@ -261,7 +297,7 @@ export function KYCAdminDashboardScreen() {
 
     } catch (err: any) {
       console.error('[Decryption Stack Crash]:', err);
-      toast.error("Erreur de décodage de l'enveloppe cryptographique.");
+      toast.error("Erreur de décodage du package cryptographique.");
     } finally {
       setIsDecrypting(false);
     }
@@ -376,21 +412,30 @@ export function KYCAdminDashboardScreen() {
         {/* COLONNE DROITE */}
         <div className="w-2/5 p-6 overflow-y-auto bg-[#090D1A]">
           
-          {/* ENCLAVE CRYPTO ADMINISTRATIVE */}
-          {!isKeyLoaded && (isIdentityEncrypted || isSelfieEncrypted) && (
-            <form onSubmit={handleLoadKey} className="bg-[#1E293B]/60 border border-slate-800 p-5 rounded-2xl space-y-4 mb-6">
-              <div className="flex gap-3">
-                <KeyRound className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-sm font-bold text-white">Enclave Administrative Requise</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">Ce dossier contient des packages scellés. Chargez votre clé privée administrative.</p>
-                </div>
+          {/* INTERFACE IMPORTEUR DE CLE SIMPLIFIÉE */}
+          {!isKeyLoaded ? (
+            <div className="bg-[#1E293B]/60 border border-slate-800 p-6 rounded-3xl text-center space-y-4 mb-6">
+              <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/20">
+                <KeyRound className="w-5 h-5 text-amber-500" />
               </div>
-              <textarea rows={3} value={privateKeyPEM} onChange={(e) => setPrivateKeyText(e.target.value)} placeholder="-----BEGIN PRIVATE KEY-----" className="w-full bg-[#0F172A] border border-slate-700 rounded-xl p-3 text-[10px] font-mono outline-none text-amber-500" />
-              <button type="submit" className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl cursor-pointer border-none">
-                Déverrouiller l'Enclave
-              </button>
-            </form>
+              <div>
+                <h3 className="text-sm font-bold text-white">Clef de Déchiffrement Requise</h3>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">Glissez votre fichier de clé privée administrative (.pem) pour activer l'inspection automatique.</p>
+              </div>
+              <label className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10">
+                <Upload className="w-4 h-4" />
+                Charger kauri_private.pem
+                <input type="file" accept=".pem,.key,.txt" onChange={handleKeyFileChange} className="hidden" />
+              </label>
+            </div>
+          ) : (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <p className="text-xs text-emerald-400 font-bold">Enclave Active · Mode Automatique</p>
+              </div>
+              <button onClick={handleRevokeKey} className="text-[10px] text-slate-400 hover:text-white underline bg-transparent border-none cursor-pointer">Désactiver</button>
+            </div>
           )}
 
           {selectedRequest ? (
