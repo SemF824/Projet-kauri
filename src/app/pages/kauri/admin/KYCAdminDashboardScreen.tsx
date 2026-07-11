@@ -52,10 +52,11 @@ export function KYCAdminDashboardScreen() {
   const fetchAllProfiles = async () => {
     setIsLoading(true);
     try {
+      // 🎯 CORRECTIF 400 : Tri sécurisé sur updated_at au lieu de created_at
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('updated_at', { ascending: false });
 
       if (error) throw error;
 
@@ -65,11 +66,11 @@ export function KYCAdminDashboardScreen() {
         email: p.email || 'Inconnu',
         phone: p.phone_number || 'Non communiqué',
         accountType: p.account_type || 'particulier',
-        kycStatus: p.kyc_status || 'pending', // Fallback natif non vérifié
+        kycStatus: p.kyc_status || 'pending',
         street: p.street || 'Non renseigné',
         city: p.city || 'Non renseigné',
         zip: p.zip || 'Non renseigné',
-        createdAt: p.created_at || new Date().toISOString()
+        createdAt: p.created_at || p.updated_at || new Date().toISOString()
       }));
 
       setRequests(formatted);
@@ -325,6 +326,13 @@ export function KYCAdminDashboardScreen() {
                 Déverrouiller l'Enclave
               </button>
             </form>
+          )}
+
+          {isKeyLoaded && (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex items-center justify-between mb-6">
+              <p className="text-xs text-emerald-400 font-semibold">Enclave de déchiffrement active.</p>
+              <button onClick={() => setIsKeyActive(false)} className="text-[10px] text-slate-400 underline cursor-pointer">Révoquer</button>
+            </div>
           )}
 
           {selectedRequest ? (
