@@ -1,10 +1,18 @@
-import { ArrowLeft, Camera, CheckCircle2, User, FileText } from "lucide-react";
+import {
+  ArrowLeft,
+  Camera,
+  CheckCircle2,
+  User,
+  FileText,
+  Loader2,
+} from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { getSupabase } from "../../../utils/supabase";
 import { toast } from "sonner";
 
+// ── 🔒 TA CLÉ PUBLIQUE ADMINISTRATIVE RÉELLE ENREGISTRÉE ──
 const ADMIN_PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8ur5G69kIhRoKMax0kr+
 Xn60dzeviG9BxtwZMNluOAKjQiPbyDrnhem7zvB4BMRsywP8GB3lnz3dyegiQJUY
@@ -16,7 +24,10 @@ EQIDAQAB
 -----END PUBLIC KEY-----`;
 
 function pemToArrayBuffer(pem: string): ArrayBuffer {
-  const b64Lines = pem.replace(/-----\s*BEGIN[^-]*-----\s*/g, "").replace(/-----\s*END[^-]*-----\s*/g, "").replace(/\s/g, "");
+  const b64Lines = pem
+    .replace(/-----\s*BEGIN[^-]*-----\s*/g, "")
+    .replace(/-----\s*END[^-]*-----\s*/g, "")
+    .replace(/\s/g, "");
   const binaryString = window.atob(b64Lines);
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
@@ -52,8 +63,8 @@ export function KYCVerificationScreen() {
     if (profile) {
       setAddress((prev) => ({
         ...prev,
-        firstName: profile.first_name || "",
-        lastName: profile.last_name || "",
+        firstName: profile.first_name && profile.first_name !== 'Prénom' ? profile.first_name : "",
+        lastName: profile.last_name && profile.last_name !== 'Nom' ? profile.last_name : "",
         street: profile.street || "",
         zip: profile.zip || "",
         city: profile.city || "",
@@ -75,7 +86,7 @@ export function KYCVerificationScreen() {
     if (!file) return;
 
     if (!profile?.id) {
-      toast.error("Session utilisateur introuvable.");
+      toast.error("Session utilisateur introuvable. Veuillez vous reconnecter.");
       return;
     }
 
@@ -96,7 +107,7 @@ export function KYCVerificationScreen() {
 
       const fileBuffer = await file.arrayBuffer();
 
-      // 1. Génération de la clé symétrique AES unique
+      // 1. Génération de la clé symétrique AES-GCM 256 bits unique pour ce fichier
       const aesKey = await window.crypto.subtle.generateKey(
         { name: "AES-GCM", length: 256 },
         true,
@@ -112,7 +123,7 @@ export function KYCVerificationScreen() {
 
       const exportedAesKey = await window.crypto.subtle.exportKey("raw", aesKey);
 
-      // 2. Chiffrement de la clé AES pour l'Administrateur
+      // 2. Chiffrement de la clé AES pour l'Administrateur (Toi)
       const adminPublicKeyBuffer = pemToArrayBuffer(ADMIN_PUBLIC_KEY_PEM);
       const adminPublicKey = await window.crypto.subtle.importKey(
         "spki", adminPublicKeyBuffer, { name: "RSA-OAEP", hash: "SHA-256" }, false, ["encrypt"]
@@ -121,7 +132,7 @@ export function KYCVerificationScreen() {
         { name: "RSA-OAEP" }, adminPublicKey, exportedAesKey
       );
 
-      // 3. Chiffrement de la même clé AES pour l'Utilisateur lui-même
+      // 3. Chiffrement de la même clé AES pour l'Utilisateur lui-même (Souveraineté client)
       const userPublicKeyBuffer = pemToArrayBuffer(dbProfile.user_public_key);
       const userPublicKey = await window.crypto.subtle.importKey(
         "spki", userPublicKeyBuffer, { name: "RSA-OAEP", hash: "SHA-256" }, false, ["encrypt"]
@@ -131,7 +142,7 @@ export function KYCVerificationScreen() {
       );
 
       // 4. Assemblage du package binaire multi-destinataires (.enc)
-      // Structure : [Len Admin (4B)] + [Len User (4B)] + [Key Admin] + [Key User] + [IV (12B)] + [Payload]
+      // Structure : [Len Admin (4B)] + [Len User (4B)] + [Key Admin] + [Key User] + [IV (12B)] + [Payload Chiffré]
       const packedBuffer = new ArrayBuffer(
         4 + 4 + encryptedAesKeyAdmin.byteLength + encryptedAesKeyUser.byteLength + 12 + encryptedFileContent.byteLength
       );
@@ -157,18 +168,19 @@ export function KYCVerificationScreen() {
       const encryptedBlob = new Blob([packedBytes], { type: "application/octet-stream" });
       const filePath = `${profile.id}/${type}.enc`;
 
+      // 5. Transfert direct vers le Bucket d'infrastructure
       const { error: uploadError } = await supabase.storage
         .from('secure-kyc')
         .upload(filePath, encryptedBlob, { cacheControl: '3600', upsert: true });
 
       if (uploadError) throw uploadError;
 
-      toast.success("Document doublement scellé !", { id: toastId });
+      toast.success("Document doublement scellé avec succès !", { id: toastId });
       if (type === "identity") setIdentityVerified(true);
       else setSelfieVerified(true);
 
     } catch (error: any) {
-      console.error(error);
+      console.error('[Crypto Packaging Stack Error]:', error);
       toast.error(`Erreur de scellage : ${error.message || error}`, { id: toastId });
     } finally {
       setIsEncryptingAndUploading(false);
@@ -177,15 +189,15 @@ export function KYCVerificationScreen() {
 
   const handleNext = async () => {
     if (currentStep === 1 && !identityVerified) {
-      toast.warning("Veuillez téléverser votre pièce d'identité.");
+      toast.warning("Veuillez téléverser votre pièce d'identité avant de passer à la suite.");
       return;
     }
     if (currentStep === 2 && !selfieVerified) {
-      toast.warning("Veuillez passer la vérification selfie.");
+      toast.warning("Veuillez valider votre vérification de selfie face caméra.");
       return;
     }
     if (currentStep === 3 && (!address.firstName || !address.lastName || !address.street || !address.zip || !address.city)) {
-      toast.warning("Formulaire incomplet.");
+      toast.warning("Veuillez renseigner complètement vos coordonnées d'attestation.");
       return;
     }
 
@@ -193,24 +205,26 @@ export function KYCVerificationScreen() {
       setCurrentStep(currentStep + 1);
     } else {
       setIsEncryptingAndUploading(true);
+      const toastId = toast.loading("Transmission de votre dossier d'immatriculation...");
       try {
         const { error } = await supabase
           .from('profiles')
           .update({
-            first_name: address.firstName,
-            last_name: address.lastName,
-            street: address.street,
-            city: address.city,
-            zip: address.zip,
+            first_name: address.firstName.trim(),
+            last_name: address.lastName.trim(),
+            street: address.street.trim(),
+            city: address.city.trim(),
+            zip: address.zip.trim(),
             kyc_status: 'pending'
           })
           .eq('id', profile?.id);
 
         if (error) throw error;
         await refreshProfile();
+        toast.success("Dossier réglementaire clôturé !", { id: toastId });
         navigate(`/kauri/biometric-setup?type=${accountType}`);
       } catch (err) {
-        toast.error("Erreur d'enregistrement final.");
+        toast.error("Erreur de synchronisation avec la base centrale.");
       } finally {
         setIsEncryptingAndUploading(false);
       }
@@ -218,103 +232,116 @@ export function KYCVerificationScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-24">
+    <div className="min-h-screen bg-[#F8FAFC] pb-24 font-sans select-none">
       <input type="file" ref={identityInputRef} onChange={(e) => handleFileChange(e, "identity")} accept="image/*,application/pdf" className="hidden" />
       <input type="file" ref={selfieInputRef} onChange={(e) => handleFileChange(e, "selfie")} accept="image/*" capture="user" className="hidden" />
 
-      <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem]">
-        <button onClick={() => navigate(-1)} className="mb-6 text-white flex items-center gap-2 bg-transparent border-none cursor-pointer">
+      {/* HEADER PROGRESSION */}
+      <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-md">
+        <button onClick={() => navigate(-1)} className="mb-6 text-white flex items-center gap-2 bg-transparent border-none cursor-pointer opacity-90 hover:opacity-100 transition-all">
           <ArrowLeft className="w-5 h-5" />
-          <span className="text-sm">Retour</span>
+          <span className="text-sm font-medium">Retour</span>
         </button>
-        <h1 className="text-white text-2xl mb-2">Vérification d'identité</h1>
-        <p className="text-[#E0F2FE] text-sm mb-6">Sécurisez votre compte en 3 étapes simples</p>
+
+        <h1 className="text-white text-2xl font-bold mb-2">Vérification réglementaire</h1>
+        <p className="text-[#E0F2FE] text-xs opacity-90 mb-6">Processus de conformité d'identité KYC / AML</p>
 
         <div className="flex items-center justify-between">
           {steps.map((step, index) => (
             <div key={step.id} className="flex items-center flex-1">
               <div className="flex flex-col items-center flex-1">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all ${
-                  step.id < currentStep || step.completed ? "bg-[#D4AF37]" : step.id === currentStep ? "bg-white" : "bg-white/20"
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 font-bold text-xs shadow transition-all ${
+                  step.id < currentStep || step.completed ? "bg-[#D4AF37] text-white" : step.id === currentStep ? "bg-white text-[#006D77]" : "bg-white/20 text-white/60"
                 }`}>
-                  {step.id < currentStep || step.completed ? <CheckCircle2 className="w-5 h-5 text-white" /> : <span className={`text-sm ${step.id === currentStep ? "text-[#006D77]" : "text-white"}`}>{step.id}</span>}
+                  {step.id < currentStep || step.completed ? <CheckCircle2 className="w-5 h-5" /> : <span>{step.id}</span>}
                 </div>
-                <p className={`text-xs text-center ${step.id <= currentStep ? "text-white" : "text-white/60"}`}>{step.label}</p>
+                <p className={`text-[10px] font-medium tracking-tight text-center ${step.id <= currentStep ? "text-white" : "text-white/50"}`}>{step.label}</p>
               </div>
-              {index < steps.length - 1 && <div className={`h-0.5 flex-1 mx-2 mb-8 ${step.id < currentStep || (step.id === 1 && identityVerified) ? "bg-[#D4AF37]" : "bg-white/20"}`}></div>}
+              {index < steps.length - 1 && (
+                <div className={`h-0.5 flex-1 mx-1 mb-6 transition-colors duration-300 ${step.id < currentStep || (step.id === 1 && identityVerified) ? "bg-[#D4AF37]" : "bg-white/20"}`}></div>
+              )}
             </div>
           ))}
         </div>
       </div>
 
-      <div className="px-6 py-6">
+      {/* CARTE FORMULAIRE DYNAMIQUE */}
+      <div className="px-6 py-6 max-w-md mx-auto w-full">
         {currentStep === 1 && (
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-[#E2E8F0]">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-[#006D77]/10 rounded-xl flex items-center justify-center"><FileText className="w-6 h-6 text-[#006D77]" /></div>
+          <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-[#E2E8F0] space-y-6">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 bg-[#006D77]/10 rounded-2xl flex items-center justify-center flex-shrink-0"><FileText className="w-5 h-5 text-[#006D77]" /></div>
               <div>
-                <h3 className="text-[#0F172A]">Document d'identité</h3>
-                <p className="text-[#64748B] text-sm">Carte d'identité ou passeport</p>
+                <h3 className="text-[#0F172A] text-base font-bold">Pièce d'identité officielle</h3>
+                <p className="text-[#64748B] text-xs leading-normal">Passeport, Carte Nationale d'Identité ou Titre de séjour valide.</p>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-[#006D77]/5 to-[#E0F2FE] rounded-2xl p-8 border-2 border-dashed border-[#006D77]/30 text-center">
-              <Camera className="w-16 h-16 text-[#006D77] mx-auto mb-4" />
-              <button onClick={() => identityInputRef.current?.click()} disabled={isEncryptingAndUploading} className="bg-[#006D77] text-white px-6 py-3 rounded-xl border-none font-bold cursor-pointer">
-                {identityVerified ? "✓ Document scellé" : "Charger le document"}
+            <div className="bg-gradient-to-br from-[#006D77]/5 to-[#E0F2FE]/30 rounded-2xl p-8 border-2 border-dashed border-[#006D77]/20 text-center space-y-4">
+              <Camera className="w-14 h-14 text-[#006D77] mx-auto opacity-80" />
+              <div>
+                <h4 className="text-xs font-bold text-[#0F172A] mb-1">Fichier d'immatriculation</h4>
+                <p className="text-[11px] text-[#64748B] max-w-[200px] mx-auto">Format image (PNG, JPG) ou document PDF accepté.</p>
+              </div>
+              <button onClick={() => identityInputRef.current?.click()} disabled={isEncryptingAndUploading} className="bg-[#006D77] hover:bg-[#005c64] text-white text-xs font-bold px-6 py-3.5 rounded-xl border-none cursor-pointer transition-all active:scale-98 shadow-md disabled:opacity-40">
+                {identityVerified ? "✓ Document scellé RSA" : "Parcourir le document"}
               </button>
             </div>
           </div>
         )}
 
         {currentStep === 2 && (
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-[#E2E8F0]">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-[#D4AF37]/10 rounded-xl flex items-center justify-center"><User className="w-6 h-6 text-[#D4AF37]" /></div>
+          <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-[#E2E8F0] space-y-6">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 bg-[#D4AF37]/10 rounded-2xl flex items-center justify-center flex-shrink-0"><User className="w-5 h-5 text-[#D4AF37]" /></div>
               <div>
-                <h3 className="text-[#0F172A]">Vérification vivacité</h3>
-                <p className="text-[#64748B] text-sm">Selfie de contrôle face caméra</p>
+                <h3 className="text-[#0F172A] text-base font-bold">Contrôle de présence physique</h3>
+                <p className="text-[#64748B] text-xs leading-normal">Vérification de sécurité biométrique par selfie en temps réel.</p>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-[#D4AF37]/5 to-[#FEF3C7] rounded-2xl p-8 border-2 border-dashed border-[#D4AF37]/30 text-center">
-              <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-white border-4 border-[#D4AF37] flex items-center justify-center"><User className="w-12 h-12 text-[#D4AF37]" /></div>
-              <button onClick={() => selfieInputRef.current?.click()} disabled={isEncryptingAndUploading} className="bg-[#D4AF37] text-white px-6 py-3 rounded-xl border-none font-bold cursor-pointer">
-                {selfieVerified ? "✓ Selfie scellé" : "Prendre un selfie"}
+            <div className="bg-gradient-to-br from-[#D4AF37]/5 to-[#FEF3C7]/30 rounded-2xl p-8 border-2 border-dashed border-[#D4AF37]/20 text-center space-y-4">
+              <div className="w-24 h-24 mx-auto bg-white border-4 border-[#D4AF37] rounded-full flex items-center justify-center overflow-hidden shadow-md">
+                <User className="w-12 h-12 text-[#D4AF37] opacity-80" />
+              </div>
+              <p className="text-[11px] text-[#64748B] max-w-[180px] mx-auto">Placez votre visage au centre du cadre face caméra.</p>
+              <button onClick={() => selfieInputRef.current?.click()} disabled={isEncryptingAndUploading} className="bg-[#D4AF37] hover:bg-[#c29f2e] text-white text-xs font-bold px-6 py-3.5 rounded-xl border-none cursor-pointer transition-all active:scale-98 shadow-md disabled:opacity-40">
+                {selfieVerified ? "✓ Selfie sécurisé RSA" : "Déclencher l'appareil"}
               </button>
             </div>
           </div>
         )}
 
         {currentStep === 3 && (
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-[#E2E8F0] space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-[#E2E8F0] space-y-5">
+            <div className="grid grid-cols-2 gap-3.5">
               <div>
-                <label className="text-[#0F172A] text-xs font-bold mb-1 block">Prénom légal</label>
-                <input type="text" value={address.firstName} onChange={(e) => setAddress({ ...address, firstName: e.target.value })} className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A]" />
+                <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Prénom légal</label>
+                <input type="text" value={address.firstName} onChange={(e) => setAddress({ ...address, firstName: e.target.value })} placeholder="Marie" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
               </div>
               <div>
-                <label className="text-[#0F172A] text-xs font-bold mb-1 block">Nom de famille</label>
-                <input type="text" value={address.lastName} onChange={(e) => setAddress({ ...address, lastName: e.target.value })} className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A]" />
+                <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Nom de famille</label>
+                <input type="text" value={address.lastName} onChange={(e) => setAddress({ ...address, lastName: e.target.value })} placeholder="Dupont" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
               </div>
             </div>
             <div>
-              <label className="text-[#0F172A] text-xs font-bold mb-1 block">Numéro et rue</label>
-              <input type="text" value={address.street} onChange={(e) => setAddress({ ...address, street: e.target.value })} className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A]" />
+              <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Adresse résidentielle complète</label>
+              <input type="text" value={address.street} onChange={(e) => setAddress({ ...address, street: e.target.value })} placeholder="1 Rue Pierre Loti" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3.5">
               <div>
-                <label className="text-[#0F172A] text-xs font-bold mb-1 block">Code postal</label>
-                <input type="text" value={address.zip} onChange={(e) => setAddress({ ...address, zip: e.target.value })} className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A]" />
+                <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Code postal</label>
+                <input type="text" value={address.zip} onChange={(e) => setAddress({ ...address, zip: e.target.value })} placeholder="35700" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
               </div>
               <div>
-                <label className="text-[#0F172A] text-xs font-bold mb-1 block">Ville</label>
-                <input type="text" value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-[#0F172A]" />
+                <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Ville</label>
+                <input type="text" value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} placeholder="Rennes" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
               </div>
             </div>
           </div>
         )}
 
-        <button onClick={handleNext} disabled={isEncryptingAndUploading} className="w-full bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-xl mt-6 shadow-lg font-bold border-none cursor-pointer">
-          {currentStep === 3 ? "Transmettre le dossier" : "Suivant"}
+        <button onClick={handleNext} disabled={isEncryptingAndUploading} className="w-full bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-2xl mt-6 shadow-lg shadow-[#006D77]/20 font-bold text-sm tracking-wide transition-all active:scale-[0.99] border-none cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50">
+          {isEncryptingAndUploading && <Loader2 className="w-4 h-4 animate-spin" />}
+          {currentStep === 3 ? "Soumettre le dossier de conformité" : "Continuer"}
         </button>
       </div>
     </div>
