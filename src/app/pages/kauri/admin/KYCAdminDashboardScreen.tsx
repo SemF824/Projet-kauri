@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   ShieldAlert, ShieldCheck, UserCheck, UserX, KeyRound, 
-  FileText, Loader2, RefreshCw, ChevronRight, Search, User 
+  FileText, Loader2, RefreshCw, Search, User, ChevronRight
 } from 'lucide-react';
 import { getSupabase } from '../../../../utils/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -14,7 +14,7 @@ interface KYCRequest {
   email: string;
   phone?: string;
   accountType: string;
-  kycStatus?: 'pending' | 'verified' | 'rejected';
+  kycStatus: 'pending' | 'verified' | 'rejected';
   street?: string;
   city?: string;
   zip?: string;
@@ -31,6 +31,7 @@ export function KYCAdminDashboardScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
   
   const [privateKeyPEM, setPrivateKeyText] = useState('');
   const [isKeyLoaded, setIsKeyActive] = useState(false);
@@ -38,36 +39,33 @@ export function KYCAdminDashboardScreen() {
   const [decryptedSelfieUrl, setDecryptedSelfieUrl] = useState<string | null>(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
 
-  // Indicateurs pour savoir si les fichiers trouvés sont chiffrés ou bruts
   const [isIdentityEncrypted, setIsIdentityEncrypted] = useState(false);
   const [isSelfieEncrypted, setIsSelfieEncrypted] = useState(false);
 
   useEffect(() => {
     if (!authContextLoading && (!user || profile?.accountType !== 'admin')) {
+      // Decommenter en production pour restreindre l'accès:
       // navigate('/kauri/login');
     }
   }, [user, profile, authContextLoading]);
 
-  const fetchPendingKYC = async () => {
+  const fetchAllProfiles = async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const pendingRequests = (data || []).filter((p: any) => {
-        return !p.kyc_status || p.kyc_status === 'pending';
-      });
-
-      const formatted: KYCRequest[] = pendingRequests.map((p: any) => ({
+      const formatted: KYCRequest[] = (data || []).map((p: any) => ({
         id: p.id,
-        fullName: p.full_name || 'Non renseigné',
+        fullName: p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Non renseigné',
         email: p.email || 'Inconnu',
         phone: p.phone_number || 'Non communiqué',
         accountType: p.account_type || 'particulier',
-        kycStatus: p.kyc_status || 'pending',
+        kycStatus: p.kyc_status || 'pending', // Fallback natif non vérifié
         street: p.street || 'Non renseigné',
         city: p.city || 'Non renseigné',
         zip: p.zip || 'Non renseigné',
@@ -77,14 +75,14 @@ export function KYCAdminDashboardScreen() {
       setRequests(formatted);
     } catch (err: any) {
       console.error('[KYC Fetch Error]:', err);
-      toast.error("Erreur de synchronisation des tables nominatives.");
+      toast.error("Erreur de synchronisation du registre des comptes.");
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPendingKYC();
+    fetchAllProfiles();
   }, []);
 
   const handleLoadKey = (e: React.FormEvent) => {
@@ -94,7 +92,7 @@ export function KYCAdminDashboardScreen() {
       return;
     }
     setIsKeyActive(true);
-    toast.success("Clé privée administrative chargée en mémoire volatile.");
+    toast.success("Enclave administrative activée.");
   };
 
   const handleViewAndDecryptDocs = async (req: KYCRequest) => {
@@ -106,18 +104,15 @@ export function KYCAdminDashboardScreen() {
 
     setIsDecrypting(true);
     try {
-      // 1. Lister le contenu du dossier de l'utilisateur dans secure-kyc
       const { data: files, error: listError } = await supabase.storage
         .from('secure-kyc')
         .list(req.id);
 
       if (listError) throw listError;
 
-      // Trouvez les vrais fichiers correspondants dans la liste
       const identityFile = files?.find(f => f.name.startsWith('identity'));
       const selfieFile = files?.find(f => f.name.startsWith('selfie'));
 
-      // 2. Traitement dynamique du Document d'Identité
       if (identityFile) {
         const isEnc = identityFile.name.endsWith('.enc');
         setIsIdentityEncrypted(isEnc);
@@ -125,19 +120,15 @@ export function KYCAdminDashboardScreen() {
         if (isEnc && !isKeyLoaded) {
           setDecryptedIdentityUrl(null);
         } else {
-          const { data: blob, error } = await supabase.storage
+          const { data: blob } = await supabase.storage
             .from('secure-kyc')
             .download(`${req.id}/${identityFile.name}`);
-          
-          if (!error && blob) {
-            setDecryptedIdentityUrl(URL.createObjectURL(blob));
-          }
+          if (blob) setDecryptedIdentityUrl(URL.createObjectURL(blob));
         }
       } else {
         setDecryptedIdentityUrl("https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?auto=format&fit=crop&w=400&q=80");
       }
 
-      // 3. Traitement dynamique du Selfie
       if (selfieFile) {
         const isEnc = selfieFile.name.endsWith('.enc');
         setIsSelfieEncrypted(isEnc);
@@ -145,21 +136,18 @@ export function KYCAdminDashboardScreen() {
         if (isEnc && !isKeyLoaded) {
           setDecryptedSelfieUrl(null);
         } else {
-          const { data: blob, error } = await supabase.storage
+          const { data: blob } = await supabase.storage
             .from('secure-kyc')
             .download(`${req.id}/${selfieFile.name}`);
-          
-          if (!error && blob) {
-            setDecryptedSelfieUrl(URL.createObjectURL(blob));
-          }
+          if (blob) setDecryptedSelfieUrl(URL.createObjectURL(blob));
         }
       } else {
         setDecryptedSelfieUrl("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80");
       }
 
     } catch (err: any) {
-      console.error('[Decryption or List Error]:', err);
-      toast.error("Erreur lors de la récupération des pièces physiques.");
+      console.error('[Storage Error]:', err);
+      toast.error("Erreur de chargement des documents.");
     } finally {
       setIsDecrypting(false);
     }
@@ -174,112 +162,156 @@ export function KYCAdminDashboardScreen() {
         .from('profiles')
         .update({ 
           kyc_status: status,
-          trust_score: status === 'verified' ? 85 : 10,
+          trust_score: status === 'verified' ? '85' : '10',
           kyc_completed: status === 'verified'
         })
         .eq('id', selectedRequest.id);
 
       if (error) throw error;
 
-      toast.success(`Dossier mis à jour : ${status.toUpperCase()}`);
+      toast.success(`Statut mis à jour : ${status.toUpperCase()}`);
       setSelectedRequest(null);
-      fetchPendingKYC();
+      fetchAllProfiles();
     } catch (err: any) {
-      console.error('[KYC Status Update Error]:', err);
-      toast.error("Échec de la modification d'état.");
+      console.error('[Status Error]:', err);
+      toast.error("Impossible d'appliquer la décision administrative.");
     } finally {
       setIsActionLoading(false);
     }
   };
 
-  const filteredRequests = requests.filter(r => 
-    r.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredRequests = requests.filter(r => {
+    const matchesSearch = r.fullName.toLowerCase().includes(searchQuery.toLowerCase()) || r.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || r.kycStatus === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col font-sans">
       
-      {/* HEADER PANNEAU ADMINISTRATIF */}
+      {/* ── BANDEAU DE GESTION SUPERIEUR ── */}
       <div className="border-b border-slate-800 bg-[#1E293B]/60 backdrop-blur-xl px-8 py-5 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
             <ShieldAlert className="w-5 h-5 text-amber-500" />
           </div>
           <div>
-            <h1 className="text-lg font-black tracking-wider text-white">KAURI CORE · COMPLIANCE</h1>
-            <p className="text-xs text-slate-400">Tunnel de validation manuelle KYC (Seuil 15k Utilisateurs)</p>
+            <h1 className="text-lg font-black tracking-wider text-white">KAURI REGULATORY MATRIX</h1>
+            <p className="text-xs text-slate-400">Registre général de conformité et de vérification d'identité</p>
           </div>
         </div>
-        <button onClick={fetchPendingKYC} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all cursor-pointer">
+        <button onClick={fetchAllProfiles} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all cursor-pointer">
           <RefreshCw className={`w-4 h-4 text-slate-300 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
         
-        {/* COLONNE GAUCHE : DOSSIERS */}
-        <div className="w-2/5 border-r border-slate-800 p-6 flex flex-col space-y-4 overflow-y-auto">
-          <div className="relative">
-            <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Rechercher un dossier (Nom, Email)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#1E293B] border border-slate-700/50 rounded-xl py-3 pl-11 pr-4 text-xs outline-none focus:border-amber-500/50 text-white transition-all"
-            />
+        {/* ── COLONNE GAUCHE : TABLEAU GENERAL DE SUIVI ── */}
+        <div className="w-3/5 border-r border-slate-800 p-6 flex flex-col space-y-4 overflow-y-auto">
+          
+          {/* BARRE DE RECHERCHE & FILTRES */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
+              <input
+                type="text"
+                placeholder="Rechercher un titulaire (Nom, Email)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#1E293B] border border-slate-700/50 rounded-xl py-3 pl-11 pr-4 text-xs outline-none focus:border-amber-500/50 text-white transition-all"
+              />
+            </div>
           </div>
 
+          {/* ONGLETS DE SEGMENTATION */}
+          <div className="flex border-b border-slate-800 text-xs font-bold gap-2">
+            {(['all', 'pending', 'verified', 'rejected'] as const).map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`pb-3 px-3 capitalize transition-all cursor-pointer ${
+                  statusFilter === status 
+                    ? 'border-b-2 border-amber-500 text-amber-500 font-black' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {status === 'all' ? 'Tous les profils' : status === 'pending' ? 'Non vérifiés' : status === 'verified' ? 'Vérifiés' : 'Rejetés'}
+              </button>
+            ))}
+          </div>
+
+          {/* TABLEAU MATRICIEL */}
           {isLoading ? (
             <div className="flex-1 flex items-center justify-center py-24">
               <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
             </div>
           ) : filteredRequests.length === 0 ? (
             <div className="text-center py-16 border-2 border-dashed border-slate-800 rounded-2xl">
-              <ShieldCheck className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <p className="text-sm text-slate-400">Aucun dossier KYC en attente d'approbation.</p>
+              <p className="text-sm text-slate-400">Aucun profil ne correspond aux critères sélectionnés.</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {filteredRequests.map((req) => (
-                <div
-                  key={req.id}
-                  onClick={() => handleViewAndDecryptDocs(req)}
-                  className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                    selectedRequest?.id === req.id 
-                      ? 'bg-amber-500/10 border-amber-500/40 shadow-lg shadow-amber-500/5' 
-                      : 'bg-[#1E293B]/40 border-slate-800 hover:border-slate-700'
-                  }`}
-                >
-                  <div className="space-y-1 truncate flex-1 pr-3">
-                    <p className="text-xs font-bold text-white uppercase tracking-wide">{req.fullName}</p>
-                    <p className="text-[11px] text-slate-400 truncate">{req.email}</p>
-                    <span className={`inline-block text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${
-                      req.accountType === 'professionnel' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                    }`}>
-                      {req.accountType}
-                    </span>
-                  </div>
-                  <ChevronRight className={`w-4 h-4 transition-transform ${selectedRequest?.id === req.id ? 'text-amber-500 translate-x-1' : 'text-slate-600'}`} />
-                </div>
-              ))}
+            <div className="bg-[#1E293B]/20 border border-slate-800 rounded-2xl overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-800 bg-[#1E293B]/40 text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                    <th className="py-3 px-4">Titulaire / Email</th>
+                    <th className="py-3 px-4">Type</th>
+                    <th className="py-3 px-4">État de conformité</th>
+                    <th className="py-3 px-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 text-xs">
+                  {filteredRequests.map((req) => (
+                    <tr 
+                      key={req.id} 
+                      className={`hover:bg-[#1E293B]/30 transition-colors ${selectedRequest?.id === req.id ? 'bg-amber-500/5' : ''}`}
+                    >
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-white uppercase">{req.fullName}</div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">{req.email}</div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-300">{req.accountType}</span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                          req.kycStatus === 'verified' 
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                            : req.kycStatus === 'rejected' 
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
+                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        }`}>
+                          {req.kycStatus === 'pending' ? 'Non vérifié' : req.kycStatus === 'verified' ? 'Vérifié' : 'Rejeté'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          onClick={() => handleViewAndDecryptDocs(req)}
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold text-[11px] transition-all inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          Inspecter <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
 
-        {/* COLONNE DROITE : INSPECTION */}
-        <div className="w-3/5 p-6 overflow-y-auto bg-[#090D1A]">
+        {/* ── COLONNE DROITE : STATION D'INSPECTION KYC ── */}
+        <div className="w-2/5 p-6 overflow-y-auto bg-[#090D1A]">
           
+          {/* ENCLAVE CRYPTO */}
           {!isKeyLoaded && (isIdentityEncrypted || isSelfieEncrypted) && (
             <form onSubmit={handleLoadKey} className="bg-[#1E293B]/60 border border-slate-800 p-5 rounded-2xl space-y-4 mb-6">
               <div className="flex gap-3">
                 <KeyRound className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="text-sm font-bold text-white">Fichiers Chiffrés Détectés · Clé Requise</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    Certaines pièces de ce dossier utilisent le protocole enveloppe. Collez votre clé PEM pour décoder.
-                  </p>
+                  <h3 className="text-sm font-bold text-white">Enclave Administrative Requise</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">Ce dossier contient des flux chiffrés. Chargez votre clé privée.</p>
                 </div>
               </div>
               <textarea
@@ -290,35 +322,31 @@ export function KYCAdminDashboardScreen() {
                 className="w-full bg-[#0F172A] border border-slate-700 rounded-xl p-3 text-[10px] font-mono outline-none text-amber-500"
               />
               <button type="submit" className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl cursor-pointer">
-                Activer l'Enclave Administrative
+                Déverrouiller l'Enclave
               </button>
             </form>
-          )}
-
-          {isKeyLoaded && (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl flex items-center justify-between mb-6">
-              <p className="text-xs text-emerald-400 font-semibold">Enclave de déchiffrement active.</p>
-              <button onClick={() => setIsKeyActive(false)} className="text-[10px] text-slate-400 underline cursor-pointer">Révoquer</button>
-            </div>
           )}
 
           {selectedRequest ? (
             <div className="space-y-6">
               <div className="bg-[#1E293B]/30 border border-slate-800 p-5 rounded-2xl space-y-4">
-                <h3 className="text-sm font-bold text-white border-b border-slate-800 pb-2 uppercase tracking-wider">Métadonnées du dossier</h3>
+                <h3 className="text-sm font-bold text-white border-b border-slate-800 pb-2 uppercase tracking-wider">Métadonnées d'Attestation</h3>
                 <div className="grid grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <span className="text-slate-500 block mb-0.5">Identité complète :</span>
-                    <strong className="text-white text-sm">{selectedRequest.fullName}</strong>
+                  <div className="col-span-2">
+                    <span className="text-slate-500 block mb-0.5">Identité complète déclarée :</span>
+                    <strong className="text-white text-sm uppercase">{selectedRequest.fullName}</strong>
                   </div>
                   <div>
                     <span className="text-slate-500 block mb-0.5">Téléphone :</span>
                     <strong className="text-slate-200">{selectedRequest.phone}</strong>
                   </div>
+                  <div>
+                    <span className="text-slate-500 block mb-0.5">Identifiant unique :</span>
+                    <strong className="text-slate-400 font-mono text-[10px] block truncate">{selectedRequest.id}</strong>
+                  </div>
                   <div className="col-span-2">
-                    <span className="text-slate-500 block mb-0.5">Adresse de résidence déclarée :</span>
-                    <strong className="text-slate-200 leading-relaxed block bg-[#0F172A] p-3 rounded-xl border border-slate-800">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline mr-1 text-slate-500"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <span className="text-slate-500 block mb-0.5">Adresse de résidence :</span>
+                    <strong className="text-slate-200 block bg-[#0F172A] p-3 rounded-xl border border-slate-800">
                       {selectedRequest.street}, {selectedRequest.zip} {selectedRequest.city}
                     </strong>
                   </div>
@@ -326,12 +354,12 @@ export function KYCAdminDashboardScreen() {
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Pièces justificatives réelles</h3>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Vérification des pièces physiques</h3>
                 
                 {isDecrypting ? (
-                  <div className="py-16 text-center border border-slate-800 rounded-2xl bg-[#1E293B]/10">
+                  <div className="py-12 text-center border border-slate-800 rounded-2xl bg-[#1E293B]/10">
                     <Loader2 className="w-6 h-6 animate-spin text-amber-500 mx-auto mb-2" />
-                    <p className="text-xs text-slate-400">Téléchargement sécurisé des pièces en cours...</p>
+                    <p className="text-xs text-slate-400">Rapatriement des flux...</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
@@ -340,16 +368,16 @@ export function KYCAdminDashboardScreen() {
                     <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden">
                       {decryptedIdentityUrl ? (
                         <div className="w-full h-full relative">
-                          <img src={decryptedIdentityUrl} alt="Identity Document" className="w-full h-44 object-cover rounded-xl" />
-                          {!isIdentityEncrypted && (
-                            <span className="text-[9px] text-emerald-400 font-bold block absolute bottom-2 right-2 bg-slate-950/80 px-2 py-0.5 rounded">FLUX BRUT</span>
-                          )}
+                          <img src={decryptedIdentityUrl} alt="Identity" className="w-full h-44 object-cover rounded-xl" />
+                          <span className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isIdentityEncrypted ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'}`}>
+                            {isIdentityEncrypted ? 'DECRYPTÉ' : 'FLUX BRUT'}
+                          </span>
                         </div>
                       ) : (
                         <div className="text-center space-y-2">
                           <FileText className="w-8 h-8 text-slate-600 mx-auto" />
                           <p className="text-xs font-bold text-slate-400">identity.enc</p>
-                          <span className="text-[10px] text-amber-500">Verrouillé RSA</span>
+                          <span className="text-[10px] text-amber-500 font-bold block">CLÉ PEM REQUISE</span>
                         </div>
                       )}
                     </div>
@@ -358,16 +386,16 @@ export function KYCAdminDashboardScreen() {
                     <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden">
                       {decryptedSelfieUrl ? (
                         <div className="w-full h-full relative">
-                          <img src={decryptedSelfieUrl} alt="Selfie Verification" className="w-full h-44 object-cover rounded-xl" />
-                          {!isSelfieEncrypted && (
-                            <span className="text-[9px] text-emerald-400 font-bold block absolute bottom-2 right-2 bg-slate-950/80 px-2 py-0.5 rounded">FLUX BRUT</span>
-                          )}
+                          <img src={decryptedSelfieUrl} alt="Selfie" className="w-full h-44 object-cover rounded-xl" />
+                          <span className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isSelfieEncrypted ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'}`}>
+                            {isSelfieEncrypted ? 'DECRYPTÉ' : 'FLUX BRUT'}
+                          </span>
                         </div>
                       ) : (
                         <div className="text-center space-y-2">
                           <User className="w-8 h-8 text-slate-600 mx-auto" />
                           <p className="text-xs font-bold text-slate-400">selfie.enc</p>
-                          <span className="text-[10px] text-amber-500">Verrouillé RSA</span>
+                          <span className="text-[10px] text-amber-500 font-bold block">CLÉ PEM REQUISE</span>
                         </div>
                       )}
                     </div>
@@ -383,7 +411,7 @@ export function KYCAdminDashboardScreen() {
                   className="flex-1 py-4 border border-red-500/30 hover:border-red-500 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
                 >
                   <UserX className="w-4 h-4" />
-                  Rejeter le dossier
+                  Rejeter et bloquer
                 </button>
                 <button
                   onClick={() => handleUpdateStatus('verified')}
@@ -391,15 +419,15 @@ export function KYCAdminDashboardScreen() {
                   className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40"
                 >
                   <UserCheck className="w-4 h-4" />
-                  Approuver et Activer
+                  Confirmer le KYC
                 </button>
               </div>
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center py-24 border-2 border-dashed border-slate-800 rounded-3xl">
               <FileText className="w-12 h-12 text-slate-700 mb-3" />
-              <h3 className="text-sm font-bold text-slate-400">Aucun dossier ouvert</h3>
-              <p className="text-xs text-slate-500 max-w-[240px] mt-1">Sélectionnez un membre dans le volet de gauche pour inspecter ses attestations.</p>
+              <h3 className="text-sm font-bold text-slate-400">Station d'inspection vide</h3>
+              <p className="text-xs text-slate-500 max-w-[240px] mt-1">Sélectionnez une ligne du tableau de suivi à gauche pour initier l'audit des pièces.</p>
             </div>
           )}
         </div>
