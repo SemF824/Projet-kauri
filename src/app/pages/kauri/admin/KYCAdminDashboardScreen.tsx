@@ -75,7 +75,7 @@ export function KYCAdminDashboardScreen() {
     } catch (err: any) {
       console.error('[KYC Fetch Error]:', err);
       toast.error("Erreur de synchronisation du registre des comptes.");
-    } filter {
+    } finally {
       setIsLoading(false);
     }
   };
@@ -147,7 +147,7 @@ export function KYCAdminDashboardScreen() {
     } catch (err: any) {
       console.error('[Storage Error]:', err);
       toast.error("Erreur de chargement des documents.");
-    } filter {
+    } finally {
       setIsDecrypting(false);
     }
   };
@@ -174,7 +174,7 @@ export function KYCAdminDashboardScreen() {
     } catch (err: any) {
       console.error('[Status Error]:', err);
       toast.error("Impossible d'appliquer la décision administrative.");
-    } filter {
+    } finally {
       setIsActionLoading(false);
     }
   };
