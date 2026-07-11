@@ -94,7 +94,6 @@ export function KYCVerificationScreen() {
     const toastId = toast.loading("Scellage double enveloppe cryptographique (Admin + Client)...");
 
     try {
-      // Extraction de la clé publique de l'utilisateur depuis PostgreSQL pour le double scellé
       const { data: dbProfile, error: profileFetchError } = await supabase
         .from('profiles')
         .select('user_public_key')
@@ -123,7 +122,7 @@ export function KYCVerificationScreen() {
 
       const exportedAesKey = await window.crypto.subtle.exportKey("raw", aesKey);
 
-      // 2. Chiffrement de la clé AES pour l'Administrateur (Toi)
+      // 2. Chiffrement de la clé AES pour l'Administrateur
       const adminPublicKeyBuffer = pemToArrayBuffer(ADMIN_PUBLIC_KEY_PEM);
       const adminPublicKey = await window.crypto.subtle.importKey(
         "spki", adminPublicKeyBuffer, { name: "RSA-OAEP", hash: "SHA-256" }, false, ["encrypt"]
@@ -132,7 +131,7 @@ export function KYCVerificationScreen() {
         { name: "RSA-OAEP" }, adminPublicKey, exportedAesKey
       );
 
-      // 3. Chiffrement de la même clé AES pour l'Utilisateur lui-même (Souveraineté client)
+      // 3. Chiffrement de la même clé AES pour l'Utilisateur lui-même
       const userPublicKeyBuffer = pemToArrayBuffer(dbProfile.user_public_key);
       const userPublicKey = await window.crypto.subtle.importKey(
         "spki", userPublicKeyBuffer, { name: "RSA-OAEP", hash: "SHA-256" }, false, ["encrypt"]
@@ -142,7 +141,6 @@ export function KYCVerificationScreen() {
       );
 
       // 4. Assemblage du package binaire multi-destinataires (.enc)
-      // Structure : [Len Admin (4B)] + [Len User (4B)] + [Key Admin] + [Key User] + [IV (12B)] + [Payload Chiffré]
       const packedBuffer = new ArrayBuffer(
         4 + 4 + encryptedAesKeyAdmin.byteLength + encryptedAesKeyUser.byteLength + 12 + encryptedFileContent.byteLength
       );
@@ -221,7 +219,7 @@ export function KYCVerificationScreen() {
 
         if (error) throw error;
         await refreshProfile();
-        toast.success("Dossier réglementaire clôturé !", { id: toastId });
+        toast.success("Dossier résumé !", { id: toastId });
         navigate(`/kauri/biometric-setup?type=${accountType}`);
       } catch (err) {
         toast.error("Erreur de synchronisation avec la base centrale.");
@@ -236,7 +234,6 @@ export function KYCVerificationScreen() {
       <input type="file" ref={identityInputRef} onChange={(e) => handleFileChange(e, "identity")} accept="image/*,application/pdf" className="hidden" />
       <input type="file" ref={selfieInputRef} onChange={(e) => handleFileChange(e, "selfie")} accept="image/*" capture="user" className="hidden" />
 
-      {/* HEADER PROGRESSION */}
       <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-md">
         <button onClick={() => navigate(-1)} className="mb-6 text-white flex items-center gap-2 bg-transparent border-none cursor-pointer opacity-90 hover:opacity-100 transition-all">
           <ArrowLeft className="w-5 h-5" />
@@ -265,7 +262,6 @@ export function KYCVerificationScreen() {
         </div>
       </div>
 
-      {/* CARTE FORMULAIRE DYNAMIQUE */}
       <div className="px-6 py-6 max-w-md mx-auto w-full">
         {currentStep === 1 && (
           <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-[#E2E8F0] space-y-6">
