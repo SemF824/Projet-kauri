@@ -108,7 +108,7 @@ export function KYCAdminDashboardScreen() {
 
   useEffect(() => {
     if (!authContextLoading && (!user || profile?.accountType !== 'admin')) {
-      // Restriction d'infrastructure désactivée pour les tests
+      // Restriction désactivée temporairement pour tests
       // navigate('/kauri/login');
     }
   }, [user, profile, authContextLoading]);
@@ -189,33 +189,29 @@ export function KYCAdminDashboardScreen() {
     setIsKeyActive(false);
     setDecryptedIdentityUrl(null);
     setDecryptedSelfieUrl(null);
-    toast.info("Enclave administrative révoquée de la mémoire.");
+    toast.info("Enclave administrative révoquée de la mémoire locale.");
   };
 
-  // 🎯 PARSING DE L'ENVELOPPE MULTI-DESTINATAIRES (Extraction du tiroir Admin)
+  // 🎯 PARSING DE L'ENVELOPPE MULTI-DESTINATAIRES
   const decryptPayload = async (packedArrayBuffer: ArrayBuffer, key: CryptoKey): Promise<{ url: string; type: 'image' | 'pdf' }> => {
     const packedBytes = new Uint8Array(packedArrayBuffer);
     const view = new DataView(packedBytes.buffer);
     
-    // Lecture des longueurs de clés correspondantes
     const encryptedKeyLengthAdmin = view.getUint32(0, false);
     const encryptedKeyLengthUser = view.getUint32(4, false);
     
-    // Découpage chirurgical des segments binaires
     const encryptedAesKeyAdmin = packedBytes.slice(8, 8 + encryptedKeyLengthAdmin);
     
     const ivOffset = 8 + encryptedKeyLengthAdmin + encryptedKeyLengthUser;
     const iv = packedBytes.slice(ivOffset, ivOffset + 12);
     const ciphertext = packedBytes.slice(ivOffset + 12);
 
-    // Déchiffrement asymétrique RSA de l'enveloppe
     const decryptedAesKeyRaw = await window.crypto.subtle.decrypt(
       { name: "RSA-OAEP" },
       key,
       encryptedAesKeyAdmin
     );
 
-    // Importation de la clé symétrique AES décodée
     const aesKey = await window.crypto.subtle.importKey(
       "raw",
       decryptedAesKeyRaw,
@@ -224,7 +220,6 @@ export function KYCAdminDashboardScreen() {
       ["decrypt"]
     );
 
-    // Déchiffrement symétrique final du corps du fichier
     const decryptedFileBuffer = await window.crypto.subtle.decrypt(
       { name: "AES-GCM", iv: iv },
       aesKey,
@@ -314,7 +309,7 @@ export function KYCAdminDashboardScreen() {
 
     } catch (err: any) {
       console.error('[Decryption Master Stack Crash]:', err);
-      toast.error("Erreur d'extraction des enveloppes multi-destinataires.");
+      toast.error("Erreur de décodage du package cryptographique.");
     } finally {
       setIsDecrypting(false);
     }
@@ -322,8 +317,14 @@ export function KYCAdminDashboardScreen() {
 
   const handleUpdateStatus = async (status: 'verified' | 'rejected') => {
     if (!selectedRequest) return;
-    setIsActionLoading(true);
 
+    // 🎯 REJET INTERNE INFRANCHISSABLE : Si l'opérateur tente d'approuver sans la clé
+    if (!isKeyLoaded || !importedCryptoKey) {
+      toast.error("Action administrative révoquée. Vous devez détenir la clé privée décryptant le dossier pour statuer.");
+      return;
+    }
+
+    setIsActionLoading(true);
     try {
       const { error } = await supabase
         .from('profiles')
@@ -336,7 +337,7 @@ export function KYCAdminDashboardScreen() {
 
       if (error) throw error;
 
-      toast.success(`Décision enregistrée avec succès : ${status.toUpperCase()}`);
+      toast.success(`Décision de conformité enregistrée : ${status.toUpperCase()}`);
       setSelectedRequest(null);
       fetchAllProfiles();
     } catch (err: any) {
@@ -356,7 +357,7 @@ export function KYCAdminDashboardScreen() {
   return (
     <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col font-sans select-none">
       
-      {/* BANDEAU DE CONTROLE ADMINISTRATIF */}
+      {/* BANDEAU SUPERIEUR */}
       <div className="border-b border-slate-800 bg-[#1E293B]/60 backdrop-blur-xl px-8 py-5 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
@@ -374,7 +375,7 @@ export function KYCAdminDashboardScreen() {
 
       <div className="flex-1 flex overflow-hidden">
         
-        {/* COLONNE GAUCHE : LE REGISTRE DES INSCRITS */}
+        {/* COLONNE GAUCHE */}
         <div className="w-3/5 border-r border-slate-800 p-6 flex flex-col space-y-4 overflow-y-auto">
           <div className="relative">
             <Search className="absolute left-4 top-3.5 w-4 h-4 text-slate-500" />
@@ -407,7 +408,7 @@ export function KYCAdminDashboardScreen() {
             </div>
           ) : filteredRequests.length === 0 ? (
             <div className="text-center py-16 border-2 border-dashed border-slate-800 rounded-2xl">
-              <p className="text-sm text-slate-400">Aucun dossier ne correspond aux filtres.</p>
+              <p className="text-sm text-slate-400">Aucun dossier ne correspond aux critères.</p>
             </div>
           ) : (
             <div className="bg-[#1E293B]/20 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
@@ -458,7 +459,7 @@ export function KYCAdminDashboardScreen() {
           )}
         </div>
 
-        {/* COLONNE DROITE : LE BLOCK D'AUDIT TECHNIQUE */}
+        {/* COLONNE DROITE */}
         <div className="w-2/5 p-6 overflow-y-auto bg-[#090D1A]">
           
           {/* CHARGEMENT AUTOMATIQUE DE L'ENCLAVE */}
@@ -594,18 +595,19 @@ export function KYCAdminDashboardScreen() {
                 )}
               </div>
 
+              {/* 🎯 SÉCURISATION RADICALE DES BOUTONS DE CONFORMITÉ */}
               <div className="flex gap-3 pt-4 border-t border-slate-800">
                 <button
                   onClick={() => handleUpdateStatus('rejected')}
-                  disabled={isActionLoading || isDecrypting}
-                  className="flex-1 py-4 border border-red-500/30 hover:border-red-500 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 border-none"
+                  disabled={isActionLoading || isDecrypting || !isKeyLoaded}
+                  className="flex-1 py-4 border border-red-500/30 hover:border-red-500 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed border-none cursor-pointer"
                 >
                   <UserX className="w-4 h-4" /> Rejeter le dossier
                 </button>
                 <button
                   onClick={() => handleUpdateStatus('verified')}
-                  disabled={isActionLoading || isDecrypting}
-                  className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 border-none"
+                  disabled={isActionLoading || isDecrypting || !isKeyLoaded}
+                  className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed border-none cursor-pointer"
                 >
                   <UserCheck className="w-4 h-4" /> Confirmer et valider
                 </button>
