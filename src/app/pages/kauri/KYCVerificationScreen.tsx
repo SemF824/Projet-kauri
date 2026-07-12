@@ -59,6 +59,28 @@ export function KYCVerificationScreen() {
     country: "France",
   });
 
+  // 🎯 VÉRIFICATION COMMERCIALE AU CHARGEMENT : Rapatriement de l'état du coffre-fort
+  useEffect(() => {
+    const checkExistingEnvelopes = async () => {
+      if (!profile?.id) return;
+      try {
+        const { data: files, error } = await supabase.storage
+          .from('secure-kyc')
+          .list(profile.id);
+
+        if (!error && files) {
+          const hasIdentity = files.some(f => f.name.startsWith('identity'));
+          const hasSelfie = files.some(f => f.name.startsWith('selfie'));
+          if (hasIdentity) setIdentityVerified(true);
+          if (hasSelfie) setSelfieVerified(true);
+        }
+      } catch (e) {
+        console.error("Error reading existing secured packages:", e);
+      }
+    };
+    checkExistingEnvelopes();
+  }, [profile]);
+
   useEffect(() => {
     if (profile) {
       setAddress((prev) => ({
@@ -106,7 +128,6 @@ export function KYCVerificationScreen() {
 
       const fileBuffer = await file.arrayBuffer();
 
-      // 1. Génération de la clé symétrique AES-GCM 256 bits unique pour ce fichier
       const aesKey = await window.crypto.subtle.generateKey(
         { name: "AES-GCM", length: 256 },
         true,
@@ -122,7 +143,6 @@ export function KYCVerificationScreen() {
 
       const exportedAesKey = await window.crypto.subtle.exportKey("raw", aesKey);
 
-      // 2. Chiffrement de la clé AES pour l'Administrateur
       const adminPublicKeyBuffer = pemToArrayBuffer(ADMIN_PUBLIC_KEY_PEM);
       const adminPublicKey = await window.crypto.subtle.importKey(
         "spki", adminPublicKeyBuffer, { name: "RSA-OAEP", hash: "SHA-256" }, false, ["encrypt"]
@@ -131,7 +151,6 @@ export function KYCVerificationScreen() {
         { name: "RSA-OAEP" }, adminPublicKey, exportedAesKey
       );
 
-      // 3. Chiffrement de la même clé AES pour l'Utilisateur lui-même
       const userPublicKeyBuffer = pemToArrayBuffer(dbProfile.user_public_key);
       const userPublicKey = await window.crypto.subtle.importKey(
         "spki", userPublicKeyBuffer, { name: "RSA-OAEP", hash: "SHA-256" }, false, ["encrypt"]
@@ -140,7 +159,6 @@ export function KYCVerificationScreen() {
         { name: "RSA-OAEP" }, userPublicKey, exportedAesKey
       );
 
-      // 4. Assemblage du package binaire multi-destinataires (.enc)
       const packedBuffer = new ArrayBuffer(
         4 + 4 + encryptedAesKeyAdmin.byteLength + encryptedAesKeyUser.byteLength + 12 + encryptedFileContent.byteLength
       );
@@ -166,7 +184,7 @@ export function KYCVerificationScreen() {
       const encryptedBlob = new Blob([packedBytes], { type: "application/octet-stream" });
       const filePath = `${profile.id}/${type}.enc`;
 
-      // 5. Transfert direct vers le Bucket d'infrastructure
+      // Exécution de l'écriture réseau (Désormais couverte par la règle SQL UPDATE)
       const { error: uploadError } = await supabase.storage
         .from('secure-kyc')
         .upload(filePath, encryptedBlob, { cacheControl: '3600', upsert: true });
@@ -279,7 +297,7 @@ export function KYCVerificationScreen() {
                 <p className="text-[11px] text-[#64748B] max-w-[200px] mx-auto">Format image (PNG, JPG) ou document PDF accepté.</p>
               </div>
               <button onClick={() => identityInputRef.current?.click()} disabled={isEncryptingAndUploading} className="bg-[#006D77] hover:bg-[#005c64] text-white text-xs font-bold px-6 py-3.5 rounded-xl border-none cursor-pointer transition-all active:scale-98 shadow-md disabled:opacity-40">
-                {identityVerified ? "✓ Document scellé RSA" : "Parcourir le document"}
+                {identityVerified ? "✓ Fichier scellé (Modifier)" : "Parcourir le document"}
               </button>
             </div>
           </div>
@@ -294,13 +312,13 @@ export function KYCVerificationScreen() {
                 <p className="text-[#64748B] text-xs leading-normal">Vérification de sécurité biométrique par selfie en temps réel.</p>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-[#D4AF37]/5 to-[#FEF3C7]/30 rounded-2xl p-8 border-2 border-dashed border-[#D4AF37]/20 text-center space-y-4">
+            <div className="bg-gradient-to-br from-[#D4AF37]/5 to-[#FEF3C7]/30 rounded-2xl p-8 border-2 border-dashed border-[#006D77]/20 text-center space-y-4">
               <div className="w-24 h-24 mx-auto bg-white border-4 border-[#D4AF37] rounded-full flex items-center justify-center overflow-hidden shadow-md">
                 <User className="w-12 h-12 text-[#D4AF37] opacity-80" />
               </div>
               <p className="text-[11px] text-[#64748B] max-w-[180px] mx-auto">Placez votre visage au centre du cadre face caméra.</p>
               <button onClick={() => selfieInputRef.current?.click()} disabled={isEncryptingAndUploading} className="bg-[#D4AF37] hover:bg-[#c29f2e] text-white text-xs font-bold px-6 py-3.5 rounded-xl border-none cursor-pointer transition-all active:scale-98 shadow-md disabled:opacity-40">
-                {selfieVerified ? "✓ Selfie sécurisé RSA" : "Déclencher l'appareil"}
+                {selfieVerified ? "✓ Selfie scellé (Modifier)" : "Déclencher l'appareil"}
               </button>
             </div>
           </div>
