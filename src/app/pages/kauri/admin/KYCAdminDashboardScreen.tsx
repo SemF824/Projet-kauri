@@ -66,7 +66,6 @@ export function KYCAdminDashboardScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
   
-  const [privateKeyPEM, setPrivateKeyText] = useState('');
   const [isKeyLoaded, setIsKeyActive] = useState(false);
   const [importedCryptoKey, setImportedCryptoKey] = useState<CryptoKey | null>(null);
   
@@ -82,7 +81,6 @@ export function KYCAdminDashboardScreen() {
 
   const [lightbox, setLightbox] = useState<LightboxState | null>(null);
 
-  // Auto-chargement de la clé privée de session enregistrée localement
   useEffect(() => {
     const initializeSavedKey = async () => {
       const savedPem = localStorage.getItem('kauri_admin_secure_key');
@@ -99,7 +97,6 @@ export function KYCAdminDashboardScreen() {
         setImportedCryptoKey(cryptoKey);
         setIsKeyActive(true);
       } catch (e) {
-        console.error("Failure importing saved enclave key:", e);
         localStorage.removeItem('kauri_admin_secure_key');
       }
     };
@@ -108,7 +105,6 @@ export function KYCAdminDashboardScreen() {
 
   useEffect(() => {
     if (!authContextLoading && (!user || profile?.accountType !== 'admin')) {
-      // Restriction désactivée temporairement pour tests
       // navigate('/kauri/login');
     }
   }, [user, profile, authContextLoading]);
@@ -174,8 +170,9 @@ export function KYCAdminDashboardScreen() {
       localStorage.setItem('kauri_admin_secure_key', pemText);
       toast.success("Enclave administrative armée. Session décryptage activée.");
       
+      // 🎯 CORRECTIF FLUIDITÉ : Injection directe pour forcer l'affichage immédiat sans re-clic
       if (selectedRequest) {
-        handleViewAndDecryptDocs(selectedRequest);
+        handleViewAndDecryptDocs(selectedRequest, cryptoKey);
       }
     } catch (err) {
       console.error(err);
@@ -192,7 +189,6 @@ export function KYCAdminDashboardScreen() {
     toast.info("Enclave administrative révoquée de la mémoire locale.");
   };
 
-  // 🎯 PARSING DE L'ENVELOPPE MULTI-DESTINATAIRES
   const decryptPayload = async (packedArrayBuffer: ArrayBuffer, key: CryptoKey): Promise<{ url: string; type: 'image' | 'pdf' }> => {
     const packedBytes = new Uint8Array(packedArrayBuffer);
     const view = new DataView(packedBytes.buffer);
@@ -235,7 +231,8 @@ export function KYCAdminDashboardScreen() {
     };
   };
 
-  const handleViewAndDecryptDocs = async (req: KYCRequest) => {
+  // Modification de signature pour accepter une injection directe de la clé
+  const handleViewAndDecryptDocs = async (req: KYCRequest, forcedKey?: CryptoKey) => {
     setSelectedRequest(req);
     setDecryptedIdentityUrl(null);
     setDecryptedSelfieUrl(null);
@@ -253,6 +250,8 @@ export function KYCAdminDashboardScreen() {
       const identityFile = files?.find(f => f.name.startsWith('identity'));
       const selfieFile = files?.find(f => f.name.startsWith('selfie'));
 
+      const activeKey = forcedKey || importedCryptoKey;
+
       if (identityFile) {
         const isEnc = identityFile.name.endsWith('.enc');
         setIsIdentityEncrypted(isEnc);
@@ -263,11 +262,11 @@ export function KYCAdminDashboardScreen() {
 
         if (blob) {
           if (isEnc) {
-            if (!importedCryptoKey) {
+            if (!activeKey) {
               setDecryptedIdentityUrl(null);
             } else {
               const arrayBuf = await blob.arrayBuffer();
-              const result = await decryptPayload(arrayBuf, importedCryptoKey);
+              const result = await decryptPayload(arrayBuf, activeKey);
               setIdentityFileType(result.type);
               setDecryptedIdentityUrl(result.url);
             }
@@ -290,11 +289,11 @@ export function KYCAdminDashboardScreen() {
 
         if (blob) {
           if (isEnc) {
-            if (!importedCryptoKey) {
+            if (!activeKey) {
               setDecryptedSelfieUrl(null);
             } else {
               const arrayBuf = await blob.arrayBuffer();
-              const result = await decryptPayload(arrayBuf, importedCryptoKey);
+              const result = await decryptPayload(arrayBuf, activeKey);
               setSelfieFileType(result.type);
               setDecryptedSelfieUrl(result.url);
             }
@@ -318,9 +317,8 @@ export function KYCAdminDashboardScreen() {
   const handleUpdateStatus = async (status: 'verified' | 'rejected') => {
     if (!selectedRequest) return;
 
-    // 🎯 REJET INTERNE INFRANCHISSABLE : Si l'opérateur tente d'approuver sans la clé
     if (!isKeyLoaded || !importedCryptoKey) {
-      toast.error("Action administrative révoquée. Vous devez détenir la clé privée décryptant le dossier pour statuer.");
+      toast.error("Action administrative révoquée. Vous devez détenir la clé privée administrative décryptant le dossier pour statuer.");
       return;
     }
 
@@ -462,7 +460,7 @@ export function KYCAdminDashboardScreen() {
         {/* COLONNE DROITE */}
         <div className="w-2/5 p-6 overflow-y-auto bg-[#090D1A]">
           
-          {/* CHARGEMENT AUTOMATIQUE DE L'ENCLAVE */}
+          {/* INTERFACE IMPORTEUR DE CLE */}
           {!isKeyLoaded ? (
             <div className="bg-[#1E293B]/60 border border-slate-800 p-6 rounded-3xl text-center space-y-4 mb-6">
               <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/20">
@@ -595,7 +593,7 @@ export function KYCAdminDashboardScreen() {
                 )}
               </div>
 
-              {/* 🎯 SÉCURISATION RADICALE DES BOUTONS DE CONFORMITÉ */}
+              {/* ACTION SÉCURISÉE COMPLÈTE */}
               <div className="flex gap-3 pt-4 border-t border-slate-800">
                 <button
                   onClick={() => handleUpdateStatus('rejected')}
@@ -623,7 +621,7 @@ export function KYCAdminDashboardScreen() {
         </div>
       </div>
 
-      {/* LIGHTBOX UNIVERSELLE HD (IFRAME ET IMAGES) */}
+      {/* LIGHTBOX */}
       {lightbox && (
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <button 
