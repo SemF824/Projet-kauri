@@ -6,13 +6,13 @@ import { toast } from 'sonner';
 
 type Step = 'choose' | 'register';
 
-// ── 🛡️ ENCLAVE LOCAL INDEXED-DB CLIENT (SYNCHRONISÉE SUR LE HUB) ──
+// ── 🛡️ PIPELINE DE STOCKAGE DE L'ENCLAVE MATÉRIELLE CLIENT (ECC V2) ──
 const DB_NAME = "KauriSecureEnclave";
 const STORE_NAME = "client_keys";
 
 function getDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 2); // Alignement version 2 courbes elliptiques
+    const req = indexedDB.open(DB_NAME, 2);
     req.onupgradeneeded = (e: any) => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -86,41 +86,41 @@ export function AccountTypeSelectionScreen() {
     try {
       const supabase = getSupabase();
 
-      // 🎯 1. GÉNÉRATION DU TROUSSEAU ECC MULTI-RÔLES DU CLIENT (P-256)
-      // Couple ECDH pour l'échange de clés et la dérivation du chiffrement
+      // 🎯 1. ARCHITECTURE HYBRIDE ECC (P-256) : Génération des deux couples de clés indépendants
+      // Matrice ECDH dédiée à l'échange de clés pour le chiffrement ECIES
       const ecdhKeyPair = await window.crypto.subtle.generateKey(
         { name: "ECDH", namedCurve: "P-256" },
         true,
         ["deriveKey"]
       );
 
-      // Couple ECDSA pour la signature numérique d'origine (Anti-Forge)
+      // Matrice ECDSA dédiée à la preuve d'authenticité d'origine des documents
       const ecdsaKeyPair = await window.crypto.subtle.generateKey(
         { name: "ECDSA", namedCurve: "P-256" },
         true,
         ["sign", "verify"]
       );
 
-      // 🎯 2. SCELLAGE DES CLÉS PRIVÉES DANS L'ENCLAVE LOCALE INDEXED-DB
+      // 🎯 2. SCELLAGE CHIRURGICAL DANS L'ENCLAVE LOCALE NON-EXTRACTIBLE
       await saveKeysToEnclave('kauri_client', {
         ecdhPriv: ecdhKeyPair.privateKey,
         ecdsaPriv: ecdsaKeyPair.privateKey
       });
 
-      // 🎯 3. EXPORTATION DES CLÉS PUBLIQUES EN FORMAT PEM POUR LE REGISTRE
+      // 🎯 3. EXPORTATION SPKI POUR LE REGISTRE PUBLIC DES ADMINISTRATEURS
       const ecdhPubBuf = await window.crypto.subtle.exportKey("spki", ecdhKeyPair.publicKey);
       const ecdsaPubBuf = await window.crypto.subtle.exportKey("spki", ecdsaKeyPair.publicKey);
 
       const ecdhPubPem = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`;
       const ecdsaPubPem = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`;
 
-      // Structuration du dictionnaire JSON qui sera stocké dans user_public_key
+      // Structuration du dictionnaire d'enclave JSON attendu par ton Hub et ton Dashboard Admin
       const publicKeysJSON = JSON.stringify({
         ecdh: ecdhPubPem,
         ecdsa: ecdsaPubPem
       });
 
-      // 🎯 4. INSCRIPTION AVEC TRANSMISSION DES STRUCTURES ECC
+      // 🎯 4. INSCRIPTION UNIQUE ET SÉCURISÉE AVEC TRANSMISSION MATRICIELLE
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: form.email.trim(),
         password: form.password,
@@ -132,7 +132,7 @@ export function AccountTypeSelectionScreen() {
             phone: form.phone.trim() || null,
             account_type: accountType,
             business_name: accountType === 'professionnel' ? form.businessName.trim() : null,
-            user_public_key: publicKeysJSON // Écriture directe via ton trigger Postgres
+            user_public_key: publicKeysJSON -- Remplacement de la structure RSA par le trousseau ECC
           },
         },
       });
@@ -149,11 +149,11 @@ export function AccountTypeSelectionScreen() {
 
       const userId = signUpData.user?.id;
       if (!userId) {
-        toast.error('Erreur d\'infrastructure lors de la création du compte.', { duration: 6000 });
+        toast.error('Erreur lors de la création du compte. Réessayez.', { duration: 6000 });
         return;
       }
 
-      // Hooks d'initialisation de portefeuille serveur
+      // Initialisation des serveurs de portefeuille
       const accessToken = signUpData.session?.access_token ?? publicAnonKey;
       
       await fetch(`${SERVER_URL}/wallet/init`, {
@@ -172,7 +172,7 @@ export function AccountTypeSelectionScreen() {
         },
       }).catch(e => console.error('Demo data seed error (non-blocking):', e));
 
-      toast.success('Votre trousseau cryptographique ECC a été scellé !');
+      toast.success('Votre compte KAURI a été initialisé !');
       navigate(`/kauri/kyc-verification?type=${accountType}`);
     } catch (e: any) {
       console.error('[Signup Transaction Error]:', e);
