@@ -18,12 +18,58 @@ interface KYCRequest {
   street?: string;
   city?: string;
   zip?: string;
+  userPublicKey: string;
   createdAt: string;
 }
 
 interface LightboxState {
   url: string;
   type: 'image' | 'pdf';
+}
+
+// ── 🛡️ UTILITAIRES WEBCRYPTO & INDEXED-DB ──
+const DB_NAME = "KauriAdminEnclave";
+const STORE_NAME = "admin_keys";
+
+function getDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = (e: any) => {
+      e.target.result.createObjectStore(STORE_NAME);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveKeyToEnclave(id: string, key: CryptoKey) {
+  const db = await getDB();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(key, id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getKeyFromEnclave(id: string): Promise<CryptoKey | undefined> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function removeKeyFromEnclave(id: string) {
+  const db = await getDB();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 function privatePemToArrayBuffer(pem: string): ArrayBuffer {
@@ -83,31 +129,18 @@ export function KYCAdminDashboardScreen() {
 
   useEffect(() => {
     const initializeSavedKey = async () => {
-      const savedPem = localStorage.getItem('kauri_admin_secure_key');
-      if (!savedPem) return;
       try {
-        const rawBinaryKey = privatePemToArrayBuffer(savedPem);
-        const cryptoKey = await window.crypto.subtle.importKey(
-          "pkcs8",
-          rawBinaryKey,
-          { name: "RSA-OAEP", hash: "SHA-256" },
-          false,
-          ["decrypt"]
-        );
-        setImportedCryptoKey(cryptoKey);
-        setIsKeyActive(true);
+        const enclaveKey = await getKeyFromEnclave('kauri_admin_master');
+        if (enclaveKey) {
+          setImportedCryptoKey(enclaveKey);
+          setIsKeyActive(true);
+        }
       } catch (e) {
-        localStorage.removeItem('kauri_admin_secure_key');
+        console.warn("Pas de clé admin dans l'enclave", e);
       }
     };
     initializeSavedKey();
   }, []);
-
-  useEffect(() => {
-    if (!authContextLoading && (!user || profile?.accountType !== 'admin')) {
-      // navigate('/kauri/login');
-    }
-  }, [user, profile, authContextLoading]);
 
   const fetchAllProfiles = async () => {
     setIsLoading(true);
@@ -129,6 +162,7 @@ export function KYCAdminDashboardScreen() {
         street: p.street || 'Non renseigné',
         city: p.city || 'Non renseigné',
         zip: p.zip || 'Non renseigné',
+        userPublicKey: p.user_public_key,
         createdAt: p.created_at || p.updated_at || new Date().toISOString()
       }));
 
@@ -161,16 +195,15 @@ export function KYCAdminDashboardScreen() {
         "pkcs8",
         rawBinaryKey,
         { name: "RSA-OAEP", hash: "SHA-256" },
-        false,
+        false, // extractable: false 🛡️
         ["decrypt"]
       );
 
+      await saveKeyToEnclave('kauri_admin_master', cryptoKey);
       setImportedCryptoKey(cryptoKey);
       setIsKeyActive(true);
-      localStorage.setItem('kauri_admin_secure_key', pemText);
-      toast.success("Enclave administrative armée. Session décryptage activée.");
+      toast.success("Enclave administrative armée. Clé scellée avec succès.");
       
-      // 🎯 CORRECTIF FLUIDITÉ : Injection directe pour forcer l'affichage immédiat sans re-clic
       if (selectedRequest) {
         handleViewAndDecryptDocs(selectedRequest, cryptoKey);
       }
@@ -180,31 +213,66 @@ export function KYCAdminDashboardScreen() {
     }
   };
 
-  const handleRevokeKey = () => {
-    localStorage.removeItem('kauri_admin_secure_key');
+  const handleRevokeKey = async () => {
+    await removeKeyFromEnclave('kauri_admin_master');
     setImportedCryptoKey(null);
     setIsKeyActive(false);
     setDecryptedIdentityUrl(null);
     setDecryptedSelfieUrl(null);
-    toast.info("Enclave administrative révoquée de la mémoire locale.");
+    toast.info("Enclave administrative purgée.");
   };
 
-  const decryptPayload = async (packedArrayBuffer: ArrayBuffer, key: CryptoKey): Promise<{ url: string; type: 'image' | 'pdf' }> => {
+  // 🎯 DÉCHIFFREMENT ET VÉRIFICATION DE LA SIGNATURE NUMÉRIQUE (ZKP)
+  const decryptPayload = async (packedArrayBuffer: ArrayBuffer, adminKey: CryptoKey, userPublicKeyPEM: string): Promise<{ url: string; type: 'image' | 'pdf' }> => {
     const packedBytes = new Uint8Array(packedArrayBuffer);
     const view = new DataView(packedBytes.buffer);
     
-    const encryptedKeyLengthAdmin = view.getUint32(0, false);
-    const encryptedKeyLengthUser = view.getUint32(4, false);
+    const adminKeyLen = view.getUint32(0, false);
+    const userKeyLen = view.getUint32(4, false);
+    const sigLen = view.getUint32(8, false);
     
-    const encryptedAesKeyAdmin = packedBytes.slice(8, 8 + encryptedKeyLengthAdmin);
+    const adminKeyOffset = 12;
+    const userKeyOffset = adminKeyOffset + adminKeyLen;
+    const sigOffset = userKeyOffset + userKeyLen;
+    const ivOffset = sigOffset + sigLen;
     
-    const ivOffset = 8 + encryptedKeyLengthAdmin + encryptedKeyLengthUser;
+    const encryptedAesKeyAdmin = packedBytes.slice(adminKeyOffset, userKeyOffset);
+    const signature = packedBytes.slice(sigOffset, ivOffset);
     const iv = packedBytes.slice(ivOffset, ivOffset + 12);
     const ciphertext = packedBytes.slice(ivOffset + 12);
 
+    // 1. Vérification de la preuve d'origine (Signature RSA-PSS)
+    if (!userPublicKeyPEM) {
+      throw new Error("Le client n'a pas de clé publique enregistrée.");
+    }
+    
+    const verifyKey = await window.crypto.subtle.importKey(
+      "spki",
+      privatePemToArrayBuffer(userPublicKeyPEM),
+      { name: "RSA-PSS", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+
+    const dataToVerify = new Uint8Array(iv.length + ciphertext.byteLength);
+    dataToVerify.set(iv, 0);
+    dataToVerify.set(ciphertext, iv.length);
+
+    const isAuthentic = await window.crypto.subtle.verify(
+      { name: "RSA-PSS", saltLength: 32 },
+      verifyKey,
+      signature,
+      dataToVerify
+    );
+
+    if (!isAuthentic) {
+      throw new Error("VIOLATION DE SÉCURITÉ : La signature du document ne correspond pas au titulaire. Document potentiellement forgé !");
+    }
+
+    // 2. Déchiffrement du contenu
     const decryptedAesKeyRaw = await window.crypto.subtle.decrypt(
       { name: "RSA-OAEP" },
-      key,
+      adminKey,
       encryptedAesKeyAdmin
     );
 
@@ -231,7 +299,6 @@ export function KYCAdminDashboardScreen() {
     };
   };
 
-  // Modification de signature pour accepter une injection directe de la clé
   const handleViewAndDecryptDocs = async (req: KYCRequest, forcedKey?: CryptoKey) => {
     setSelectedRequest(req);
     setDecryptedIdentityUrl(null);
@@ -247,10 +314,10 @@ export function KYCAdminDashboardScreen() {
 
       if (listError) throw listError;
 
+      const activeKey = forcedKey || importedCryptoKey;
+
       const identityFile = files?.find(f => f.name.startsWith('identity'));
       const selfieFile = files?.find(f => f.name.startsWith('selfie'));
-
-      const activeKey = forcedKey || importedCryptoKey;
 
       if (identityFile) {
         const isEnc = identityFile.name.endsWith('.enc');
@@ -262,11 +329,9 @@ export function KYCAdminDashboardScreen() {
 
         if (blob) {
           if (isEnc) {
-            if (!activeKey) {
-              setDecryptedIdentityUrl(null);
-            } else {
+            if (activeKey) {
               const arrayBuf = await blob.arrayBuffer();
-              const result = await decryptPayload(arrayBuf, activeKey);
+              const result = await decryptPayload(arrayBuf, activeKey, req.userPublicKey);
               setIdentityFileType(result.type);
               setDecryptedIdentityUrl(result.url);
             }
@@ -289,11 +354,9 @@ export function KYCAdminDashboardScreen() {
 
         if (blob) {
           if (isEnc) {
-            if (!activeKey) {
-              setDecryptedSelfieUrl(null);
-            } else {
+            if (activeKey) {
               const arrayBuf = await blob.arrayBuffer();
-              const result = await decryptPayload(arrayBuf, activeKey);
+              const result = await decryptPayload(arrayBuf, activeKey, req.userPublicKey);
               setSelfieFileType(result.type);
               setDecryptedSelfieUrl(result.url);
             }
@@ -308,7 +371,7 @@ export function KYCAdminDashboardScreen() {
 
     } catch (err: any) {
       console.error('[Decryption Master Stack Crash]:', err);
-      toast.error("Erreur de décodage du package cryptographique.");
+      toast.error(err.message || "Erreur de décodage du package cryptographique.");
     } finally {
       setIsDecrypting(false);
     }
@@ -544,7 +607,7 @@ export function KYCAdminDashboardScreen() {
                             </div>
                           )}
                           <span className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isIdentityEncrypted ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'}`}>
-                            {isIdentityEncrypted ? 'ENVELOPPE A' : 'BRUT'}
+                            {isIdentityEncrypted ? 'ENVELOPPE A + SIGNATURE' : 'BRUT'}
                           </span>
                         </div>
                       ) : (
@@ -577,7 +640,7 @@ export function KYCAdminDashboardScreen() {
                             </div>
                           )}
                           <span className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isSelfieEncrypted ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'}`}>
-                            {isSelfieEncrypted ? 'ENVELOPPE A' : 'BRUT'}
+                            {isSelfieEncrypted ? 'ENVELOPPE A + SIGNATURE' : 'BRUT'}
                           </span>
                         </div>
                       ) : (
@@ -651,3 +714,5 @@ export function KYCAdminDashboardScreen() {
     </div>
   );
 }
+
+export default KYCAdminDashboardScreen;
