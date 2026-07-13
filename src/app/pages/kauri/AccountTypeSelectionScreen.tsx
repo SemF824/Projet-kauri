@@ -87,14 +87,12 @@ export function AccountTypeSelectionScreen() {
       const supabase = getSupabase();
 
       // 🎯 1. ARCHITECTURE HYBRIDE ECC (P-256) : Génération des deux couples de clés indépendants
-      // Matrice ECDH dédiée à l'échange de clés pour le chiffrement ECIES
       const ecdhKeyPair = await window.crypto.subtle.generateKey(
         { name: "ECDH", namedCurve: "P-256" },
         true,
         ["deriveKey"]
       );
 
-      // Matrice ECDSA dédiée à la preuve d'authenticité d'origine des documents
       const ecdsaKeyPair = await window.crypto.subtle.generateKey(
         { name: "ECDSA", namedCurve: "P-256" },
         true,
@@ -114,7 +112,6 @@ export function AccountTypeSelectionScreen() {
       const ecdhPubPem = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`;
       const ecdsaPubPem = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`;
 
-      // Structuration du dictionnaire d'enclave JSON attendu par ton Hub et ton Dashboard Admin
       const publicKeysJSON = JSON.stringify({
         ecdh: ecdhPubPem,
         ecdsa: ecdsaPubPem
@@ -132,7 +129,7 @@ export function AccountTypeSelectionScreen() {
             phone: form.phone.trim() || null,
             account_type: accountType,
             business_name: accountType === 'professionnel' ? form.businessName.trim() : null,
-            user_public_key: publicKeysJSON -- Remplacement de la structure RSA par le trousseau ECC
+            user_public_key: publicKeysJSON // Correction du commentaire SQL défaillant ici
           },
         },
       });
