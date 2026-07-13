@@ -6,6 +6,34 @@ import { toast } from 'sonner';
 
 type Step = 'choose' | 'register';
 
+// ── 🛡️ ENCLAVE LOCAL INDEXED-DB CLIENT (SYNCHRONISÉE SUR LE HUB) ──
+const DB_NAME = "KauriSecureEnclave";
+const STORE_NAME = "client_keys";
+
+function getDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 2); // Alignement version 2 courbes elliptiques
+    req.onupgradeneeded = (e: any) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveKeysToEnclave(id: string, keys: { ecdhPriv: CryptoKey; ecdsaPriv: CryptoKey }) {
+  const db = await getDB();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(keys, id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 function arrayBufferToBase64(blob: ArrayBuffer): string {
   const bytes = new Uint8Array(blob);
   let binary = '';
@@ -58,32 +86,41 @@ export function AccountTypeSelectionScreen() {
     try {
       const supabase = getSupabase();
 
-      // 🎯 ENCLAVE CRYPTO CLIENT : Génération instantanée d'un couple de clés RSA-2048 pour l'utilisateur
-      const userKeyPair = await window.crypto.subtle.generateKey(
-        {
-          name: "RSA-OAEP",
-          modulusLength: 2048,
-          publicExponent: new Uint8Array([1, 0, 1]),
-          hash: "SHA-256",
-        },
+      // 🎯 1. GÉNÉRATION DU TROUSSEAU ECC MULTI-RÔLES DU CLIENT (P-256)
+      // Couple ECDH pour l'échange de clés et la dérivation du chiffrement
+      const ecdhKeyPair = await window.crypto.subtle.generateKey(
+        { name: "ECDH", namedCurve: "P-256" },
         true,
-        ["encrypt", "decrypt"]
+        ["deriveKey"]
       );
 
-      // Exportation des clés au format binaire standard SPKI et PKCS8
-      const pubBuffer = await window.crypto.subtle.exportKey("spki", userKeyPair.publicKey);
-      const privBuffer = await window.crypto.subtle.exportKey("pkcs8", userKeyPair.privateKey);
+      // Couple ECDSA pour la signature numérique d'origine (Anti-Forge)
+      const ecdsaKeyPair = await window.crypto.subtle.generateKey(
+        { name: "ECDSA", namedCurve: "P-256" },
+        true,
+        ["sign", "verify"]
+      );
 
-      const pubB64 = arrayBufferToBase64(pubBuffer);
-      const privB64 = arrayBufferToBase64(privBuffer);
+      // 🎯 2. SCELLAGE DES CLÉS PRIVÉES DANS L'ENCLAVE LOCALE INDEXED-DB
+      await saveKeysToEnclave('kauri_client', {
+        ecdhPriv: ecdhKeyPair.privateKey,
+        ecdsaPriv: ecdsaKeyPair.privateKey
+      });
 
-      const userPublicKeyPEM = `-----BEGIN PUBLIC KEY-----\n${pubB64}\n-----END PUBLIC KEY-----`;
-      const userPrivateKeyPEM = `-----BEGIN PRIVATE KEY-----\n${privB64}\n-----END PRIVATE KEY-----`;
+      // 🎯 3. EXPORTATION DES CLÉS PUBLIQUES EN FORMAT PEM POUR LE REGISTRE
+      const ecdhPubBuf = await window.crypto.subtle.exportKey("spki", ecdhKeyPair.publicKey);
+      const ecdsaPubBuf = await window.crypto.subtle.exportKey("spki", ecdsaKeyPair.publicKey);
 
-      // Sauvegarde locale de la clé privée (Souveraineté Zero-Knowledge)
-      localStorage.setItem(`kauri_client_priv_key`, userPrivateKeyPEM);
+      const ecdhPubPem = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`;
+      const ecdsaPubPem = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`;
 
-      // Transmission complète incluant la clé publique dans les métadonnées de l'inscription
+      // Structuration du dictionnaire JSON qui sera stocké dans user_public_key
+      const publicKeysJSON = JSON.stringify({
+        ecdh: ecdhPubPem,
+        ecdsa: ecdsaPubPem
+      });
+
+      // 🎯 4. INSCRIPTION AVEC TRANSMISSION DES STRUCTURES ECC
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: form.email.trim(),
         password: form.password,
@@ -95,7 +132,7 @@ export function AccountTypeSelectionScreen() {
             phone: form.phone.trim() || null,
             account_type: accountType,
             business_name: accountType === 'professionnel' ? form.businessName.trim() : null,
-            user_public_key: userPublicKeyPEM // Injecté pour l'admin
+            user_public_key: publicKeysJSON // Écriture directe via ton trigger Postgres
           },
         },
       });
@@ -112,11 +149,11 @@ export function AccountTypeSelectionScreen() {
 
       const userId = signUpData.user?.id;
       if (!userId) {
-        toast.error('Erreur lors de la création du compte. Réessayez.', { duration: 6000 });
+        toast.error('Erreur d\'infrastructure lors de la création du compte.', { duration: 6000 });
         return;
       }
 
-      // Initialisation des backends de portefeuille
+      // Hooks d'initialisation de portefeuille serveur
       const accessToken = signUpData.session?.access_token ?? publicAnonKey;
       
       await fetch(`${SERVER_URL}/wallet/init`, {
@@ -135,7 +172,7 @@ export function AccountTypeSelectionScreen() {
         },
       }).catch(e => console.error('Demo data seed error (non-blocking):', e));
 
-      toast.success('Votre compte KAURI a été initialisé !');
+      toast.success('Votre trousseau cryptographique ECC a été scellé !');
       navigate(`/kauri/kyc-verification?type=${accountType}`);
     } catch (e: any) {
       console.error('[Signup Transaction Error]:', e);
@@ -240,7 +277,7 @@ export function AccountTypeSelectionScreen() {
             {isLoading ? (
               <>
                 <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                Génération des clés d'accès…
+                Génération des enclaves ECC (P-256)…
               </>
             ) : 'Créer mon compte Kauri →'}
           </button>
