@@ -18,7 +18,7 @@ interface KYCRequest {
   street?: string;
   city?: string;
   zip?: string;
-  userPublicKey: string;
+  userPublicKeysJSON: string;
   createdAt: string;
 }
 
@@ -33,9 +33,15 @@ const STORE_NAME = "admin_keys";
 
 function getDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
+    const req = indexedDB.open(DB_NAME, 2);
     req.onupgradeneeded = (e: any) => {
-      e.target.result.createObjectStore(STORE_NAME);
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      } else {
+        db.deleteObjectStore(STORE_NAME);
+        db.createObjectStore(STORE_NAME);
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -130,7 +136,7 @@ export function KYCAdminDashboardScreen() {
   useEffect(() => {
     const initializeSavedKey = async () => {
       try {
-        const enclaveKey = await getKeyFromEnclave('kauri_admin_master');
+        const enclaveKey = await getKeyFromEnclave('kauri_admin_ecdh');
         if (enclaveKey) {
           setImportedCryptoKey(enclaveKey);
           setIsKeyActive(true);
@@ -162,7 +168,7 @@ export function KYCAdminDashboardScreen() {
         street: p.street || 'Non renseigné',
         city: p.city || 'Non renseigné',
         zip: p.zip || 'Non renseigné',
-        userPublicKey: p.user_public_key,
+        userPublicKeysJSON: p.user_public_key, // Attention: contient les PEMs ECDSA et ECDH JSON.stringifié
         createdAt: p.created_at || p.updated_at || new Date().toISOString()
       }));
 
@@ -186,7 +192,7 @@ export function KYCAdminDashboardScreen() {
     try {
       const pemText = await file.text();
       if (!pemText.includes('-----BEGIN PRIVATE KEY-----')) {
-        toast.error("Le fichier sélectionné ne possède pas les en-têtes PKCS#8 d'une clé RSA valide.");
+        toast.error("Le fichier sélectionné ne possède pas les en-têtes PKCS#8 d'une clé valide.");
         return;
       }
 
@@ -194,27 +200,27 @@ export function KYCAdminDashboardScreen() {
       const cryptoKey = await window.crypto.subtle.importKey(
         "pkcs8",
         rawBinaryKey,
-        { name: "RSA-OAEP", hash: "SHA-256" },
+        { name: "ECDH", namedCurve: "P-256" },
         false, // extractable: false 🛡️
-        ["decrypt"]
+        ["deriveKey"]
       );
 
-      await saveKeyToEnclave('kauri_admin_master', cryptoKey);
+      await saveKeyToEnclave('kauri_admin_ecdh', cryptoKey);
       setImportedCryptoKey(cryptoKey);
       setIsKeyActive(true);
-      toast.success("Enclave administrative armée. Clé scellée avec succès.");
+      toast.success("Enclave ECC armée. Clé scellée avec succès.");
       
       if (selectedRequest) {
         handleViewAndDecryptDocs(selectedRequest, cryptoKey);
       }
     } catch (err) {
       console.error(err);
-      toast.error("Échec d'intégration binaire de la clé privée.");
+      toast.error("Échec d'intégration binaire. La clé n'est pas une clé ECC P-256 valide.");
     }
   };
 
   const handleRevokeKey = async () => {
-    await removeKeyFromEnclave('kauri_admin_master');
+    await removeKeyFromEnclave('kauri_admin_ecdh');
     setImportedCryptoKey(null);
     setIsKeyActive(false);
     setDecryptedIdentityUrl(null);
@@ -222,71 +228,98 @@ export function KYCAdminDashboardScreen() {
     toast.info("Enclave administrative purgée.");
   };
 
-  // 🎯 DÉCHIFFREMENT ET VÉRIFICATION DE LA SIGNATURE NUMÉRIQUE (ZKP)
-  const decryptPayload = async (packedArrayBuffer: ArrayBuffer, adminKey: CryptoKey, userPublicKeyPEM: string): Promise<{ url: string; type: 'image' | 'pdf' }> => {
+  // 🎯 DÉCHIFFREMENT ECIES ET VÉRIFICATION DE LA SIGNATURE NUMÉRIQUE (ECDSA)
+  const decryptPayload = async (packedArrayBuffer: ArrayBuffer, adminEcdhPriv: CryptoKey, userKeysJSON: string): Promise<{ url: string; type: 'image' | 'pdf' }> => {
     const packedBytes = new Uint8Array(packedArrayBuffer);
     const view = new DataView(packedBytes.buffer);
     
-    const adminKeyLen = view.getUint32(0, false);
-    const userKeyLen = view.getUint32(4, false);
+    // 1. Découpage chirurgical de la matrice (Header de 101 octets)
+    const adminFekLen = view.getUint32(0, false);
+    const userFekLen = view.getUint32(4, false);
     const sigLen = view.getUint32(8, false);
     
-    const adminKeyOffset = 12;
-    const userKeyOffset = adminKeyOffset + adminKeyLen;
-    const sigOffset = userKeyOffset + userKeyLen;
-    const ivOffset = sigOffset + sigLen;
+    const ephPubRaw = packedBytes.slice(12, 77); // 65 octets
+    const wrapIV = packedBytes.slice(77, 89);
+    const fileIV = packedBytes.slice(89, 101);
     
-    const encryptedAesKeyAdmin = packedBytes.slice(adminKeyOffset, userKeyOffset);
-    const signature = packedBytes.slice(sigOffset, ivOffset);
-    const iv = packedBytes.slice(ivOffset, ivOffset + 12);
-    const ciphertext = packedBytes.slice(ivOffset + 12);
+    let offset = 101;
+    const adminEncFek = packedBytes.slice(offset, offset + adminFekLen);
+    offset += adminFekLen;
+    
+    offset += userFekLen; // On ignore l'enveloppe du client
+    
+    const signature = packedBytes.slice(offset, offset + sigLen);
+    offset += sigLen;
+    
+    const ciphertext = packedBytes.slice(offset);
 
-    // 1. Vérification de la preuve d'origine (Signature RSA-PSS)
-    if (!userPublicKeyPEM) {
-      throw new Error("Le client n'a pas de clé publique enregistrée.");
+    if (!userKeysJSON) {
+      throw new Error("Le client n'a pas de trousseau public ECC enregistré.");
     }
-    
+    const userKeys = JSON.parse(userKeysJSON);
+
+    // 2. Vérification de la preuve d'origine (ZKP via ECDSA)
     const verifyKey = await window.crypto.subtle.importKey(
       "spki",
-      privatePemToArrayBuffer(userPublicKeyPEM),
-      { name: "RSA-PSS", hash: "SHA-256" },
+      privatePemToArrayBuffer(userKeys.ecdsa),
+      { name: "ECDSA", namedCurve: "P-256" },
       false,
       ["verify"]
     );
 
-    const dataToVerify = new Uint8Array(iv.length + ciphertext.byteLength);
-    dataToVerify.set(iv, 0);
-    dataToVerify.set(ciphertext, iv.length);
+    const dataToVerify = new Uint8Array(ephPubRaw.byteLength + fileIV.byteLength + ciphertext.byteLength);
+    dataToVerify.set(new Uint8Array(ephPubRaw), 0);
+    dataToVerify.set(new Uint8Array(fileIV), ephPubRaw.byteLength);
+    dataToVerify.set(new Uint8Array(ciphertext), ephPubRaw.byteLength + fileIV.byteLength);
 
     const isAuthentic = await window.crypto.subtle.verify(
-      { name: "RSA-PSS", saltLength: 32 },
+      { name: "ECDSA", hash: { name: "SHA-256" } },
       verifyKey,
       signature,
       dataToVerify
     );
 
     if (!isAuthentic) {
-      throw new Error("VIOLATION DE SÉCURITÉ : La signature du document ne correspond pas au titulaire. Document potentiellement forgé !");
+      throw new Error("VIOLATION DE SÉCURITÉ : La signature ECDSA du document ne correspond pas au titulaire. Document potentiellement forgé !");
     }
 
-    // 2. Déchiffrement du contenu
-    const decryptedAesKeyRaw = await window.crypto.subtle.decrypt(
-      { name: "RSA-OAEP" },
-      adminKey,
-      encryptedAesKeyAdmin
+    // 3. Reconstruction de la clé éphémère (P-256)
+    const ephPubKey = await window.crypto.subtle.importKey(
+      "raw", 
+      ephPubRaw, 
+      { name: "ECDH", namedCurve: "P-256" }, 
+      false, 
+      []
     );
 
-    const aesKey = await window.crypto.subtle.importKey(
-      "raw",
-      decryptedAesKeyRaw,
-      { name: "AES-GCM" },
+    // 4. Dérivation du secret partagé Admin (ECDH)
+    const adminWrapKey = await window.crypto.subtle.deriveKey(
+      { name: "ECDH", public: ephPubKey },
+      adminEcdhPriv,
+      { name: "AES-GCM", length: 256 },
       false,
       ["decrypt"]
     );
 
+    // 5. Déverrouillage de la clé maître du fichier (FEK)
+    const decryptedFekRaw = await window.crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: wrapIV }, 
+      adminWrapKey, 
+      adminEncFek
+    );
+
+    const fek = await window.crypto.subtle.importKey(
+      "raw", 
+      decryptedFekRaw, 
+      { name: "AES-GCM" }, 
+      false, 
+      ["decrypt"]
+    );
+
+    // 6. Déchiffrement final
     const decryptedFileBuffer = await window.crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: iv },
-      aesKey,
+      { name: "AES-GCM", iv: fileIV }, 
+      fek, 
       ciphertext
     );
 
@@ -331,7 +364,7 @@ export function KYCAdminDashboardScreen() {
           if (isEnc) {
             if (activeKey) {
               const arrayBuf = await blob.arrayBuffer();
-              const result = await decryptPayload(arrayBuf, activeKey, req.userPublicKey);
+              const result = await decryptPayload(arrayBuf, activeKey, req.userPublicKeysJSON);
               setIdentityFileType(result.type);
               setDecryptedIdentityUrl(result.url);
             }
@@ -356,7 +389,7 @@ export function KYCAdminDashboardScreen() {
           if (isEnc) {
             if (activeKey) {
               const arrayBuf = await blob.arrayBuffer();
-              const result = await decryptPayload(arrayBuf, activeKey, req.userPublicKey);
+              const result = await decryptPayload(arrayBuf, activeKey, req.userPublicKeysJSON);
               setSelfieFileType(result.type);
               setDecryptedSelfieUrl(result.url);
             }
@@ -426,10 +459,13 @@ export function KYCAdminDashboardScreen() {
           </div>
           <div>
             <h1 className="text-lg font-black tracking-wider text-white">KAURI REGULATORY MATRIX</h1>
-            <p className="text-xs text-slate-400">Registre général de conformité et de vérification d'identité</p>
+            <p className="text-xs text-slate-400">Registre général de vérification (ECC)</p>
           </div>
         </div>
-        <button onClick={fetchAllProfiles} className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all cursor-pointer border-none text-white">
+        <button 
+          onClick={fetchAllProfiles} 
+          className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all cursor-pointer border-none text-white"
+        >
           <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
       </div>
@@ -530,12 +566,12 @@ export function KYCAdminDashboardScreen() {
                 <KeyRound className="w-5 h-5 text-amber-500" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Clef Administrative Requise</h3>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">Glissez votre fichier de clé privée administrative (.pem) pour activer l'extraction instantanée.</p>
+                <h3 className="text-sm font-bold text-white">Clef Administrative ECC</h3>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">Glissez le fichier de la clé privée ECDH (.pem) pour dériver les secrets.</p>
               </div>
               <label className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10 border-none">
                 <Upload className="w-4 h-4" />
-                Charger kauri_private.pem
+                Charger clé ECDH (.pem)
                 <input type="file" accept=".pem,.key,.txt" onChange={handleKeyFileChange} className="hidden" />
               </label>
             </div>
@@ -543,9 +579,14 @@ export function KYCAdminDashboardScreen() {
             <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <p className="text-xs text-emerald-400 font-bold">Enclave Active · Extraction Enveloppe A</p>
+                <p className="text-xs text-emerald-400 font-bold">Enclave ECDH Active</p>
               </div>
-              <button onClick={handleRevokeKey} className="text-[10px] text-slate-400 hover:text-white underline bg-transparent border-none cursor-pointer">Désactiver</button>
+              <button 
+                onClick={handleRevokeKey} 
+                className="text-[10px] text-slate-400 hover:text-white underline bg-transparent border-none cursor-pointer"
+              >
+                Désactiver
+              </button>
             </div>
           )}
 
@@ -580,7 +621,7 @@ export function KYCAdminDashboardScreen() {
                 {isDecrypting ? (
                   <div className="py-12 text-center border border-slate-800 rounded-2xl bg-[#1E293B]/10">
                     <Loader2 className="w-6 h-6 animate-spin text-amber-500 mx-auto mb-2" />
-                    <p className="text-xs text-slate-400">Déchiffrement asymétrique...</p>
+                    <p className="text-xs text-slate-400">Validation ECDSA et dérivation de clé...</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
@@ -607,7 +648,7 @@ export function KYCAdminDashboardScreen() {
                             </div>
                           )}
                           <span className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isIdentityEncrypted ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'}`}>
-                            {isIdentityEncrypted ? 'ENVELOPPE A + SIGNATURE' : 'BRUT'}
+                            {isIdentityEncrypted ? 'SIGNATURE ECDSA OK' : 'BRUT'}
                           </span>
                         </div>
                       ) : (
@@ -640,7 +681,7 @@ export function KYCAdminDashboardScreen() {
                             </div>
                           )}
                           <span className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isSelfieEncrypted ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'}`}>
-                            {isSelfieEncrypted ? 'ENVELOPPE A + SIGNATURE' : 'BRUT'}
+                            {isSelfieEncrypted ? 'SIGNATURE ECDSA OK' : 'BRUT'}
                           </span>
                         </div>
                       ) : (
