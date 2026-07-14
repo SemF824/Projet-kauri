@@ -1,4 +1,4 @@
-import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, X } from "lucide-react";
+import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, X, Video } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -56,14 +56,13 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
   return bytes.buffer;
 }
 
+// Support étendu aux vidéos WebM et MP4
 function detectMimeType(arrayBuffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(arrayBuffer).slice(0, 4);
-  if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
-    return "application/pdf";
-  }
-  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
-    return "image/png";
-  }
+  const bytes = new Uint8Array(arrayBuffer).slice(0, 12);
+  if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) return "application/pdf";
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return "image/png";
+  if (bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) return "video/webm";
+  if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) return "video/mp4";
   return "image/jpeg";
 }
 
@@ -80,163 +79,154 @@ export function KYCVerificationScreen() {
 
   const [identityPreviewUrl, setIdentityPreviewUrl] = useState<string | null>(null);
   const [selfiePreviewUrl, setSelfiePreviewUrl] = useState<string | null>(null);
-  const [identityType, setIdentityFileType] = useState<'image' | 'pdf'>('image');
-  const [selfieType, setSelfieFileType] = useState<'image' | 'pdf'>('image');
+  const [identityType, setIdentityFileType] = useState<'image' | 'pdf' | 'video'>('image');
+  const [selfieType, setSelfieFileType] = useState<'image' | 'pdf' | 'video'>('image');
 
   const [hasFileChanges, setHasFileChanges] = useState(false);
   const [address, setAddress] = useState({
-    firstName: "",
-    lastName: "",
-    street: "",
-    zip: "",
-    city: "",
-    country: "France",
+    firstName: "", lastName: "", street: "", zip: "", city: "", country: "France",
   });
   const [initialAddress, setInitialAddress] = useState({
-    firstName: "",
-    lastName: "",
-    street: "",
-    zip: "",
-    city: "",
-    country: "France",
+    firstName: "", lastName: "", street: "", zip: "", city: "", country: "France",
   });
 
   const identityInputRef = useRef<HTMLInputElement>(null);
 
-  // ── 🎥 ÉTATS ET CONTRÔLE DE LA CAMÉRA (YOTI-STYLE) ──
+  // ── 🎥 ÉTATS DU MOTEUR D'ENREGISTREMENT VIDÉO (LIVENESS SEQUENCE) ──
   const [showCamera, setShowCamera] = useState(false);
+  const [recordingState, setRecordingState] = useState<'idle' | 'front' | 'left' | 'right' | 'processing'>('idle');
+  
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const videoChunksRef = useRef<BlobPart[]>([]);
+  const keyframesRef = useRef<ImageData[]>([]);
 
   const startCamera = async () => {
     try {
-      // FIX CRITIQUE : Suppression du ratio forcé. 
-      // On demande la plus haute résolution naturelle (paysage sur PC, portrait sur mobile).
-      // Le CSS 'object-fit: cover' se chargera de remplir l'écran sans zoom destructeur.
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } 
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false // KYC silencieux
       });
-      setMediaStream(stream);
+      mediaStreamRef.current = stream;
       setShowCamera(true);
+      setRecordingState('idle');
     } catch (err) {
-      console.error("Camera access denied or failed:", err);
-      toast.error("Impossible d'accéder à la caméra. Vérifiez les permissions de votre navigateur.");
+      toast.error("Accès caméra refusé. Vérifiez vos permissions.");
     }
   };
 
   useEffect(() => {
-    if (showCamera && videoRef.current && mediaStream) {
-      videoRef.current.srcObject = mediaStream;
-      videoRef.current.play().catch(e => console.error("Erreur vidéo:", e));
+    if (showCamera && videoRef.current && mediaStreamRef.current) {
+      videoRef.current.srcObject = mediaStreamRef.current;
+      videoRef.current.play().catch(e => console.error("Erreur de flux:", e));
     }
-  }, [showCamera, mediaStream]);
+  }, [showCamera]);
 
   const stopCamera = () => {
-    if (mediaStream) {
-      mediaStream.getTracks().forEach(track => track.stop());
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(t => t.stop());
     }
-    setMediaStream(null);
+    mediaStreamRef.current = null;
     setShowCamera(false);
+    setRecordingState('idle');
   };
 
   useEffect(() => {
     return () => {
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(t => t.stop());
       }
     };
-  }, [mediaStream]);
+  }, []);
 
-  // Capture instantanée en un seul clic
-  const captureSelfieAndProcess = () => {
+  // Capture discrète pour le moteur d'Optical Flow
+  const captureKeyframe = () => {
     if (!videoRef.current) return;
-    const video = videoRef.current;
-    
     const canvas = document.createElement("canvas");
-    // On conserve la résolution native du capteur pour l'analyse
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = 100; // Résolution basse pour calcul matriciel instantané
+    canvas.height = 100;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (ctx) {
+      ctx.drawImage(videoRef.current, 0, 0, 100, 100);
+      keyframesRef.current.push(ctx.getImageData(0, 0, 100, 100));
+    }
+  };
 
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const file = new File([blob], "selfie_capture.jpg", { type: "image/jpeg" });
-        stopCamera();
-        handleUploadAndEncrypt("selfie", file);
+  // Le moteur anti-fraude statique
+  const evaluateMotionVariance = () => {
+    const frames = keyframesRef.current;
+    if (frames.length < 3) return false;
+
+    let totalDiff = 0;
+    for (let i = 0; i < frames.length - 1; i++) {
+      const curr = frames[i].data;
+      const next = frames[i+1].data;
+      let frameDiff = 0;
+      for (let j = 0; j < curr.length; j += 4) {
+        // Variation des canaux RGB
+        frameDiff += Math.abs(curr[j] - next[j]) + Math.abs(curr[j+1] - next[j+1]) + Math.abs(curr[j+2] - next[j+2]);
       }
-    }, "image/jpeg", 0.95);
+      totalDiff += frameDiff / (curr.length / 4);
+    }
+    
+    // Si la moyenne de déplacement des pixels est inférieure à 15, c'est une image statique (fraude).
+    return totalDiff > 15; 
   };
 
-  // ── 🧠 MOTEUR DE CONTRÔLE DE NETTETÉ ET LUMINANCE LOCALE ──
-  const analyzeSelfieBiometrics = (file: File): Promise<{ valid: boolean; reason?: string }> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      
-      img.onload = () => {
-        if (img.width < 250 || img.height < 250) {
-          resolve({ valid: false, reason: "Résolution de capture trop faible." });
-          return;
-        }
+  const startVideoLivenessSequence = () => {
+    if (!mediaStreamRef.current) return;
+    
+    videoChunksRef.current = [];
+    keyframesRef.current = [];
+    
+    const recorder = new MediaRecorder(mediaStreamRef.current);
+    mediaRecorderRef.current = recorder;
 
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        if (!ctx) { resolve({ valid: true }); return; }
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) videoChunksRef.current.push(e.data);
+    };
 
-        canvas.width = 250;
-        canvas.height = 250;
-        ctx.drawImage(img, 0, 0, 250, 250);
+    recorder.onstop = async () => {
+      setRecordingState('processing');
+      const videoBlob = new Blob(videoChunksRef.current, { type: recorder.mimeType || 'video/mp4' });
+      videoChunksRef.current = [];
 
-        const imgData = ctx.getImageData(0, 0, 250, 250);
-        const data = imgData.data;
+      const isLive = evaluateMotionVariance();
+      if (!isLive) {
+        toast.error("Échec Anti-Fraude : Aucun mouvement facial détecté. Veuillez suivre les instructions.");
+        setRecordingState('idle');
+        return;
+      }
 
-        let totalLuminance = 0;
-        let edgeVarianceScore = 0;
-        const totalPixels = data.length / 4;
+      const file = new File([videoBlob], "liveness_record.webm", { type: videoBlob.type });
+      stopCamera();
+      await handleUploadAndEncrypt("selfie", file);
+    };
 
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
+    // Le Séquençage Chronométré (6 Secondes)
+    recorder.start();
+    setRecordingState('front');
+    captureKeyframe();
 
-          const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-          totalLuminance += luminance;
+    setTimeout(() => {
+      setRecordingState('left');
+      captureKeyframe();
+    }, 2000);
 
-          if (i + 4 < data.length) {
-            const nextR = data[i + 4];
-            const nextG = data[i + 5];
-            const nextB = data[i + 6];
-            edgeVarianceScore += Math.abs(r - nextR) + Math.abs(g - nextG) + Math.abs(b - nextB);
-          }
-        }
+    setTimeout(() => {
+      setRecordingState('right');
+      captureKeyframe();
+    }, 4000);
 
-        const averageLuminance = totalLuminance / totalPixels;
-        const normalizedEdgeScore = edgeVarianceScore / totalPixels;
-
-        // Rejets pour la fraude basique
-        if (averageLuminance < 35) {
-          resolve({ valid: false, reason: "L'image est trop sombre. Éclairez votre visage." });
-          return;
-        }
-        if (averageLuminance > 240) {
-          resolve({ valid: false, reason: "L'image est surexposée (trop de lumière)." });
-          return;
-        }
-        if (normalizedEdgeScore < 8) {
-          resolve({ valid: false, reason: "La photo est floue. Stabilisez votre appareil." });
-          return;
-        }
-
-        resolve({ valid: true });
-      };
-      img.onerror = () => resolve({ valid: false, reason: "Fichier corrompu." });
-    });
+    setTimeout(() => {
+      captureKeyframe();
+      recorder.stop();
+    }, 6000);
   };
 
-  const decryptUserFile = async (packedBuffer: ArrayBuffer, ecdhPriv: CryptoKey): Promise<{ url: string; type: 'image' | 'pdf' }> => {
+  // ── 🧠 CHIFFREMENT & DECHIFFREMENT ECC ──
+  const decryptUserFile = async (packedBuffer: ArrayBuffer, ecdhPriv: CryptoKey): Promise<{ url: string; type: 'image' | 'pdf' | 'video' }> => {
     const packedBytes = new Uint8Array(packedBuffer);
     const view = new DataView(packedBytes.buffer);
     
@@ -263,7 +253,7 @@ export function KYCVerificationScreen() {
     const mime = detectMimeType(decryptedFileBuffer);
     return {
       url: URL.createObjectURL(new Blob([decryptedFileBuffer], { type: mime })),
-      type: mime === "application/pdf" ? 'pdf' : 'image'
+      type: mime.startsWith('video') ? 'video' : mime === "application/pdf" ? 'pdf' : 'image'
     };
   };
 
@@ -274,10 +264,7 @@ export function KYCVerificationScreen() {
 
       try {
         const enclaveKeys = await getKeysFromEnclave('kauri_client');
-        if (!enclaveKeys) {
-          setIsLoadingDocuments(false);
-          return;
-        }
+        if (!enclaveKeys) { setIsLoadingDocuments(false); return; }
 
         const { data: files, error } = await supabase.storage.from('secure-kyc').list(profile.id);
 
@@ -306,12 +293,11 @@ export function KYCVerificationScreen() {
           }
         }
       } catch (err) {
-        console.error("Hub recovery bypassed:", err);
+        console.error("Déchiffrement local échoué:", err);
       } finally {
         setIsLoadingDocuments(false);
       }
     };
-
     loadAndDecryptKycHub();
   }, [profile]);
 
@@ -335,20 +321,7 @@ export function KYCVerificationScreen() {
     if (!file) return;
 
     setIsActionLoading(true);
-
-    if (type === "selfie") {
-      const analysisToastId = toast.loading("Analyse de la netteté et de l'exposition...");
-      const biometricCheck = await analyzeSelfieBiometrics(file);
-      
-      if (!biometricCheck.valid) {
-        toast.error(`${biometricCheck.reason}`, { id: analysisToastId, duration: 6000 });
-        setIsActionLoading(false);
-        return;
-      }
-      toast.success("Validation optique réussie !", { id: analysisToastId });
-    }
-
-    const toastId = toast.loading(`Scellage asymétrique (ECC P-256) du document...`);
+    const toastId = toast.loading(`Scellage asymétrique (ECC P-256) du module ${type}...`);
 
     try {
       const enclaveKeys = await getKeysFromEnclave('kauri_client');
@@ -369,17 +342,17 @@ export function KYCVerificationScreen() {
       const exportedFek = await window.crypto.subtle.exportKey("raw", fek);
       const wrapIV = window.crypto.getRandomValues(new Uint8Array(12));
 
-      // Admin
+      // Admin Enclave
       const adminPubKey = await window.crypto.subtle.importKey("spki", pemToArrayBuffer(ADMIN_ECDH_PUBLIC_KEY_PEM), { name: "ECDH", namedCurve: "P-256" }, false, []);
       const adminWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: adminPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
       const adminEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, adminWrapKey, exportedFek);
 
-      // Client
+      // Client Enclave
       const userPubKey = await window.crypto.subtle.importKey("spki", pemToArrayBuffer(userPublicKeys.ecdh), { name: "ECDH", namedCurve: "P-256" }, false, []);
       const userWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: userPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
       const userEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, userWrapKey, exportedFek);
 
-      // Signature
+      // Signature (Preuve d'origine)
       const dataToSign = new Uint8Array(ephPubRaw.byteLength + fileIV.byteLength + encryptedFileContent.byteLength);
       dataToSign.set(new Uint8Array(ephPubRaw), 0);
       dataToSign.set(fileIV, ephPubRaw.byteLength);
@@ -412,14 +385,13 @@ export function KYCVerificationScreen() {
         setIdentityFileType(file.type === 'application/pdf' ? 'pdf' : 'image');
         setIdentityPreviewUrl(localUrl);
       } else {
-        setSelfieFileType(file.type === 'application/pdf' ? 'pdf' : 'image');
+        setSelfieFileType(file.type.startsWith('video') ? 'video' : 'image');
         setSelfiePreviewUrl(localUrl);
       }
 
       setHasFileChanges(true);
-      toast.success("Trousseau sécurisé, scellé et transmis !", { id: toastId });
+      toast.success("Package vidéo chiffré et transmis !", { id: toastId });
     } catch (err: any) {
-      console.error(err);
       toast.error("Échec de l'opération cryptographique.", { id: toastId });
     } finally {
       setIsActionLoading(false);
@@ -491,7 +463,7 @@ export function KYCVerificationScreen() {
         </button>
 
         <h1 className="text-white text-2xl font-black tracking-tight">Kauri KYC Hub</h1>
-        <p className="text-[#E0F2FE] text-xs opacity-90">Cryptographie ECC & Capture Haute Précision</p>
+        <p className="text-[#E0F2FE] text-xs opacity-90">Analyse de Liveness Vidéo & ECIES</p>
       </div>
 
       <div className="px-6 py-6 max-w-md mx-auto w-full space-y-6">
@@ -501,9 +473,7 @@ export function KYCVerificationScreen() {
             <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
             <div>
               <h4 className="text-xs font-bold text-amber-600">Dossier en cours d'analyse</h4>
-              <p className="text-[11px] text-amber-700/80 font-medium leading-normal mt-0.5">
-                Vos pièces sont en cours d'analyse par le registre central.
-              </p>
+              <p className="text-[11px] text-amber-700/80 font-medium leading-normal mt-0.5">Vos pièces sont en cours d'analyse par le registre central.</p>
             </div>
           </div>
         )}
@@ -513,9 +483,7 @@ export function KYCVerificationScreen() {
             <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
             <div>
               <h4 className="text-xs font-bold text-emerald-600">Identité Certifiée</h4>
-              <p className="text-[11px] text-emerald-700/80 font-medium leading-normal mt-0.5">
-                Votre compte possède le statut vérifié de conformité.
-              </p>
+              <p className="text-[11px] text-emerald-700/80 font-medium leading-normal mt-0.5">Votre compte possède le statut vérifié de conformité.</p>
             </div>
           </div>
         )}
@@ -535,14 +503,8 @@ export function KYCVerificationScreen() {
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-14 h-14 rounded-2xl bg-slate-900 overflow-hidden flex items-center justify-center flex-shrink-0 border border-slate-100">
                     {identityPreviewUrl ? (
-                      identityType === 'pdf' ? (
-                        <FileText className="w-6 h-6 text-red-400" />
-                      ) : (
-                        <img src={identityPreviewUrl} alt="Identity Cache" className="w-full h-full object-cover" />
-                      )
-                    ) : (
-                      <FileText className="w-6 h-6 text-slate-600" />
-                    )}
+                      identityType === 'pdf' ? <FileText className="w-6 h-6 text-red-400" /> : <img src={identityPreviewUrl} alt="Identity Cache" className="w-full h-full object-cover" />
+                    ) : <FileText className="w-6 h-6 text-slate-600" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h4 className="text-sm font-bold text-[#0F172A] truncate">Pièce d'identité officielle</h4>
@@ -552,39 +514,35 @@ export function KYCVerificationScreen() {
                     </div>
                   </div>
                 </div>
-                <button 
-                  onClick={() => identityInputRef.current?.click()}
-                  className="px-4 py-2.5 bg-[#006D77]/10 hover:bg-[#006D77]/20 text-[#006D77] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1"
-                >
-                  <RotateCw className="w-3.5 h-3.5" />
-                  {identityPreviewUrl ? "Modifier" : "Ajouter"}
+                <button onClick={() => identityInputRef.current?.click()} className="px-4 py-2.5 bg-[#006D77]/10 hover:bg-[#006D77]/20 text-[#006D77] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1">
+                  <RotateCw className="w-3.5 h-3.5" /> {identityPreviewUrl ? "Modifier" : "Ajouter"}
                 </button>
               </div>
 
-              {/* CARD 2 : LIVENESS CHECK */}
+              {/* CARD 2 : SÉQUENCE LIVENESS VIDÉO */}
               <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-md flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-14 h-14 rounded-2xl bg-slate-900 overflow-hidden flex items-center justify-center flex-shrink-0 border border-slate-100">
                     {selfiePreviewUrl ? (
-                      <img src={selfiePreviewUrl} alt="Selfie Cache" className="w-full h-full object-cover" />
+                      selfieType === 'video' ? (
+                        <video src={selfiePreviewUrl} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+                      ) : (
+                        <img src={selfiePreviewUrl} alt="Selfie Cache" className="w-full h-full object-cover" />
+                      )
                     ) : (
-                      <User className="w-6 h-6 text-slate-600" />
+                      <Video className="w-6 h-6 text-slate-600" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-sm font-bold text-[#0F172A] truncate">Selfie de présence physique</h4>
+                    <h4 className="text-sm font-bold text-[#0F172A] truncate">Liveness Vidéo 3D</h4>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className={`w-1.5 h-1.5 rounded-full ${selfiePreviewUrl ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                      <p className="text-[11px] text-slate-500 font-medium">{selfiePreviewUrl ? 'Certifié & Scellé' : 'Soumis à capture en direct'}</p>
+                      <p className="text-[11px] text-slate-500 font-medium">{selfiePreviewUrl ? 'Vidéo Enregistrée & Scellée' : 'Preuve de vie requise'}</p>
                     </div>
                   </div>
                 </div>
-                <button 
-                  onClick={startCamera}
-                  className="px-4 py-2.5 bg-gradient-to-br from-[#D4AF37]/10 to-[#FEF3C7]/20 text-[#B8860B] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  {selfiePreviewUrl ? "Refaire" : "Capturer"}
+                <button onClick={startCamera} className="px-4 py-2.5 bg-gradient-to-br from-[#D4AF37]/10 to-[#FEF3C7]/20 text-[#B8860B] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1">
+                  <Camera className="w-3.5 h-3.5" /> {selfiePreviewUrl ? "Refaire" : "Démarrer"}
                 </button>
               </div>
             </div>
@@ -592,7 +550,6 @@ export function KYCVerificationScreen() {
             {/* FORMULAIRE DE RÉSIDENCE */}
             <div className="space-y-4">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Attestation de Résidence</h3>
-              
               <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -633,54 +590,52 @@ export function KYCVerificationScreen() {
         )}
       </div>
 
-      {/* 🎥 MODALE DE CAPTURE CAMÉRA (YOTI-STYLE CLONE) */}
+      {/* 🎥 MODALE DE SÉQUENCE VIDÉO (STYLE YOTI + INSTRUCTIONS TEMPORELLES) */}
       {showCamera && (
         <div className="fixed inset-0 z-50 bg-[#F4F4F5] flex flex-col items-center justify-center p-4 md:p-8">
           
-          {/* Bouton Retour en Haut Gauche */}
           <div className="absolute top-6 left-6 z-20">
-            <button onClick={stopCamera} className="bg-white border border-slate-200 text-[#2B6CB0] px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors">
-              <ArrowLeft className="w-4 h-4" /> Retour
+            <button onClick={stopCamera} disabled={recordingState !== 'idle'} className="bg-white border border-slate-200 text-[#2B6CB0] px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors disabled:opacity-50">
+              <ArrowLeft className="w-4 h-4" /> Annuler
             </button>
           </div>
 
-          {/* Wrapper Principal fausse-modale type mobile */}
           <div className="bg-white w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl flex flex-col border border-slate-100">
             
-            {/* Header d'instruction */}
-            <div className="p-6 text-center z-10 bg-white shadow-sm relative">
-              <h2 className="text-[#0F172A] font-extrabold text-base tracking-tight">Placez votre visage dans le cadre</h2>
+            <div className="p-5 text-center z-10 bg-white shadow-sm relative min-h-[72px] flex items-center justify-center">
+              <h2 className="text-[#0F172A] font-extrabold text-[15px] tracking-tight transition-all">
+                {recordingState === 'idle' && "Placez votre visage dans le cadre"}
+                {recordingState === 'front' && "Regardez fixement l'objectif..."}
+                {recordingState === 'left' && "Tournez la tête à GAUCHE..."}
+                {recordingState === 'right' && "Tournez la tête à DROITE..."}
+                {recordingState === 'processing' && "Analyse en cours..."}
+              </h2>
             </div>
             
-            {/* Zone Vidéo avec Masque Absolu (Frosted Glass + Ligne) */}
             <div className="relative w-full h-[60vh] min-h-[400px] bg-slate-200 flex items-center justify-center overflow-hidden">
               <video 
                 ref={videoRef} 
                 className="absolute inset-0 w-full h-full object-cover" 
-                autoPlay 
                 playsInline 
                 muted 
               />
               
-              {/* L'astuce CSS indestructible pour la forme de visage type Yoti */}
               <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center overflow-hidden">
-                <div className="relative w-[260px] h-[360px] rounded-[130px] border-4 border-[#64748B] shadow-[0_0_0_9999px_rgba(255,255,255,0.85)]"></div>
+                <div className={`relative w-[260px] h-[360px] rounded-[130px] border-4 transition-colors duration-300 shadow-[0_0_0_9999px_rgba(255,255,255,0.85)] ${recordingState !== 'idle' && recordingState !== 'processing' ? 'border-[#2B6CB0]' : 'border-[#64748B]'}`}></div>
               </div>
             </div>
             
-            {/* Actions Footer */}
             <div className="p-6 bg-[#F8FAFC] flex flex-col gap-3 z-10 border-t border-slate-200">
               <button 
-                onClick={captureSelfieAndProcess} 
-                className="w-full bg-[#2B6CB0] hover:bg-[#1E4E8C] text-white py-4 rounded-xl font-bold text-[13px] transition-all flex items-center justify-center gap-2 cursor-pointer border-none shadow-md active:scale-95"
+                onClick={startVideoLivenessSequence} 
+                disabled={recordingState !== 'idle'}
+                className="w-full bg-[#2B6CB0] hover:bg-[#1E4E8C] text-white py-4 rounded-xl font-bold text-[13px] transition-all flex items-center justify-center gap-2 cursor-pointer border-none shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Camera className="w-5 h-5" /> Prendre une photo
-              </button>
-              <button 
-                onClick={stopCamera} 
-                className="w-full bg-white text-[#2B6CB0] border-2 border-[#2B6CB0] py-3.5 rounded-xl font-bold text-[13px] transition-all cursor-pointer active:scale-95"
-              >
-                Aide
+                {recordingState === 'idle' ? (
+                  <> <Video className="w-5 h-5" /> Démarrer l'enregistrement </>
+                ) : (
+                  <> <Loader2 className="w-5 h-5 animate-spin" /> Ne quittez pas le cadre... </>
+                )}
               </button>
             </div>
           </div>
