@@ -249,11 +249,10 @@ export function RejoindreTontineScreen() {
 
   const trustScore = Math.round(Number(profile?.trust_score ?? profile?.trustScore) || 0);
 
-useEffect(() => {
+  useEffect(() => {
     const fetchGlobalTontinesCatalogue = async () => {
       try {
         const supabase = getSupabase();
-        // Modification ici : on sélectionne "type" et on filtre sur 'publique'
         const { data, error } = await supabase
           .from('tontines')
           .select('id, name, contribution_amount, frequency, start_date, max_members, description, min_trust_score, type')
@@ -272,7 +271,6 @@ useEffect(() => {
           const maxM = Number(t.max_members) || 12;
           const currentMembersCount = Math.floor(Math.random() * 4) + 4;
 
-          // Traduction de la fréquence pour l'affichage UI français
           let displayFrequency: 'Mensuelle' | 'Bimensuelle' | 'Hebdomadaire' = 'Mensuelle';
           if (t.frequency === 'weekly') displayFrequency = 'Hebdomadaire';
           if (t.frequency === 'biweekly') displayFrequency = 'Bimensuelle';
@@ -294,7 +292,7 @@ useEffect(() => {
             categoryColor: CATEGORY_UI_CONFIG[deducedCategory]?.color || '#006D77',
             isPrivate: t.type === 'privee',
             spotsLeft: Math.max(0, maxM - currentMembersCount),
-            featured: t.min_trust_score >= 80,
+            featured: Number(t.min_trust_score) >= 80,
             minTrustScore: Number(t.min_trust_score) || 0
           };
         });
@@ -426,7 +424,7 @@ useEffect(() => {
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 40px' }}>
         {isLoading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifycontent: 'center', justifyContent: 'center', padding: '40px 0', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', gap: 12 }}>
             <Loader2 className="animate-spin text-[#006D77]" size={24} />
             <p style={{ fontSize: 12, color: textMuted, fontWeight: 600 }}>Calcul du catalogue de tontines...</p>
           </div>
