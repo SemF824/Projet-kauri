@@ -61,10 +61,10 @@ function KauriBottomNav({ active, isDarkMode, navigate }: { active: NavTab; isDa
                 <button
                   onClick={() => tab.path && navigate(tab.path)}
                   aria-label="Kauri"
-                  className="cursor-pointer border-none"
+                  className="cursor-pointer window-center border-none"
                   style={{
                     width: 56, height: 56, borderRadius: '50%',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    display: 'flex', alignItems: 'center', justifycontent: 'center', justifyContent: 'center',
                     boxShadow: '0 4px 16px rgba(212,175,55,0.50), 0 2px 8px rgba(0,0,0,0.18)',
                     border: isActive ? '2.5px solid rgba(255,255,255,0.5)' : '2px solid rgba(255,255,255,0.2)',
                     transform: isActive ? 'scale(1.08)' : 'scale(1)',
@@ -78,7 +78,6 @@ function KauriBottomNav({ active, isDarkMode, navigate }: { active: NavTab; isDa
                     <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
                   </svg>
                 </button>
-                {/* ── AJOUT DU SIGNE MÉTICULEUX "+" SOUS LE BOUTON LOGO CENTRAL ── */}
                 <span style={{ fontSize: 13, fontWeight: 900, color: isActive ? TEAL : inactive, transition: 'color 0.15s', marginTop: 3, lineHeight: 1 }}>
                   +
                 </span>
@@ -120,8 +119,9 @@ export function NormalDashboardScreen() {
   const [tontinesCount, setTontinesCount] = useState<number | null>(null);
   const [investmentsCount, setInvestmentsCount] = useState<number | null>(null);
 
-  // Équilibre financier agrégé RWA
+  // Valeurs financières cumulées de la base de données
   const [rwaTotalAmount, setRwaTotalAmount] = useState<number>(0);
+  const [tontinesTotalAmount, setTontinesTotalAmount] = useState<number>(0);
 
   // 1. Récupération stricte du Trust Score
   const rawScore = profile?.trust_score !== undefined ? profile.trust_score : (profile?.trustScore !== undefined ? profile.trustScore : 0);
@@ -137,12 +137,14 @@ export function NormalDashboardScreen() {
   };
   const paymentStreak = calculateStreak();
 
-  // 3. Statut de palier de conformité
+  // 3. Grade utilisateur
   const userStatus = trustScore >= 85 ? 'Membre Émérite' : trustScore >= 40 ? 'Membre Actif' : 'Nouveau Membre';
   
   const firstName = profile?.firstName ?? profile?.first_name ?? 'Vous';
+  
+  // 💰 LIQUIDITÉ ET PATRIMOINE AGREGÉ (Liquide + RWA + Capital Tontines)
   const availableLiquidity = Number(profile?.balance ?? 0);
-  const totalCombinedWealth = availableLiquidity + rwaTotalAmount;
+  const totalCombinedWealth = availableLiquidity + rwaTotalAmount + tontinesTotalAmount;
   
   const currentKycStatus = profile?.kyc_status || profile?.kycStatus || 'pending';
   const isKycVerified = currentKycStatus === 'verified' || profile?.kyc_completed === true || profile?.kycCompleted === true;
@@ -173,13 +175,24 @@ export function NormalDashboardScreen() {
       try {
         const supabase = getSupabase();
         
-        const { count: tCount, error: tError } = await supabase
+        // 1. Récupération & Calcul financier des Tontines Actives
+        const { data: tData, error: tError } = await supabase
           .from('tontine_members')
-          .select('tontine_id', { count: 'exact', head: true })
+          .select(`
+            tontine_id,
+            tontines (
+              contribution_amount
+            )
+          `)
           .eq('user_id', user.id);
 
-        if (!tError && tCount !== null) setTontinesCount(tCount);
+        if (!tError && tData) {
+          setTontinesCount(tData.length);
+          const totalTontineSum = tData.reduce((acc, curr: any) => acc + (Number(curr.tontines?.contribution_amount) || 0), 0);
+          setTontinesTotalAmount(totalTontineSum);
+        }
 
+        // 2. Récupération & Calcul financier des actifs réels RWA
         const { data: iData, error: iError } = await supabase
           .from('rwa_investments')
           .select('id, amount');
@@ -213,7 +226,15 @@ export function NormalDashboardScreen() {
               </div>
             </div>
 
+            {/* ── ALIGNEMENT ET BADGE DE LIQUIDITÉ EN HAUT À DROITE ── */}
             <div className="flex items-center gap-2">
+              <div 
+                onClick={() => navigate('/kauri/portefeuille')}
+                className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-black cursor-pointer transition-transform active:scale-95 shadow-sm"
+                title="Mon Solde Liquide Disponible"
+              >
+                {availableLiquidity.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+              </div>
               <div className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md flex items-center gap-1.5">
                 <Crown className="w-3.5 h-3.5 text-[#D4AF37]" />
                 <span className="text-xs font-medium text-white">{userStatus}</span>
@@ -285,7 +306,7 @@ export function NormalDashboardScreen() {
 
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/20">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[#E0F2FE] text-sm">Solde total</span>
+              <span className="text-[#E0F2FE] text-sm">Solde total (Patrimoine)</span>
               <button
                 onClick={() => setBalanceVisible(!balanceVisible)}
                 className="text-white cursor-pointer bg-transparent border-none"
@@ -353,7 +374,7 @@ export function NormalDashboardScreen() {
 
             <div className="grid grid-cols-2 gap-3 mb-3">
               <button
-                onClick={() => navigate('/kauri/mes-tontines')}
+                onClick={() => navigate('/kauri/tontines-actives')}
                 className={`rounded-xl p-4 text-center shadow-sm border hover:shadow-md transition-shadow cursor-pointer ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}
               >
                 <div className="w-12 h-12 mx-auto mb-2 bg-[#006D77]/10 rounded-xl flex items-center justify-center">
