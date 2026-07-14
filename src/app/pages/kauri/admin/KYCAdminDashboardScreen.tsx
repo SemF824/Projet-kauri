@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   ShieldAlert, ShieldCheck, UserCheck, UserX, KeyRound, 
-  FileText, Loader2, RefreshCw, Search, User, ChevronRight, X, ZoomIn, Upload
+  FileText, Loader2, RefreshCw, Search, User, ChevronRight, X, ZoomIn, Upload, Video
 } from 'lucide-react';
 import { getSupabase } from '../../../../utils/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -24,7 +24,7 @@ interface KYCRequest {
 
 interface LightboxState {
   url: string;
-  type: 'image' | 'pdf';
+  type: 'image' | 'pdf' | 'video';
 }
 
 // ── 🛡️ UTILITAIRES WEBCRYPTO & INDEXED-DB ──
@@ -92,8 +92,9 @@ function privatePemToArrayBuffer(pem: string): ArrayBuffer {
   return bytes.buffer;
 }
 
+// Détection enrichie pour inclure WebM et MP4
 function detectMimeType(arrayBuffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(arrayBuffer).slice(0, 4);
+  const bytes = new Uint8Array(arrayBuffer).slice(0, 12);
   if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
     return "application/pdf";
   }
@@ -102,6 +103,12 @@ function detectMimeType(arrayBuffer: ArrayBuffer): string {
   }
   if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
     return "image/gif";
+  }
+  if (bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) {
+    return "video/webm";
+  }
+  if (bytes.length >= 8 && bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
+    return "video/mp4";
   }
   return "image/jpeg";
 }
@@ -128,8 +135,8 @@ export function KYCAdminDashboardScreen() {
   const [isIdentityEncrypted, setIsIdentityEncrypted] = useState(false);
   const [isSelfieEncrypted, setIsSelfieEncrypted] = useState(false);
 
-  const [identityFileType, setIdentityFileType] = useState<'image' | 'pdf'>('image');
-  const [selfieFileType, setSelfieFileType] = useState<'image' | 'pdf'>('image');
+  const [identityFileType, setIdentityFileType] = useState<'image' | 'pdf' | 'video'>('image');
+  const [selfieFileType, setSelfieFileType] = useState<'image' | 'pdf' | 'video'>('image');
 
   const [lightbox, setLightbox] = useState<LightboxState | null>(null);
 
@@ -168,7 +175,7 @@ export function KYCAdminDashboardScreen() {
         street: p.street || 'Non renseigné',
         city: p.city || 'Non renseigné',
         zip: p.zip || 'Non renseigné',
-        userPublicKeysJSON: p.user_public_key, // Attention: contient les PEMs ECDSA et ECDH JSON.stringifié
+        userPublicKeysJSON: p.user_public_key,
         createdAt: p.created_at || p.updated_at || new Date().toISOString()
       }));
 
@@ -201,7 +208,7 @@ export function KYCAdminDashboardScreen() {
         "pkcs8",
         rawBinaryKey,
         { name: "ECDH", namedCurve: "P-256" },
-        false, // extractable: false 🛡️
+        false, 
         ["deriveKey"]
       );
 
@@ -229,24 +236,22 @@ export function KYCAdminDashboardScreen() {
   };
 
   // 🎯 DÉCHIFFREMENT ECIES ET VÉRIFICATION DE LA SIGNATURE NUMÉRIQUE (ECDSA)
-  const decryptPayload = async (packedArrayBuffer: ArrayBuffer, adminEcdhPriv: CryptoKey, userKeysJSON: string): Promise<{ url: string; type: 'image' | 'pdf' }> => {
+  const decryptPayload = async (packedArrayBuffer: ArrayBuffer, adminEcdhPriv: CryptoKey, userKeysJSON: string): Promise<{ url: string; type: 'image' | 'pdf' | 'video' }> => {
     const packedBytes = new Uint8Array(packedArrayBuffer);
     const view = new DataView(packedBytes.buffer);
     
-    // 1. Découpage chirurgical de la matrice (Header de 101 octets)
     const adminFekLen = view.getUint32(0, false);
     const userFekLen = view.getUint32(4, false);
     const sigLen = view.getUint32(8, false);
     
-    const ephPubRaw = packedBytes.slice(12, 77); // 65 octets
+    const ephPubRaw = packedBytes.slice(12, 77); 
     const wrapIV = packedBytes.slice(77, 89);
     const fileIV = packedBytes.slice(89, 101);
     
     let offset = 101;
     const adminEncFek = packedBytes.slice(offset, offset + adminFekLen);
     offset += adminFekLen;
-    
-    offset += userFekLen; // On ignore l'enveloppe du client
+    offset += userFekLen; 
     
     const signature = packedBytes.slice(offset, offset + sigLen);
     offset += sigLen;
@@ -258,7 +263,6 @@ export function KYCAdminDashboardScreen() {
     }
     const userKeys = JSON.parse(userKeysJSON);
 
-    // 2. Vérification de la preuve d'origine (ZKP via ECDSA)
     const verifyKey = await window.crypto.subtle.importKey(
       "spki",
       privatePemToArrayBuffer(userKeys.ecdsa),
@@ -280,10 +284,9 @@ export function KYCAdminDashboardScreen() {
     );
 
     if (!isAuthentic) {
-      throw new Error("VIOLATION DE SÉCURITÉ : La signature ECDSA du document ne correspond pas au titulaire. Document potentiellement forgé !");
+      throw new Error("VIOLATION DE SÉCURITÉ : La signature ECDSA du document ne correspond pas au titulaire.");
     }
 
-    // 3. Reconstruction de la clé éphémère (P-256)
     const ephPubKey = await window.crypto.subtle.importKey(
       "raw", 
       ephPubRaw, 
@@ -292,7 +295,6 @@ export function KYCAdminDashboardScreen() {
       []
     );
 
-    // 4. Dérivation du secret partagé Admin (ECDH)
     const adminWrapKey = await window.crypto.subtle.deriveKey(
       { name: "ECDH", public: ephPubKey },
       adminEcdhPriv,
@@ -301,7 +303,6 @@ export function KYCAdminDashboardScreen() {
       ["decrypt"]
     );
 
-    // 5. Déverrouillage de la clé maître du fichier (FEK)
     const decryptedFekRaw = await window.crypto.subtle.decrypt(
       { name: "AES-GCM", iv: wrapIV }, 
       adminWrapKey, 
@@ -316,7 +317,6 @@ export function KYCAdminDashboardScreen() {
       ["decrypt"]
     );
 
-    // 6. Déchiffrement final
     const decryptedFileBuffer = await window.crypto.subtle.decrypt(
       { name: "AES-GCM", iv: fileIV }, 
       fek, 
@@ -328,7 +328,7 @@ export function KYCAdminDashboardScreen() {
     
     return {
       url: URL.createObjectURL(finalBlob),
-      type: exactMime === "application/pdf" ? 'pdf' : 'image'
+      type: exactMime.startsWith('video') ? 'video' : exactMime === "application/pdf" ? 'pdf' : 'image'
     };
   };
 
@@ -352,6 +352,7 @@ export function KYCAdminDashboardScreen() {
       const identityFile = files?.find(f => f.name.startsWith('identity'));
       const selfieFile = files?.find(f => f.name.startsWith('selfie'));
 
+      // DÉCODAGE PIÈCE D'IDENTITÉ
       if (identityFile) {
         const isEnc = identityFile.name.endsWith('.enc');
         setIsIdentityEncrypted(isEnc);
@@ -369,7 +370,7 @@ export function KYCAdminDashboardScreen() {
               setDecryptedIdentityUrl(result.url);
             }
           } else {
-            setIdentityFileType(blob.type === 'application/pdf' ? 'pdf' : 'image');
+            setIdentityFileType(blob.type.startsWith('video') ? 'video' : blob.type === 'application/pdf' ? 'pdf' : 'image');
             setDecryptedIdentityUrl(URL.createObjectURL(blob));
           }
         }
@@ -377,6 +378,7 @@ export function KYCAdminDashboardScreen() {
         setDecryptedIdentityUrl("https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?auto=format&fit=crop&w=400&q=80");
       }
 
+      // DÉCODAGE SELFIE / LIVENESS VIDÉO
       if (selfieFile) {
         const isEnc = selfieFile.name.endsWith('.enc');
         setIsSelfieEncrypted(isEnc);
@@ -394,7 +396,7 @@ export function KYCAdminDashboardScreen() {
               setDecryptedSelfieUrl(result.url);
             }
           } else {
-            setSelfieFileType(blob.type === 'application/pdf' ? 'pdf' : 'image');
+            setSelfieFileType(blob.type.startsWith('video') ? 'video' : blob.type === 'application/pdf' ? 'pdf' : 'image');
             setDecryptedSelfieUrl(URL.createObjectURL(blob));
           }
         }
@@ -459,7 +461,7 @@ export function KYCAdminDashboardScreen() {
           </div>
           <div>
             <h1 className="text-lg font-black tracking-wider text-white">KAURI REGULATORY MATRIX</h1>
-            <p className="text-xs text-slate-400">Registre général de vérification (ECC)</p>
+            <p className="text-xs text-slate-400">Registre général de vérification (ECC P-256)</p>
           </div>
         </div>
         <button 
@@ -639,6 +641,13 @@ export function KYCAdminDashboardScreen() {
                               <span className="text-[11px] font-bold text-white block truncate max-w-full">JUSTIFICATIF PDF</span>
                               <span className="text-[9px] text-slate-400 mt-1">Cliquer pour zoomer</span>
                             </div>
+                          ) : identityFileType === 'video' ? (
+                            <div className="w-full h-full relative cursor-zoom-in" onClick={() => setLightbox({ url: decryptedIdentityUrl, type: 'video' })}>
+                              <video src={decryptedIdentityUrl} className="w-full h-44 object-cover rounded-xl" autoPlay loop muted playsInline />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
+                                <ZoomIn className="w-5 h-5 text-white" />
+                              </div>
+                            </div>
                           ) : (
                             <div className="w-full h-full relative cursor-zoom-in" onClick={() => setLightbox({ url: decryptedIdentityUrl, type: 'image' })}>
                               <img src={decryptedIdentityUrl} alt="Identity" className="w-full h-44 object-cover rounded-xl" />
@@ -660,7 +669,7 @@ export function KYCAdminDashboardScreen() {
                       )}
                     </div>
 
-                    {/* APERÇU SELFIE */}
+                    {/* APERÇU SELFIE / VIDÉO */}
                     <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden group transition-all">
                       {decryptedSelfieUrl ? (
                         <div className="w-full h-full relative flex flex-col items-center justify-center">
@@ -671,6 +680,13 @@ export function KYCAdminDashboardScreen() {
                             >
                               <FileText className="w-10 h-10 text-red-500 mb-2" />
                               <span className="text-[11px] font-bold text-white block truncate max-w-full">SELFIE PDF</span>
+                            </div>
+                          ) : selfieFileType === 'video' ? (
+                            <div className="w-full h-full relative cursor-zoom-in" onClick={() => setLightbox({ url: decryptedSelfieUrl, type: 'video' })}>
+                              <video src={decryptedSelfieUrl} className="w-full h-44 object-cover rounded-xl" autoPlay loop muted playsInline />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
+                                <ZoomIn className="w-5 h-5 text-white" />
+                              </div>
                             </div>
                           ) : (
                             <div className="w-full h-full relative cursor-zoom-in" onClick={() => setLightbox({ url: decryptedSelfieUrl, type: 'image' })}>
@@ -725,7 +741,7 @@ export function KYCAdminDashboardScreen() {
         </div>
       </div>
 
-      {/* LIGHTBOX */}
+      {/* LIGHTBOX DE L'ADMINISTRATEUR (CORRIGÉE POUR LES VIDÉOS) */}
       {lightbox && (
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <button 
@@ -734,12 +750,23 @@ export function KYCAdminDashboardScreen() {
           >
             <X className="w-6 h-6" />
           </button>
-          <div className="max-w-5xl max-h-[88vh] w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl p-2">
+          <div className="max-w-5xl max-h-[88vh] w-full h-full flex flex-col items-center justify-center overflow-hidden rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl p-2 relative">
+            <div className="absolute top-4 left-4 bg-black/60 backdrop-blur px-4 py-1.5 rounded-full text-white text-xs font-bold tracking-widest z-10">
+              Audit Zoomed View
+            </div>
+            
             {lightbox.type === 'pdf' ? (
               <iframe 
                 src={lightbox.url} 
                 className="w-full h-[84vh] rounded-xl border-none bg-white"
                 title="Kauri Fullscreen Audit Frame"
+              />
+            ) : lightbox.type === 'video' ? (
+              <video 
+                src={lightbox.url} 
+                controls 
+                autoPlay 
+                className="max-w-full max-h-[84vh] object-contain rounded-xl"
               />
             ) : (
               <img 
