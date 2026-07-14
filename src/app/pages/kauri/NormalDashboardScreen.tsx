@@ -112,9 +112,12 @@ export function NormalDashboardScreen() {
   const [tontinesCount, setTontinesCount] = useState<number | null>(null);
   const [investmentsCount, setInvestmentsCount] = useState<number | null>(null);
 
+  // ── ÉTAT POUR LE PORTEFEUILLE RWA DYNAMIQUE ──
+  const [rwaTotalAmount, setRwaTotalAmount] = useState<number>(0);
+
   // 1. Récupération stricte et sans concession du vrai Trust Score
   const rawScore = profile?.trust_score !== undefined ? profile.trust_score : (profile?.trustScore !== undefined ? profile.trustScore : 0);
-  const trustScore = Math.round(rawScore);
+  const trustScore = Math.round(Number(rawScore) || 0);
   
   // 2. Calcul mathématique de l'ancienneté (Série) au lieu du 6 en dur
   const calculateStreak = () => {
@@ -130,7 +133,10 @@ export function NormalDashboardScreen() {
   const userStatus = trustScore >= 85 ? 'Membre Émérite' : trustScore >= 40 ? 'Membre Actif' : 'Nouveau Membre';
   
   const firstName = profile?.firstName ?? profile?.first_name ?? 'Vous';
-  const balance = profile?.balance ?? 0;
+  
+  // 💰 CALCULATEUR DE PATRIMOINE AGREGÉ (Liquide + Investissements)
+  const availableLiquidity = Number(profile?.balance ?? 0);
+  const totalCombinedWealth = availableLiquidity + rwaTotalAmount;
   
   const currentKycStatus = profile?.kyc_status || profile?.kycStatus || 'pending';
   const isKycVerified = currentKycStatus === 'verified' || profile?.kyc_completed === true || profile?.kycCompleted === true;
@@ -157,11 +163,12 @@ export function NormalDashboardScreen() {
 
   useEffect(() => {
     refreshProfile();
-    const fetchCounts = async () => {
+    const fetchCountsAndWealth = async () => {
       if (!user) return;
       try {
         const supabase = getSupabase();
         
+        // Récupération des Cercles Actifs
         const { count: tCount, error: tError } = await supabase
           .from('tontine_members')
           .select('tontine_id', { count: 'exact', head: true })
@@ -169,17 +176,21 @@ export function NormalDashboardScreen() {
 
         if (!tError && tCount !== null) setTontinesCount(tCount);
 
-        const { count: iCount, error: iError } = await supabase
-          .from('investments')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id);
+        // Récupération des Investissements RWA et sommation
+        const { data: iData, error: iError } = await supabase
+          .from('rwa_investments')
+          .select('id, amount', { count: 'exact' }); // RLS sécurise la récupération par user_id automatiquement
 
-        if (!iError && iCount !== null) setInvestmentsCount(iCount);
+        if (!iError && iData) {
+          setInvestmentsCount(iData.length);
+          const totalRwaSum = iData.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+          setRwaTotalAmount(totalRwaSum);
+        }
       } catch (err) {
         console.error('Erreur synchronisation compteurs dashboard:', err);
       }
     };
-    fetchCounts();
+    fetchCountsAndWealth();
   }, [user]);
 
   return (
@@ -279,8 +290,9 @@ export function NormalDashboardScreen() {
                 {balanceVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               </button>
             </div>
+            {/* 🎯 CORRECTION DE LA DISSONANCE : Utilisation de totalCombinedWealth au lieu du liquide seul */}
             <h1 className="text-white text-3xl mb-4 font-black tracking-tight">
-              {balanceVisible ? `${balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €` : '•••••'}
+              {balanceVisible ? `${totalCombinedWealth.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €` : '•••••'}
             </h1>
             <div className="grid grid-cols-2 gap-3">
               <button
