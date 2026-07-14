@@ -432,12 +432,13 @@ export function KYCVerificationScreen() {
           street: address.street.trim(),
           city: address.city.trim(),
           zip: address.zip.trim(),
-          kyc_status: 'pending'
+          kyc_status: 'pending',
+          trust_score: 40
         }).eq('id', profile?.id);
 
       if (error) throw error;
       await refreshProfile();
-      toast.success("Registre mis à jour avec succès !", { id: toastId });
+      toast.success("Registre mis à jour avec un score initial de 40 !", { id: toastId });
       navigate(`/kauri/biometric-setup?type=${accountType}`);
     } catch (err) {
       toast.error("Erreur de synchronisation réseau.", { id: toastId });
@@ -618,6 +619,7 @@ export function KYCVerificationScreen() {
                 className="absolute inset-0 w-full h-full object-cover" 
                 playsInline 
                 muted 
+                autoPlay
               />
               
               <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center overflow-hidden">
