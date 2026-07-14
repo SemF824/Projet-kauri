@@ -106,7 +106,6 @@ import { KYCAdminDashboardScreen } from './pages/kauri/admin/KYCAdminDashboardSc
 import { useAuth } from './contexts/AuthContext';
 import { Lock, ShieldAlert, ArrowRight, User as UserIcon } from 'lucide-react';
 
-// ── 🎯 ECOUTEUR ET BARRIÈRE DE PROTECTION FINANCIÈRE GLOBAL ──
 function KauriKYCGuardLayout() {
   const { profile, loading } = useAuth();
   const navigate = useNavigate();
@@ -124,7 +123,6 @@ function KauriKYCGuardLayout() {
   const isKycVerified = currentKycStatus === 'verified' || profile?.kyc_completed === true || profile?.kycCompleted === true;
   const isKycRejected = currentKycStatus === 'rejected';
 
-  // Exclusion stricte : Les écrans d'authentification, de dépôt de pièces et les profils restent ouverts
   const isPageExcluded = 
     location.pathname.includes('/kauri/login') || 
     location.pathname.includes('/kauri/kyc-verification') || 
@@ -530,6 +528,10 @@ export const router = createBrowserRouter([
           },
           {
             path: 'cercle-detail',
+            element: <CercleDetailScreen />,
+          },
+          {
+            path: 'tontine/:id', // ── CORRECTION : Capture dynamique de l'identifiant pour la Tontine ──
             element: <CercleDetailScreen />,
           },
           {
