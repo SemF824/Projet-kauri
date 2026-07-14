@@ -5,9 +5,9 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useState, useEffect, useRef } from 'react';
-import { useDarkMode } from '../contexts/DarkModeContext';
-import { useAuth } from '../contexts/AuthContext';
-import { getSupabase } from '../utils/supabase';
+import { useDarkMode } from '../../contexts/DarkModeContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { getSupabase } from '../../../utils/supabase';
 import { toast } from 'sonner';
 
 interface TontineOffer {
@@ -35,7 +35,6 @@ const CATEGORIES = ['Tous', 'Investissement', 'Diaspora', 'Jeunes', 'Famille', '
 const FREQUENCIES = ['Toutes', 'Mensuelle', 'Bimensuelle', 'Hebdomadaire'];
 const AMOUNTS = ['Tous', '< 200€', '200–500€', '> 500€'];
 
-// Dictionnaire de mapping visuel pour les catégories dynamiques
 const CATEGORY_UI_CONFIG: Record<string, { color: string }> = {
   'Investissement': { color: '#006D77' },
   'Diaspora': { color: '#D4AF37' },
@@ -69,7 +68,6 @@ function JoinSheet({ tontine, onClose, onConfirm, isDarkMode }: JoinSheetProps) 
     try {
       const supabase = getSupabase();
       
-      // Insertion au sein de la table de ralliement des membres
       const { error } = await supabase
         .from('tontine_members')
         .insert({
@@ -110,7 +108,7 @@ function JoinSheet({ tontine, onClose, onConfirm, isDarkMode }: JoinSheetProps) 
         </div>
 
         <div style={{ background: `linear-gradient(135deg, ${tontine.categoryColor}, ${tontine.categoryColor}CC)`, margin: '12px 16px 0', borderRadius: 16, padding: '16px 18px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <p style={{ margin: 0, color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Rejoindre la tontine</p>
               <h2 style={{ margin: '4px 0 0', color: '#fff', fontSize: 18, fontWeight: 800 }}>{tontine.name}</h2>
@@ -127,7 +125,7 @@ function JoinSheet({ tontine, onClose, onConfirm, isDarkMode }: JoinSheetProps) 
               { label: 'Contribution', value: `${tontine.contribution} € / ${tontine.frequency.toLowerCase()}` },
               { label: 'Durée', value: `${tontine.duration} mois` },
               { label: 'Cagnotte totale', value: `${(tontine.contribution * tontine.maxMembers * tontine.duration).toLocaleString('fr-FR')} €` },
-              { label: 'Tu recevras', value: `${(tontine.contribution * tontine.maxMembers).toLocaleString('fr-FR')} €', highlight: true },
+              { label: 'Tu recevras', value: `${(tontine.contribution * tontine.maxMembers).toLocaleString('fr-FR')} €`, highlight: true },
               { label: 'Membres', value: `${tontine.members} / ${tontine.maxMembers}` },
               { label: 'Prochain départ', value: tontine.nextStart },
             ].map((row: any, i, arr) => (
@@ -186,7 +184,7 @@ function JoinSheet({ tontine, onClose, onConfirm, isDarkMode }: JoinSheetProps) 
               transition: 'all 0.2s', boxShadow: agreed ? `0 4px 20px ${tontine.categoryColor}40` : 'none'
             }}
           >
-            {isSubmitting ? <Loader2 size={18} className="animate-spin style-center" style={{ margin: '0 auto' }} /> : agreed ? `Rejoindre · ${tontine.contribution} € / mois` : 'Acceptez les conditions pour continuer'}
+            {isSubmitting ? <Loader2 size={18} className="animate-spin" style={{ margin: '0 auto' }} /> : agreed ? `Rejoindre · ${tontine.contribution} € / mois` : 'Acceptez les conditions pour continuer'}
           </button>
         </div>
       </div>
@@ -246,11 +244,9 @@ export function RejoindreTontineScreen() {
   const [selectedTontine, setSelectedTontine] = useState<TontineOffer | null>(null);
   const [joinedTontine, setJoinedTontine] = useState<TontineOffer | null>(null);
   
-  // États de synchronisation d'infrastructure
   const [tontinesList, setTontinesList] = useState<TontineOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Sécurisation numérique du score client
   const trustScore = Math.round(Number(profile?.trust_score ?? profile?.trustScore) || 0);
 
   useEffect(() => {
@@ -266,7 +262,6 @@ export function RejoindreTontineScreen() {
         if (error) throw error;
 
         const mappedOffers: TontineOffer[] = (data || []).map((t: any) => {
-          // Déduction de catégorie arbitraire basée sur les mots-clés ou fallback Investissement
           let deducedCategory: any = 'Investissement';
           if (t.name.toLowerCase().includes('famille')) deducedCategory = 'Famille';
           else if (t.name.toLowerCase().includes('diaspora')) deducedCategory = 'Diaspora';
@@ -274,7 +269,7 @@ export function RejoindreTontineScreen() {
           else if (t.name.toLowerCase().includes('young')) deducedCategory = 'Jeunes';
 
           const maxM = Number(t.max_members) || 12;
-          const currentMembersCount = Math.floor(Math.random() * 4) + 4; // Agrégation à lier ultérieurement
+          const currentMembersCount = Math.floor(Math.random() * 4) + 4;
 
           return {
             id: t.id,
@@ -425,7 +420,7 @@ export function RejoindreTontineScreen() {
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 40px' }}>
         {isLoading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifycontent: 'center', justifyContent: 'center', padding: '40px 0', gap: 12 }}>
             <Loader2 className="animate-spin text-[#006D77]" size={24} />
             <p style={{ fontSize: 12, color: textMuted, fontWeight: 600 }}>Calcul du catalogue de tontines...</p>
           </div>
@@ -500,7 +495,6 @@ function TontineCard({
   const fillPct = tontine.members / tontine.maxMembers;
   const urgency = tontine.spotsLeft <= 2;
   
-  // Comparaison mathématique avec le score dynamique réel de l'utilisateur
   const isLockedForUser = tontine.minTrustScore ? userTrustScore < tontine.minTrustScore : false;
 
   return (
@@ -512,7 +506,7 @@ function TontineCard({
       <div style={{ height: 3, background: `linear-gradient(90deg, ${tontine.categoryColor}, ${tontine.categoryColor}44)` }} />
 
       <div style={{ padding: '14px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyBetween: 'space-between', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
               <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: tontine.categoryColor, background: tontine.categoryColor + '15', padding: '2px 7px', borderRadius: 8 }}>
@@ -547,7 +541,7 @@ function TontineCard({
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyBetween: 'space-between', justifyContent: 'space-between', marginBottom: 5 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
             <span style={{ fontSize: 11, color: textMuted }}>Places occupées</span>
             <span style={{ fontSize: 11, fontWeight: 700, color: textMain }}>{Math.round(fillPct * 100)}%</span>
           </div>
@@ -560,7 +554,7 @@ function TontineCard({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg, ${tontine.categoryColor}, ${tontine.categoryColor}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 10 }}>
               {tontine.organizerAvatar}
