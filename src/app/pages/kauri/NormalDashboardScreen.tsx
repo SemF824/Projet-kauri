@@ -60,7 +60,7 @@ function KauriBottomNav({ active, isDarkMode, navigate }: { active: NavTab; isDa
                 className="cursor-pointer"
                 style={{
                   width: 56, height: 56, borderRadius: '50%',
-                  display: 'flex', alignItems: 'center', justifycontent: 'center',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                   boxShadow: '0 4px 16px rgba(212,175,55,0.50), 0 2px 8px rgba(0,0,0,0.18)',
                   border: isActive ? '2.5px solid rgba(255,255,255,0.5)' : '2px solid rgba(255,255,255,0.2)',
                   transform: isActive ? 'scale(1.08)' : 'scale(1)',
@@ -112,9 +112,23 @@ export function NormalDashboardScreen() {
   const [tontinesCount, setTontinesCount] = useState<number | null>(null);
   const [investmentsCount, setInvestmentsCount] = useState<number | null>(null);
 
-  const trustScore = profile?.trustScore !== undefined ? Math.round(profile.trustScore) : (profile?.trust_score !== undefined ? Math.round(profile.trust_score) : 100);
-  const paymentStreak = 6;
-  const userStatus = trustScore >= 80 ? 'Membre Émérite' : trustScore >= 60 ? 'Membre Actif' : 'Nouveau Membre';
+  // 1. Récupération stricte et sans concession du vrai Trust Score
+  const rawScore = profile?.trust_score !== undefined ? profile.trust_score : (profile?.trustScore !== undefined ? profile.trustScore : 0);
+  const trustScore = Math.round(rawScore);
+  
+  // 2. Calcul mathématique de l'ancienneté (Série) au lieu du 6 en dur
+  const calculateStreak = () => {
+    if (!profile?.created_at) return 0;
+    const createdDate = new Date(profile.created_at);
+    const now = new Date();
+    const diffMonths = (now.getFullYear() - createdDate.getFullYear()) * 12 + (now.getMonth() - createdDate.getMonth());
+    return Math.max(0, diffMonths);
+  };
+  const paymentStreak = calculateStreak();
+
+  // 3. Attribution dynamique du grade
+  const userStatus = trustScore >= 85 ? 'Membre Émérite' : trustScore >= 40 ? 'Membre Actif' : 'Nouveau Membre';
+  
   const firstName = profile?.firstName ?? profile?.first_name ?? 'Vous';
   const balance = profile?.balance ?? 0;
   
@@ -126,6 +140,7 @@ export function NormalDashboardScreen() {
     ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase() 
     : (profile?.first_name && profile?.last_name ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase() : 'KA');
 
+  // Géométrie SVG pour la jauge du score
   const circumference = 2 * Math.PI * 28;
   const strokeDashoffset = circumference - (trustScore / 100) * circumference;
 
@@ -221,6 +236,7 @@ export function NormalDashboardScreen() {
                       strokeDasharray={circumference}
                       strokeDashoffset={strokeDashoffset}
                       strokeLinecap="round"
+                      className="transition-all duration-1000 ease-out"
                     />
                     <defs>
                       <linearGradient id="miniTrustGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -263,34 +279,37 @@ export function NormalDashboardScreen() {
                 {balanceVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               </button>
             </div>
-            <h1 className="text-white text-3xl mb-4">
+            <h1 className="text-white text-3xl mb-4 font-black tracking-tight">
               {balanceVisible ? `${balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €` : '•••••'}
             </h1>
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => navigate('/kauri/portefeuille')}
-                className="bg-white text-[#006D77] py-3 rounded-xl text-sm font-medium cursor-pointer border-none transition-transform active:scale-98"
+                className="bg-white text-[#006D77] py-3 rounded-xl text-sm font-bold cursor-pointer border-none transition-transform active:scale-95 shadow-md"
               >
                 Détails
               </button>
               <button
                 onClick={() => navigate('/kauri/send-money')}
-                className="bg-[#D4AF37] text-white py-3 rounded-xl text-sm font-medium cursor-pointer border-none transition-transform active:scale-98"
+                className="bg-[#D4AF37] text-white py-3 rounded-xl text-sm font-bold cursor-pointer border-none transition-transform active:scale-95 shadow-md"
               >
                 Envoyer
               </button>
             </div>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 border border-[#D4AF37]/30 mt-3">
+          <div className={`bg-white/10 backdrop-blur-xl rounded-2xl p-4 border transition-all mt-3 ${trustScore >= 85 ? 'border-[#D4AF37]/50' : 'border-white/10 opacity-50'}`}>
             <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-[#D4AF37] flex-shrink-0 mt-0.5" />
+              <CheckCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${trustScore >= 85 ? 'text-[#D4AF37]' : 'text-white/30'}`} />
               <div>
-                <p className="text-white text-sm font-medium mb-1">
+                <p className="text-white text-sm font-bold mb-1">
                   Avantage Membre Émérite
                 </p>
                 <p className="text-white/80 text-xs leading-relaxed">
-                  Frais CICO réduits à <span className="font-bold text-[#D4AF37]">0%</span> ce mois-ci
+                  {trustScore >= 85 
+                    ? <><span className="font-bold text-[#D4AF37]">Frais réduits à 0%</span> débloqués pour vos CICO de ce mois-ci.</>
+                    : "Atteignez 85 pts de confiance pour débloquer les transactions à 0% de frais."
+                  }
                 </p>
               </div>
             </div>
@@ -303,9 +322,9 @@ export function NormalDashboardScreen() {
               <WifiOff className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-white text-sm mb-1">Mode Hors-Ligne</p>
+              <p className="text-white text-sm font-bold mb-1">Mode Hors-Ligne</p>
               <p className="text-white/80 text-xs">
-                Solde en cache • Prochain tour : 8 mai 2026
+                Solde en cache. Reconnexion requise pour actualiser.
               </p>
             </div>
           </div>
@@ -314,7 +333,7 @@ export function NormalDashboardScreen() {
         <div className="px-6 py-6 space-y-6">
           <div>
             <h3 className={`mb-4 flex items-center gap-2 font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
-              <div className="w-1 h-5 bg-[#D4AF37] rounded-full"></div>
+              <div className="w-1.5 h-5 bg-[#D4AF37] rounded-full"></div>
               Tableau de bord
             </h3>
 
@@ -326,8 +345,8 @@ export function NormalDashboardScreen() {
                 <div className="w-12 h-12 mx-auto mb-2 bg-[#006D77]/10 rounded-xl flex items-center justify-center">
                   <Users className="w-6 h-6 text-[#006D77]" />
                 </div>
-                <p className={`text-xs ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Tontines</p>
-                <p className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{tontinesCount !== null ? `${tontinesCount} active${tontinesCount !== 1 ? 's' : ''}` : '…'}</p>
+                <p className={`text-xs font-medium ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Tontines</p>
+                <p className={`text-sm font-bold mt-0.5 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{tontinesCount !== null ? `${tontinesCount} active${tontinesCount !== 1 ? 's' : ''}` : '…'}</p>
               </button>
 
               <button
@@ -337,8 +356,8 @@ export function NormalDashboardScreen() {
                 <div className="w-12 h-12 mx-auto mb-2 bg-[#D4AF37]/10 rounded-xl flex items-center justify-center">
                   <Leaf className="w-6 h-6 text-[#D4AF37]" />
                 </div>
-                <p className={`text-xs ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Projets</p>
-                <p className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{investmentsCount !== null ? `${investmentsCount} actif${investmentsCount !== 1 ? 's' : ''}` : '…'}</p>
+                <p className={`text-xs font-medium ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Projets</p>
+                <p className={`text-sm font-bold mt-0.5 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>{investmentsCount !== null ? `${investmentsCount} actif${investmentsCount !== 1 ? 's' : ''}` : '…'}</p>
               </button>
             </div>
 
@@ -350,8 +369,8 @@ export function NormalDashboardScreen() {
                 <div className="w-12 h-12 mx-auto mb-2 bg-[#F59E0B]/10 rounded-xl flex items-center justify-center">
                   <RefreshCcw className="w-6 h-6 text-[#F59E0B]" />
                 </div>
-                <p className={`text-xs ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Swap</p>
-                <p className={`text-sm ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>1</p>
+                <p className={`text-xs font-medium ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Swap</p>
+                <p className={`text-sm font-bold mt-0.5 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>1</p>
               </button>
 
               <button
@@ -361,32 +380,32 @@ export function NormalDashboardScreen() {
                 <div className="w-12 h-12 mx-auto mb-2 bg-[#006D77]/10 rounded-xl flex items-center justify-center">
                   <Compass className="w-6 h-6 text-[#006D77]" />
                 </div>
-                <p className={`text-xs ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Cercles</p>
-                <p className={`text-sm ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Publics</p>
+                <p className={`text-xs font-medium ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#4A4A4A]'}`}>Cercles</p>
+                <p className={`text-sm font-bold mt-0.5 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Publics</p>
               </button>
             </div>
           </div>
 
           <div>
             <h3 className={`mb-4 flex items-center gap-2 font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
-              <div className="w-1 h-5 bg-[#006D77] rounded-full"></div>
+              <div className="w-1.5 h-5 bg-[#006D77] rounded-full"></div>
               Mes Tontines Privées
             </h3>
 
             <div className="space-y-3">
               <div className={`rounded-xl p-4 shadow-md border ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}>
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Cercle Familial</h4>
-                  <span className="px-3 py-1 bg-[#D1FAE5] text-[#006D77] text-xs rounded-full font-bold">
+                  <h4 className={`font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>Cercle Familial</h4>
+                  <span className="px-3 py-1 bg-[#D1FAE5] text-[#006D77] text-[10px] rounded-full font-bold uppercase tracking-wider">
                     Actif
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className={isDarkMode ? 'text-[#94A3B8]' : 'text-[#64748B]'}>Prochain pot</span>
-                  <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>500,00 €</span>
+                  <span className={`font-medium ${isDarkMode ? 'text-[#94A3B8]' : 'text-[#64748B]'}`}>Prochain pot</span>
+                  <span className={`font-black ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>500,00 €</span>
                 </div>
                 <div className={`h-2 rounded-full overflow-hidden ${isDarkMode ? 'bg-[#334155]' : 'bg-[#F1F5F9]'}`}>
-                  <div className="h-full bg-gradient-to-r from-[#006D77] to-[#0D9488] w-4/5"></div>
+                  <div className="h-full bg-gradient-to-r from-[#006D77] to-[#0D9488] w-4/5 rounded-full"></div>
                 </div>
               </div>
             </div>
@@ -394,7 +413,7 @@ export function NormalDashboardScreen() {
 
           <button
             onClick={() => navigate('/kauri/emergency-swap')}
-            className="w-full bg-gradient-to-r from-[#F59E0B] to-[#D97706] hover:from-[#D97706] hover:to-[#B45309] text-white py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-98 font-bold cursor-pointer border-none"
+            className="w-full bg-gradient-to-r from-[#F59E0B] to-[#D97706] hover:from-[#D97706] hover:to-[#B45309] text-white py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 font-bold cursor-pointer border-none"
           >
             <RefreshCcw className="w-5 h-5" />
             <span>Échanger ma position d'urgence</span>
@@ -405,36 +424,41 @@ export function NormalDashboardScreen() {
       {/* ── ENCLAVE OVERLAY RÉGLEMENTAIRE FINANCIER (PROTÉGÉ) ── */}
       {!isKycVerified && (
         <div className="absolute inset-0 flex items-center justify-center p-6 bg-transparent z-40">
-          <div className={`w-full max-w-md rounded-3xl border shadow-2xl p-6 text-center space-y-5 ${isDarkMode ? 'bg-[#1E293B] border-slate-800' : 'bg-white border-slate-100'}`}>
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-lg ${isKycRejected ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
+          <div className={`w-full max-w-md rounded-[2rem] border shadow-2xl p-6 text-center space-y-6 ${isDarkMode ? 'bg-[#1E293B] border-slate-800' : 'bg-white border-slate-100'}`}>
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-inner ${isKycRejected ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
               {isKycRejected ? <ShieldAlert className="w-7 h-7" /> : <Lock className="w-7 h-7" />}
             </div>
             <div className="space-y-2">
-              <h2 className={`text-xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
+              <h2 className={`text-xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
                 {isKycRejected ? 'Dossier de conformité rejeté' : 'Compte en cours de validation'}
               </h2>
-              <p className={`text-xs leading-relaxed px-2 ${isDarkMode ? 'text-slate-400' : 'text-[#475569]'}`}>
+              <p className={`text-xs leading-relaxed px-2 font-medium ${isDarkMode ? 'text-slate-400' : 'text-[#475569]'}`}>
                 {isKycRejected 
                   ? "Vos pièces justificatives n'ont pas pu être validées par notre équipe de conformité. Veuillez soumettre à nouveau vos documents réglementaires."
                   : "Bonjour ! Vos pièces justificatives ont été transmises avec succès au registre central de KAURI. Votre dossier est en cours d'analyse."}
               </p>
             </div>
+            
             {!isKycRejected && (
               <div className={`${isDarkMode ? 'bg-[#006D77]/10 border border-[#006D77]/20' : 'bg-[#E6F4F5] border border-[#006D77]/10'} rounded-2xl p-4`}>
-                <p className={`text-xs font-semibold leading-relaxed text-center ${isDarkMode ? 'text-teal-400' : 'text-[#006D77]'}`}>
-                  ⏳ Activation de vos accès financiers sous 24 heures maximum.
+                <p className={`text-xs font-bold leading-relaxed text-center ${isDarkMode ? 'text-teal-400' : 'text-[#006D77]'}`}>
+                  ⏳ Activation de vos accès financiers sous 24 heures.
                 </p>
               </div>
             )}
-            <div className={`rounded-2xl p-4 text-left text-[11px] leading-normal space-y-1.5 border ${isDarkMode ? 'bg-slate-900/40 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
-              <p className={`font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Fonctionnalités gelées temporairement :</p>
-              <p>• Création, adhésion et paiement de Tontines</p>
-              <p>• Dépôts, retraits et transferts de capitaux</p>
-              <p>• Souscription aux levées de fonds</p>
+
+            <div className={`rounded-2xl p-4 text-left text-xs leading-relaxed space-y-2 border ${isDarkMode ? 'bg-slate-900/40 border-slate-800 text-slate-400' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+              <p className={`font-black uppercase tracking-wider text-[10px] ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>Fonctionnalités gelées temporairement :</p>
+              <div className="space-y-1 font-medium">
+                <p>• Création et paiement de Tontines</p>
+                <p>• Dépôts et retraits de capitaux</p>
+                <p>• Souscription aux levées de fonds</p>
+              </div>
             </div>
+
             <button
               onClick={() => navigate('/kauri/kyc-verification')}
-              className={`w-full py-4 rounded-xl text-white font-bold text-xs tracking-wider uppercase shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border-none ${isKycRejected ? 'bg-red-500 hover:bg-red-600' : 'bg-[#006D77] hover:bg-[#00525a]'}`}
+              className={`w-full py-4 rounded-xl text-white font-bold text-[13px] tracking-wide uppercase shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer border-none ${isKycRejected ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20' : 'bg-[#006D77] hover:bg-[#00525a] shadow-[#006D77]/20'}`}
             >
               <span>{isKycRejected ? 'Soumettre à nouveau les pièces' : 'Vérifier mes documents'}</span>
               <ArrowRight className="w-4 h-4" />
@@ -447,3 +471,5 @@ export function NormalDashboardScreen() {
     </div>
   );
 }
+
+export default NormalDashboardScreen;
