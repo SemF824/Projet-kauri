@@ -1,4 +1,4 @@
-import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, AlertCircle, X, Focus, RefreshCw } from "lucide-react";
+import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -103,26 +103,21 @@ export function KYCVerificationScreen() {
 
   const identityInputRef = useRef<HTMLInputElement>(null);
 
-  // ── 🎥 ÉTATS DU LIVENESS CHECK SÉQUENTIEL ──
+  // ── 🎥 ÉTATS ET CONTRÔLE DE LA CAMÉRA (YOTI-STYLE) ──
   const [showCamera, setShowCamera] = useState(false);
-  const [livenessState, setLivenessState] = useState<'idle' | 'center' | 'turn' | 'processing'>('idle');
   const videoRef = useRef<HTMLVideoElement>(null);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
   const startCamera = async () => {
     try {
-      // Forçage de l'aspect ratio Portrait (9:16) pour éviter le zoom/crop massif
+      // FIX CRITIQUE : Suppression du ratio forcé. 
+      // On demande la plus haute résolution naturelle (paysage sur PC, portrait sur mobile).
+      // Le CSS 'object-fit: cover' se chargera de remplir l'écran sans zoom destructeur.
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: "user", 
-          width: { ideal: 1080 }, 
-          height: { ideal: 1920 },
-          aspectRatio: { ideal: 0.5625 } 
-        } 
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } 
       });
       setMediaStream(stream);
       setShowCamera(true);
-      setLivenessState('idle');
     } catch (err) {
       console.error("Camera access denied or failed:", err);
       toast.error("Impossible d'accéder à la caméra. Vérifiez les permissions de votre navigateur.");
@@ -142,7 +137,6 @@ export function KYCVerificationScreen() {
     }
     setMediaStream(null);
     setShowCamera(false);
-    setLivenessState('idle');
   };
 
   useEffect(() => {
@@ -153,63 +147,30 @@ export function KYCVerificationScreen() {
     };
   }, [mediaStream]);
 
-  // ── 🧠 MOTEUR ANTI-SPOOFING (OPTICAL FLOW) ──
-  const captureLivenessSequence = async () => {
+  // Capture instantanée en un seul clic
+  const captureSelfieAndProcess = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
     
     const canvas = document.createElement("canvas");
+    // On conserve la résolution native du capteur pour l'analyse
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    try {
-      // 1. Capture de la frame centrale (Le Selfie réel)
-      setLivenessState('center');
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const frame1Data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const faceBlob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/jpeg', 0.95));
-
-      // 2. Capture de la frame de mouvement
-      setLivenessState('turn');
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const frame2Data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-      setLivenessState('processing');
-
-      // 3. Calcul de la variance des pixels (Optical Flow basique)
-      let diff = 0;
-      const len = frame1Data.data.length;
-      for (let i = 0; i < len; i += 4) {
-        diff += Math.abs(frame1Data.data[i] - frame2Data.data[i]);       // R
-        diff += Math.abs(frame1Data.data[i + 1] - frame2Data.data[i + 1]); // G
-        diff += Math.abs(frame1Data.data[i + 2] - frame2Data.data[i + 2]); // B
-      }
-      
-      const avgDiff = diff / (len / 4);
-
-      // Si avgDiff est très bas (< 12), c'est une image imprimée statique.
-      if (avgDiff < 12) {
-        toast.error("Échec de la preuve de vie. Mouvement insuffisant ou photo statique détectée.");
-        setLivenessState('idle');
-        return;
-      }
-
-      if (faceBlob) {
-        const file = new File([faceBlob], "selfie_liveness.jpg", { type: "image/jpeg" });
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], "selfie_capture.jpg", { type: "image/jpeg" });
         stopCamera();
         handleUploadAndEncrypt("selfie", file);
       }
-    } catch (e) {
-      toast.error("Erreur lors de la séquence biométrique.");
-      setLivenessState('idle');
-    }
+    }, "image/jpeg", 0.95);
   };
 
-  // ── 🧠 MOTEUR DE CONTRÔLE DE NETTETÉ ET LUMINANCE (Seuils Ajustés) ──
+  // ── 🧠 MOTEUR DE CONTRÔLE DE NETTETÉ ET LUMINANCE LOCALE ──
   const analyzeSelfieBiometrics = (file: File): Promise<{ valid: boolean; reason?: string }> => {
     return new Promise((resolve) => {
       const img = new Image();
@@ -255,23 +216,23 @@ export function KYCVerificationScreen() {
         const averageLuminance = totalLuminance / totalPixels;
         const normalizedEdgeScore = edgeVarianceScore / totalPixels;
 
+        // Rejets pour la fraude basique
         if (averageLuminance < 35) {
-          resolve({ valid: false, reason: "Environnement sous-exposé ou trop sombre. Veuillez éclairer votre visage." });
+          resolve({ valid: false, reason: "L'image est trop sombre. Éclairez votre visage." });
           return;
         }
         if (averageLuminance > 240) {
-          resolve({ valid: false, reason: "Image surexposée. Évitez les sources de lumière directe face caméra." });
+          resolve({ valid: false, reason: "L'image est surexposée (trop de lumière)." });
           return;
         }
-        // Seuil abaissé à 8 pour tolérer le bruit natif des caméras frontales mobiles
         if (normalizedEdgeScore < 8) {
-          resolve({ valid: false, reason: "Capture trop floue ou instable. Stabilisez votre appareil." });
+          resolve({ valid: false, reason: "La photo est floue. Stabilisez votre appareil." });
           return;
         }
 
         resolve({ valid: true });
       };
-      img.onerror = () => resolve({ valid: false, reason: "Structure de fichier corrompue." });
+      img.onerror = () => resolve({ valid: false, reason: "Fichier corrompu." });
     });
   };
 
@@ -345,7 +306,7 @@ export function KYCVerificationScreen() {
           }
         }
       } catch (err) {
-        console.error("Hub self-decryption bypassed or failed:", err);
+        console.error("Hub recovery bypassed:", err);
       } finally {
         setIsLoadingDocuments(false);
       }
@@ -376,11 +337,11 @@ export function KYCVerificationScreen() {
     setIsActionLoading(true);
 
     if (type === "selfie") {
-      const analysisToastId = toast.loading("Contrôle biométrique des paramètres d'image...");
+      const analysisToastId = toast.loading("Analyse de la netteté et de l'exposition...");
       const biometricCheck = await analyzeSelfieBiometrics(file);
       
       if (!biometricCheck.valid) {
-        toast.error(`Capture rejetée : ${biometricCheck.reason}`, { id: analysisToastId, duration: 6000 });
+        toast.error(`${biometricCheck.reason}`, { id: analysisToastId, duration: 6000 });
         setIsActionLoading(false);
         return;
       }
@@ -530,7 +491,7 @@ export function KYCVerificationScreen() {
         </button>
 
         <h1 className="text-white text-2xl font-black tracking-tight">Kauri KYC Hub</h1>
-        <p className="text-[#E0F2FE] text-xs opacity-90">Cryptographie ECIES & Liveness Check</p>
+        <p className="text-[#E0F2FE] text-xs opacity-90">Cryptographie ECC & Capture Haute Précision</p>
       </div>
 
       <div className="px-6 py-6 max-w-md mx-auto w-full space-y-6">
@@ -614,7 +575,7 @@ export function KYCVerificationScreen() {
                     <h4 className="text-sm font-bold text-[#0F172A] truncate">Selfie de présence physique</h4>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className={`w-1.5 h-1.5 rounded-full ${selfiePreviewUrl ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                      <p className="text-[11px] text-slate-500 font-medium">{selfiePreviewUrl ? 'Liveness Validé & Scellé' : 'Soumis à capture en direct'}</p>
+                      <p className="text-[11px] text-slate-500 font-medium">{selfiePreviewUrl ? 'Certifié & Scellé' : 'Soumis à capture en direct'}</p>
                     </div>
                   </div>
                 </div>
@@ -670,77 +631,58 @@ export function KYCVerificationScreen() {
             </button>
           </>
         )}
-
       </div>
 
-      {/* 🎥 MODALE DE LIVENESS CHECK SEQUENCE */}
+      {/* 🎥 MODALE DE CAPTURE CAMÉRA (YOTI-STYLE CLONE) */}
       {showCamera && (
-        <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col">
+        <div className="fixed inset-0 z-50 bg-[#F4F4F5] flex flex-col items-center justify-center p-4 md:p-8">
           
-          <div className="px-6 py-6 flex items-center justify-between z-20 absolute top-0 w-full">
-            <button onClick={stopCamera} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur flex items-center justify-center border-none cursor-pointer text-white">
-              <X className="w-5 h-5" />
+          {/* Bouton Retour en Haut Gauche */}
+          <div className="absolute top-6 left-6 z-20">
+            <button onClick={stopCamera} className="bg-white border border-slate-200 text-[#2B6CB0] px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Retour
             </button>
-            <span className="text-white text-xs font-bold uppercase tracking-widest bg-black/40 px-4 py-1.5 rounded-full backdrop-blur">
-              Liveness Check
-            </span>
           </div>
 
-          <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-slate-900 z-0">
-            <video 
-              ref={videoRef} 
-              className="absolute inset-0 w-full h-full object-cover"
-              playsInline 
-              muted 
-              autoPlay
-            />
+          {/* Wrapper Principal fausse-modale type mobile */}
+          <div className="bg-white w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl flex flex-col border border-slate-100">
             
-            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-10 overflow-hidden">
-              {/* Ovale de cadrage fixe pour éviter les déformations SVG */}
-              <div className={`w-[260px] h-[360px] sm:w-[300px] sm:h-[400px] rounded-[50%] border-2 border-dashed ${livenessState === 'processing' ? 'border-emerald-500' : 'border-[#D4AF37]'} shadow-[0_0_0_9999px_rgba(15,23,42,0.85)] relative transition-colors duration-300`}>
-                
-                <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-screen px-8 text-center flex flex-col items-center">
-                  {livenessState === 'idle' && (
-                    <p className="text-white font-medium text-sm drop-shadow-md">Placez votre visage au centre de l'ovale dans un environnement clair.</p>
-                  )}
-                  {livenessState === 'center' && (
-                    <div className="bg-black/60 backdrop-blur-md px-6 py-3 rounded-xl border border-white/20 animate-pulse">
-                      <p className="text-white font-bold text-sm">Étape 1 : Regardez fixement l'objectif...</p>
-                    </div>
-                  )}
-                  {livenessState === 'turn' && (
-                    <div className="bg-[#D4AF37]/20 backdrop-blur-md px-6 py-3 rounded-xl border border-[#D4AF37]/50 animate-pulse">
-                      <p className="text-[#D4AF37] font-bold text-sm">Étape 2 : Tournez légèrement la tête...</p>
-                    </div>
-                  )}
-                  {livenessState === 'processing' && (
-                    <div className="bg-emerald-500/20 backdrop-blur-md px-6 py-3 rounded-xl border border-emerald-500/50 flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4 text-emerald-400 animate-spin" />
-                      <p className="text-emerald-400 font-bold text-sm">Analyse biométrique en cours...</p>
-                    </div>
-                  )}
-                </div>
-
+            {/* Header d'instruction */}
+            <div className="p-6 text-center z-10 bg-white shadow-sm relative">
+              <h2 className="text-[#0F172A] font-extrabold text-base tracking-tight">Placez votre visage dans le cadre</h2>
+            </div>
+            
+            {/* Zone Vidéo avec Masque Absolu (Frosted Glass + Ligne) */}
+            <div className="relative w-full h-[60vh] min-h-[400px] bg-slate-200 flex items-center justify-center overflow-hidden">
+              <video 
+                ref={videoRef} 
+                className="absolute inset-0 w-full h-full object-cover" 
+                autoPlay 
+                playsInline 
+                muted 
+              />
+              
+              {/* L'astuce CSS indestructible pour la forme de visage type Yoti */}
+              <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center overflow-hidden">
+                <div className="relative w-[260px] h-[360px] rounded-[130px] border-4 border-[#64748B] shadow-[0_0_0_9999px_rgba(255,255,255,0.85)]"></div>
               </div>
             </div>
-          </div>
-
-          <div className="bg-slate-950 pb-12 pt-8 flex items-center justify-center z-20 shadow-[0_-10px_20px_rgba(15,23,42,1)]">
-            <button 
-              onClick={captureLivenessSequence}
-              disabled={livenessState !== 'idle'}
-              className="px-8 py-4 rounded-full border border-white/20 flex items-center justify-center gap-2 cursor-pointer bg-white text-slate-900 transition-transform active:scale-95 disabled:opacity-50 font-bold text-sm shadow-xl"
-            >
-              {livenessState === 'idle' ? (
-                <>
-                  <Focus className="w-5 h-5" /> Démarrer l'analyse
-                </>
-              ) : (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" /> Veuillez patienter...
-                </>
-              )}
-            </button>
+            
+            {/* Actions Footer */}
+            <div className="p-6 bg-[#F8FAFC] flex flex-col gap-3 z-10 border-t border-slate-200">
+              <button 
+                onClick={captureSelfieAndProcess} 
+                className="w-full bg-[#2B6CB0] hover:bg-[#1E4E8C] text-white py-4 rounded-xl font-bold text-[13px] transition-all flex items-center justify-center gap-2 cursor-pointer border-none shadow-md active:scale-95"
+              >
+                <Camera className="w-5 h-5" /> Prendre une photo
+              </button>
+              <button 
+                onClick={stopCamera} 
+                className="w-full bg-white text-[#2B6CB0] border-2 border-[#2B6CB0] py-3.5 rounded-xl font-bold text-[13px] transition-all cursor-pointer active:scale-95"
+              >
+                Aide
+              </button>
+            </div>
           </div>
         </div>
       )}
