@@ -21,6 +21,64 @@ const CATEGORIES: { value: Categorie; label: string; emoji: string }[] = [
   { value: 'autre',           label: 'Autre',           emoji: '✨' },
 ];
 
+// ── COMPOSANTS EXTRAITS DE LA CLOSURE POUR CONSERVER LE FOCUS ──
+
+function Field({ label, icon: Icon, textSec, children }: { label: string; icon: any; textSec: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="flex items-center gap-1.5 text-xs font-semibold mb-2" style={{ color: textSec }}>
+        <Icon style={{ width: 13, height: 13 }} />
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function Input({ value, onChange, placeholder, type = 'text', inputBg, border, textPrimary }: { value: string; onChange: (v: string) => void; placeholder: string; type?: string; inputBg: string; border: string; textPrimary: string }) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors"
+      style={{ backgroundColor: inputBg, border: `1.5px solid ${border}`, color: textPrimary }}
+    />
+  );
+}
+
+function ToggleGroup<T extends string>({ options, value, onChange, color, isDarkMode, textSec }: {
+  options: { value: T; label: string; icon?: any }[];
+  value: T;
+  onChange: (v: T) => void;
+  color: string;
+  isDarkMode: boolean;
+  textSec: string;
+}) {
+  return (
+    <div className="flex rounded-xl p-1" style={{ backgroundColor: isDarkMode ? '#0F172A' : '#F1F5F9' }}>
+      {options.map(opt => (
+        <button
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition-all border-none cursor-pointer"
+          style={{
+            backgroundColor: value === opt.value ? color : 'transparent',
+            color: value === opt.value ? '#fff' : textSec,
+            boxShadow: value === opt.value ? `0 2px 8px ${color}44` : 'none',
+          }}
+        >
+          {opt.icon && <opt.icon style={{ width: 13, height: 13 }} />}
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── COMPOSANT PRINCIPAL ──
+
 export function CreerTontinePubliqueScreen() {
   const navigate = useNavigate();
   const { isDarkMode } = useDarkMode();
@@ -55,58 +113,6 @@ export function CreerTontinePubliqueScreen() {
     ? parseFloat(cotisation) * parseInt(maxMembres) * parseInt(duree)
     : null;
 
-  function Field({ label, icon: Icon, children }: { label: string; icon: any; children: React.ReactNode }) {
-    return (
-      <div>
-        <label className="flex items-center gap-1.5 text-xs font-semibold mb-2" style={{ color: textSec }}>
-          <Icon style={{ width: 13, height: 13 }} />
-          {label}
-        </label>
-        {children}
-      </div>
-    );
-  }
-
-  function Input({ value, onChange, placeholder, type = 'text' }: { value: string; onChange: (v: string) => void; placeholder: string; type?: string }) {
-    return (
-      <input
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-xl px-4 py-3 text-sm outline-none"
-        style={{ backgroundColor: inputBg, border: `1.5px solid ${border}`, color: textPrimary }}
-      />
-    );
-  }
-
-  function ToggleGroup<T extends string>({ options, value, onChange, color }: {
-    options: { value: T; label: string; icon?: any }[];
-    value: T;
-    onChange: (v: T) => void;
-    color: string;
-  }) {
-    return (
-      <div className="flex rounded-xl p-1" style={{ backgroundColor: isDarkMode ? '#0F172A' : '#F1F5F9' }}>
-        {options.map(opt => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition-all"
-            style={{
-              backgroundColor: value === opt.value ? color : 'transparent',
-              color: value === opt.value ? '#fff' : textSec,
-              boxShadow: value === opt.value ? `0 2px 8px ${color}44` : 'none',
-            }}
-          >
-            {opt.icon && <opt.icon style={{ width: 13, height: 13 }} />}
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    );
-  }
-
   const isValid = nom.trim() && cotisation && maxMembres && dateDebut && categorie && duree !== '';
 
   const handleCreate = async () => {
@@ -119,7 +125,6 @@ export function CreerTontinePubliqueScreen() {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) throw new Error("Session introuvable. Reconnectez-vous.");
 
-      // 1. Insertion de la Tontine Publique avec contraintes de confiance
       const { data: newTontine, error: tontineError } = await supabase
         .from('tontines')
         .insert({
@@ -127,7 +132,7 @@ export function CreerTontinePubliqueScreen() {
           name: nom,
           description: description || null,
           contribution_amount: Number(cotisation),
-          frequency: frequence,
+          frequency: frequence === 'bihebdomadaire' ? 'biweekly' : (frequence === 'hebdomadaire' ? 'weekly' : 'monthly'), // Normalisation nomenclature DB
           max_members: Number(maxMembres),
           duration_months: Number(duree),
           start_date: dateDebut,
@@ -135,7 +140,7 @@ export function CreerTontinePubliqueScreen() {
           category: categorie,
           min_trust_score: Number(trustMin),
           type: 'publique',
-          status: 'en_attente',
+          status: 'pending', // Alignement strict contrainte check DB
           current_round: 0,
           total_rounds: Number(maxMembres)
         })
@@ -144,7 +149,6 @@ export function CreerTontinePubliqueScreen() {
 
       if (tontineError) throw tontineError;
 
-      // 2. Enregistrement automatique de l'admin
       const { error: memberError } = await supabase
         .from('tontine_members')
         .insert({
@@ -156,8 +160,8 @@ export function CreerTontinePubliqueScreen() {
 
       if (memberError) throw memberError;
 
-      toast.success('Tontine publique créée !');
-      navigate('/kauri/mes-tontines');
+      toast.success('Tontine publique créée avec succès !');
+      navigate('/kauri/tontines-actives');
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || 'Erreur Supabase');
@@ -173,7 +177,7 @@ export function CreerTontinePubliqueScreen() {
         className="px-5 pt-14 pb-6 shadow-xl"
         style={{ background: `linear-gradient(135deg, #B8860B 0%, ${GOLD} 100%)`, borderRadius: '0 0 28px 28px' }}
       >
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/80 hover:text-white mb-5 transition-colors">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/80 hover:text-white mb-5 transition-colors bg-transparent border-none cursor-pointer">
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm font-medium">Retour</span>
         </button>
@@ -182,7 +186,7 @@ export function CreerTontinePubliqueScreen() {
             <Globe className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="text-white/70 text-xs uppercase tracking-widest">Nouvelle tontine</p>
+            <p className="text-white/70 text-xs uppercase tracking-widest font-bold">Nouvelle tontine</p>
             <h1 className="text-white text-xl font-bold">Créer • Publique</h1>
           </div>
         </div>
@@ -193,11 +197,11 @@ export function CreerTontinePubliqueScreen() {
         <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: cardBg, border: `1.5px solid ${border}` }}>
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: GOLD }}>Informations générales</p>
 
-          <Field label="Nom de la tontine" icon={Globe}>
-            <Input value={nom} onChange={setNom} placeholder="Ex : Cercle Émeraude" />
+          <Field label="Nom de la tontine" icon={Globe} textSec={textSec}>
+            <Input value={nom} onChange={setNom} placeholder="Ex : Cercle Émeraude" inputBg={inputBg} border={border} textPrimary={textPrimary} />
           </Field>
 
-          <Field label="Description" icon={Globe}>
+          <Field label="Description" icon={Globe} textSec={textSec}>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
@@ -208,7 +212,7 @@ export function CreerTontinePubliqueScreen() {
             />
           </Field>
 
-          <Field label="Catégorie" icon={Tag}>
+          <Field label="Catégorie" icon={Tag} textSec={textSec}>
             <div className="grid grid-cols-3 gap-2">
               {CATEGORIES.map(cat => (
                 <button
@@ -235,21 +239,21 @@ export function CreerTontinePubliqueScreen() {
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: GOLD }}>Paramètres financiers</p>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Cotisation (€)" icon={Euro}>
-              <Input value={cotisation} onChange={setCotisation} placeholder="150" type="number" />
+            <Field label="Cotisation (€)" icon={Euro} textSec={textSec}>
+              <Input value={cotisation} onChange={setCotisation} placeholder="150" type="number" inputBg={inputBg} border={border} textPrimary={textPrimary} />
             </Field>
-            <Field label="Membres max" icon={Users}>
-              <Input value={maxMembres} onChange={setMaxMembres} placeholder="20" type="number" />
+            <Field label="Membres max" icon={Users} textSec={textSec}>
+              <Input value={maxMembres} onChange={setMaxMembres} placeholder="20" type="number" inputBg={inputBg} border={border} textPrimary={textPrimary} />
             </Field>
           </div>
 
-          <Field label="Durée de la tontine" icon={Calendar}>
+          <Field label="Durée de la tontine" icon={Calendar} textSec={textSec}>
             <div className="grid grid-cols-3 gap-2">
               {(['3', '6', '9', '12', '18', '24'] as Duree[]).map(d => (
                 <button
                   key={d}
                   onClick={() => setDuree(d)}
-                  className="py-2.5 rounded-xl text-xs font-semibold transition-all"
+                  className="py-2.5 rounded-xl text-xs font-semibold transition-all border-none cursor-pointer"
                   style={{
                     background: duree === d ? `linear-gradient(135deg, #B8860B, ${GOLD})` : inputBg,
                     color: duree === d ? '#fff' : textSec,
@@ -263,10 +267,10 @@ export function CreerTontinePubliqueScreen() {
             </div>
           </Field>
 
-          <Field label="Fréquence" icon={Calendar}>
+          <Field label="Fréquence" icon={Calendar} textSec={textSec}>
             <button
               onClick={() => setShowFrequence(v => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm"
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm border-none cursor-pointer"
               style={{ backgroundColor: inputBg, border: `1.5px solid ${border}`, color: textPrimary }}
             >
               <span>{FREQUENCES.find(f => f.value === frequence)?.label}</span>
@@ -278,7 +282,7 @@ export function CreerTontinePubliqueScreen() {
                   <button
                     key={f.value}
                     onClick={() => { setFrequence(f.value); setShowFrequence(false); }}
-                    className="w-full px-4 py-3 text-sm text-left"
+                    className="w-full px-4 py-3 text-sm text-left border-none cursor-pointer"
                     style={{
                       backgroundColor: frequence === f.value ? `${GOLD}14` : cardBg,
                       color: frequence === f.value ? GOLD : textPrimary,
@@ -292,8 +296,8 @@ export function CreerTontinePubliqueScreen() {
             )}
           </Field>
 
-          <Field label="Date de début" icon={Calendar}>
-            <Input value={dateDebut} onChange={setDateDebut} placeholder="" type="date" />
+          <Field label="Date de début" icon={Calendar} textSec={textSec}>
+            <Input value={dateDebut} onChange={setDateDebut} placeholder="" type="date" inputBg={inputBg} border={border} textPrimary={textPrimary} />
           </Field>
 
           {/* Pot estimé */}
@@ -317,19 +321,23 @@ export function CreerTontinePubliqueScreen() {
         <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: cardBg, border: `1.5px solid ${border}` }}>
           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: GOLD }}>Règles & critères d'adhésion</p>
 
-          <Field label="Ordre de passage" icon={Shuffle}>
-            <ToggleGroup
-              value={ordre}
-              onChange={setOrdre}
-              color={GOLD}
-              options={[
-                { value: 'aleatoire', label: 'Aléatoire', icon: Shuffle },
-                { value: 'fixe',      label: 'Fixe',      icon: Users   },
-              ]}
-            />
-          </Field>
+          <div className="w-full block">
+            <Field label="Ordre de passage" icon={Shuffle} textSec={textSec}>
+              <ToggleGroup
+                value={ordre}
+                onChange={setOrdre}
+                color={GOLD}
+                isDarkMode={isDarkMode}
+                textSec={textSec}
+                options={[
+                  { value: 'aleatoire', label: 'Aléatoire', icon: Shuffle },
+                  { value: 'fixe',      label: 'Fixe',      icon: Users   },
+                ]}
+              />
+            </Field>
+          </div>
 
-          <Field label="Trust Score minimum requis" icon={ShieldCheck}>
+          <Field label="Trust Score minimum requis" icon={ShieldCheck} textSec={textSec}>
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs" style={{ color: textSec }}>Score minimum</span>
@@ -354,7 +362,7 @@ export function CreerTontinePubliqueScreen() {
         <button
           disabled={!isValid || isSubmitting}
           onClick={handleCreate}
-          className="w-full py-4 rounded-2xl text-white text-sm font-bold shadow-lg transition-opacity flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full py-4 rounded-2xl text-white text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer border-none"
           style={{
             background: isValid ? `linear-gradient(135deg, #B8860B, ${GOLD})` : '#CBD5E1',
             boxShadow: isValid ? `0 4px 16px ${GOLD}44` : 'none',
@@ -363,7 +371,7 @@ export function CreerTontinePubliqueScreen() {
         >
           {isSubmitting ? (
             <>
-              <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white安全 animate-spin" />
+              <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
               Création…
             </>
           ) : 'Créer ma tontine publique'}
@@ -376,3 +384,5 @@ export function CreerTontinePubliqueScreen() {
     </div>
   );
 }
+
+export default CreerTontinePubliqueScreen;
