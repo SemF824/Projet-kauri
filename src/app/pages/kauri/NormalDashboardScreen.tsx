@@ -53,28 +53,36 @@ function KauriBottomNav({ active, isDarkMode, navigate }: { active: NavTab; isDa
 
           if (tab.isCenter) {
             return (
-              <button
-                key={tab.id}
-                onClick={() => tab.path && navigate(tab.path)}
-                aria-label="Kauri"
-                className="cursor-pointer"
-                style={{
-                  width: 56, height: 56, borderRadius: '50%',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 4px 16px rgba(212,175,55,0.50), 0 2px 8px rgba(0,0,0,0.18)',
-                  border: isActive ? '2.5px solid rgba(255,255,255,0.5)' : '2px solid rgba(255,255,255,0.2)',
-                  transform: isActive ? 'scale(1.08)' : 'scale(1)',
-                  transition: 'transform 0.15s ease',
-                  flexShrink: 0,
-                  marginBottom: 6,
-                  overflow: 'hidden',
-                  background: 'linear-gradient(135deg, #D4AF37, #F59E0B)',
-                }}
+              <div 
+                key={tab.id} 
+                className="flex flex-col items-center justify-end" 
+                style={{ minWidth: 44, paddingBottom: 2 }}
               >
-                <svg viewBox="0 0 100 100" style={{ width: 28, height: 28, color: '#fff', margin: 'auto' }}>
-                  <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
-                </svg>
-              </button>
+                <button
+                  onClick={() => tab.path && navigate(tab.path)}
+                  aria-label="Kauri"
+                  className="cursor-pointer border-none"
+                  style={{
+                    width: 56, height: 56, borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 16px rgba(212,175,55,0.50), 0 2px 8px rgba(0,0,0,0.18)',
+                    border: isActive ? '2.5px solid rgba(255,255,255,0.5)' : '2px solid rgba(255,255,255,0.2)',
+                    transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                    transition: 'transform 0.15s ease',
+                    flexShrink: 0,
+                    overflow: 'hidden',
+                    background: 'linear-gradient(135deg, #D4AF37, #F59E0B)',
+                  }}
+                >
+                  <svg viewBox="0 0 100 100" style={{ width: 28, height: 28, color: '#fff', margin: 'auto' }}>
+                    <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
+                  </svg>
+                </button>
+                {/* ── AJOUT DU SIGNE MÉTICULEUX "+" SOUS LE BOUTON LOGO CENTRAL ── */}
+                <span style={{ fontSize: 13, fontWeight: 900, color: isActive ? TEAL : inactive, transition: 'color 0.15s', marginTop: 3, lineHeight: 1 }}>
+                  +
+                </span>
+              </div>
             );
           }
 
@@ -112,14 +120,14 @@ export function NormalDashboardScreen() {
   const [tontinesCount, setTontinesCount] = useState<number | null>(null);
   const [investmentsCount, setInvestmentsCount] = useState<number | null>(null);
 
-  // ── ÉTAT POUR LE PORTEFEUILLE RWA DYNAMIQUE ──
+  // Équilibre financier agrégé RWA
   const [rwaTotalAmount, setRwaTotalAmount] = useState<number>(0);
 
-  // 1. Récupération stricte et sans concession du vrai Trust Score
+  // 1. Récupération stricte du Trust Score
   const rawScore = profile?.trust_score !== undefined ? profile.trust_score : (profile?.trustScore !== undefined ? profile.trustScore : 0);
   const trustScore = Math.round(Number(rawScore) || 0);
   
-  // 2. Calcul mathématique de l'ancienneté (Série) au lieu du 6 en dur
+  // 2. Calcul d'ancienneté du cycle
   const calculateStreak = () => {
     if (!profile?.created_at) return 0;
     const createdDate = new Date(profile.created_at);
@@ -129,12 +137,10 @@ export function NormalDashboardScreen() {
   };
   const paymentStreak = calculateStreak();
 
-  // 3. Attribution dynamique du grade
+  // 3. Statut de palier de conformité
   const userStatus = trustScore >= 85 ? 'Membre Émérite' : trustScore >= 40 ? 'Membre Actif' : 'Nouveau Membre';
   
   const firstName = profile?.firstName ?? profile?.first_name ?? 'Vous';
-  
-  // 💰 CALCULATEUR DE PATRIMOINE AGREGÉ (Liquide + Investissements)
   const availableLiquidity = Number(profile?.balance ?? 0);
   const totalCombinedWealth = availableLiquidity + rwaTotalAmount;
   
@@ -146,7 +152,6 @@ export function NormalDashboardScreen() {
     ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase() 
     : (profile?.first_name && profile?.last_name ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase() : 'KA');
 
-  // Géométrie SVG pour la jauge du score
   const circumference = 2 * Math.PI * 28;
   const strokeDashoffset = circumference - (trustScore / 100) * circumference;
 
@@ -168,7 +173,6 @@ export function NormalDashboardScreen() {
       try {
         const supabase = getSupabase();
         
-        // Récupération des Cercles Actifs
         const { count: tCount, error: tError } = await supabase
           .from('tontine_members')
           .select('tontine_id', { count: 'exact', head: true })
@@ -176,10 +180,9 @@ export function NormalDashboardScreen() {
 
         if (!tError && tCount !== null) setTontinesCount(tCount);
 
-        // Récupération des Investissements RWA et sommation
         const { data: iData, error: iError } = await supabase
           .from('rwa_investments')
-          .select('id, amount', { count: 'exact' }); // RLS sécurise la récupération par user_id automatiquement
+          .select('id, amount');
 
         if (!iError && iData) {
           setInvestmentsCount(iData.length);
@@ -290,7 +293,6 @@ export function NormalDashboardScreen() {
                 {balanceVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               </button>
             </div>
-            {/* 🎯 CORRECTION DE LA DISSONANCE : Utilisation de totalCombinedWealth au lieu du liquide seul */}
             <h1 className="text-white text-3xl mb-4 font-black tracking-tight">
               {balanceVisible ? `${totalCombinedWealth.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €` : '•••••'}
             </h1>
