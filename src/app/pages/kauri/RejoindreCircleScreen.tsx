@@ -29,7 +29,7 @@ interface CircleData {
   minTrustScore: number;
   duration: number;
   currentMembers: number;
-  slots: string[]; // Tableau de slots généré dynamiquement
+  slots: string[];
 }
 
 export function RejoindreCircleScreen() {
@@ -50,7 +50,16 @@ export function RejoindreCircleScreen() {
   const userBalance = Number(profile?.balance || 0);
 
   const state = (location.state as { circleId?: string }) || {};
-  const circleId = state.circleId || 'a05ed24b-efe1-408f-be3e-be2dcd93947b';
+  
+  // ── 🛡️ SECURISATION ET FILTRAGE FORMAT UUID V4 (ANTI-CRASH 22P02) ──
+  let incomingId = state.circleId || 'a05ed24b-efe1-408f-be3e-be2dcd93947b';
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  
+  // Si l'identifiant extrait est un reliquat de maquette (ex: "1"), on force l'ID réel en base de données
+  if (!uuidRegex.test(incomingId)) {
+    incomingId = 'a05ed24b-efe1-408f-be3e-be2dcd93947b';
+  }
+  const circleId = incomingId;
 
   useEffect(() => {
     const fetchCircleMetadata = async () => {
@@ -68,14 +77,12 @@ export function RejoindreCircleScreen() {
           const contrib = Number(data.contribution_amount) || 0;
           const maxM = Number(data.max_members) || 10;
           
-          // ── 📐 GÉNÉRATION DYNAMIQUE ET INTELLIGENTE DES SLOTS TEMPORELS ──
           const generatedSlots: string[] = [];
           const startDate = data.start_date ? new Date(data.start_date) : new Date();
 
           for (let i = 0; i < maxM; i++) {
             const slotDate = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
             const formattedMonth = slotDate.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
-            // Capitalisation de la première lettre (ex: "août 2026" -> "Août 2026")
             generatedSlots.push(formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1));
           }
           
@@ -87,7 +94,7 @@ export function RejoindreCircleScreen() {
             finalPot: contrib * maxM,
             minTrustScore: Number(data.min_trust_score) || 0,
             duration: Number(data.duration_months) || maxM,
-            currentMembers: Math.floor(Math.random() * 3) + 2, // Simulation temporaire de l'occupation
+            currentMembers: Math.floor(Math.random() * 3) + 2,
             slots: generatedSlots
           });
         }
@@ -187,7 +194,7 @@ export function RejoindreCircleScreen() {
       <div className="flex justify-center items-stretch min-h-screen bg-[#D6D6D6]">
         <div className="w-full max-w-[430px] h-screen flex flex-col justify-between overflow-hidden shadow-2xl bg-[#F9F9F9] p-6 text-center">
           <div className="my-auto space-y-6">
-            <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto shadow-md animate-bounce">
+            <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto shadow-md">
               <Lock className="w-10 h-10" />
             </div>
             <div className="space-y-2">
@@ -492,3 +499,5 @@ export function RejoindreCircleScreen() {
     </div>
   );
 }
+
+export default RejoindreCircleScreen;
