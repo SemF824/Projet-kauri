@@ -1,8 +1,8 @@
 import { ArrowLeft, Plus, Users, TrendingUp, Loader2, Calendar, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { getSupabase } from '../../../utils/supabase';
+import { useAuth } from '../contexts/AuthContext';
+import { getSupabase } from '../../utils/supabase';
 
 interface TontineItem {
   id: string;
@@ -40,7 +40,7 @@ export function TontineListPage() {
         // Transformation et mapping dynamique des données du catalogue
         const formatted: TontineItem[] = (data || []).map((t: any) => {
           const monthly = Number(t.contribution_amount) || 0;
-          const simulatedMembersCount = Math.floor(Math.random() * 4) + 3; // Fallback dynamique en attendant une table count d'agrégation globale
+          const simulatedMembersCount = Math.floor(Math.random() * 4) + 3; // Fallback dynamique en attendant un décompte réel
           const maxM = Number(t.max_members) || 10;
 
           return {
@@ -135,11 +135,11 @@ export function TontineListPage() {
               <div className="grid grid-cols-2 gap-4 mb-4 font-mono">
                 <div className="bg-[#F8FAFC] rounded-2xl p-3 border border-slate-100/50">
                   <p className="text-[10px] font-bold font-sans text-[#64748B] uppercase tracking-wider mb-1">Cotisation / mois</p>
-                  <p className="text-[#0F172A] text-sm font-black">{tontine.monthlyAmount. someCurrency !== undefined ? tontine.monthlyAmount : `${tontine.monthlyAmount},00 €`}</p>
+                  <p className="text-[#0F172A] text-sm font-black">{`${tontine.monthlyAmount},00 €`}</p>
                 </div>
                 <div className="bg-[#F8FAFC] rounded-2xl p-3 border border-slate-100/50">
                   <p className="text-[10px] font-bold font-sans text-[#64748B] uppercase tracking-wider mb-1">Valeur du Pot</p>
-                  <p className="text-[#0D9488] text-sm font-black">{tontine.potValue.someCurrency !== undefined ? tontine.potValue : `${tontine.potValue},00 €`}</p>
+                  <p className="text-[#0D9488] text-sm font-black">{`${tontine.potValue},00 €`}</p>
                 </div>
               </div>
 
