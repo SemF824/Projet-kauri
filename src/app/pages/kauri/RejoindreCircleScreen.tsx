@@ -20,11 +20,6 @@ import { toast } from 'sonner';
 const TEAL = '#006D77';
 const GOLD = '#D4AF37';
 
-const MONTH_SLOTS = [
-  'Août 2026', 'Sept 2026', 'Oct 2026', 'Nov 2026', 'Déc 2026',
-  'Jan 2027', 'Fév 2027', 'Mars 2027', 'Avr 2027', 'Mai 2027',
-];
-
 interface CircleData {
   id: string;
   name: string;
@@ -34,6 +29,7 @@ interface CircleData {
   minTrustScore: number;
   duration: number;
   currentMembers: number;
+  slots: string[]; // Tableau de slots généré dynamiquement
 }
 
 export function RejoindreCircleScreen() {
@@ -41,7 +37,6 @@ export function RejoindreCircleScreen() {
   const location = useLocation();
   const { profile, user } = useAuth();
 
-  // États de chargement et de synchronisation d'infrastructure
   const [circle, setCircle] = useState<CircleData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -51,12 +46,10 @@ export function RejoindreCircleScreen() {
   const [step, setStep] = useState<1 | 2>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Extraction et sécurisation numérique du score client
   const userTrustScore = Math.round(Number(profile?.trust_score ?? profile?.trustScore) || 0);
   const userBalance = Number(profile?.balance || 0);
 
   const state = (location.state as { circleId?: string }) || {};
-  // Récupération de l'ID passé en paramètre de navigation
   const circleId = state.circleId || 'a05ed24b-efe1-408f-be3e-be2dcd93947b';
 
   useEffect(() => {
@@ -65,7 +58,7 @@ export function RejoindreCircleScreen() {
         const supabase = getSupabase();
         const { data, error } = await supabase
           .from('tontines')
-          .select('id, name, contribution_amount, max_members, min_trust_score, duration_months')
+          .select('id, name, contribution_amount, max_members, min_trust_score, duration_months, start_date')
           .eq('id', circleId)
           .single();
 
@@ -75,6 +68,17 @@ export function RejoindreCircleScreen() {
           const contrib = Number(data.contribution_amount) || 0;
           const maxM = Number(data.max_members) || 10;
           
+          // ── 📐 GÉNÉRATION DYNAMIQUE ET INTELLIGENTE DES SLOTS TEMPORELS ──
+          const generatedSlots: string[] = [];
+          const startDate = data.start_date ? new Date(data.start_date) : new Date();
+
+          for (let i = 0; i < maxM; i++) {
+            const slotDate = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
+            const formattedMonth = slotDate.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+            // Capitalisation de la première lettre (ex: "août 2026" -> "Août 2026")
+            generatedSlots.push(formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1));
+          }
+          
           setCircle({
             id: data.id,
             name: data.name,
@@ -83,7 +87,8 @@ export function RejoindreCircleScreen() {
             finalPot: contrib * maxM,
             minTrustScore: Number(data.min_trust_score) || 0,
             duration: Number(data.duration_months) || maxM,
-            currentMembers: Math.floor(Math.random() * 3) + 2 // Simulation temporaire de l'occupation des slots
+            currentMembers: Math.floor(Math.random() * 3) + 2, // Simulation temporaire de l'occupation
+            slots: generatedSlots
           });
         }
       } catch (err) {
@@ -122,7 +127,6 @@ export function RejoindreCircleScreen() {
     );
   }
 
-  // 🛡️ CRITÈRE STRICT : Barrière mathématique de conformité du Trust Score
   const hasAccess = userTrustScore >= circle.minTrustScore;
   const isElite = circle.minTrustScore >= 85;
   const accentColor = isElite ? GOLD : TEAL;
@@ -142,7 +146,6 @@ export function RejoindreCircleScreen() {
     try {
       const supabase = getSupabase();
       
-      // Inscription immuable dans la table des membres
       const { error } = await supabase
         .from('tontine_members')
         .insert({
@@ -179,7 +182,6 @@ export function RejoindreCircleScreen() {
     }
   }
 
-  // ─── RENDU DE LA BARRIÈRE DE SÉCURITÉ SI LE TRUST SCORE EST INSUFFISANT ───
   if (!hasAccess) {
     return (
       <div className="flex justify-center items-stretch min-h-screen bg-[#D6D6D6]">
@@ -288,7 +290,7 @@ export function RejoindreCircleScreen() {
                   Choisissez le mois d'attribution de la cagnotte. L'ordre de versement est assigné de façon immuable lors du ralliement.
                 </p>
                 <div className="grid grid-cols-2 gap-2 font-mono">
-                  {MONTH_SLOTS.map((month, i) => {
+                  {circle.slots.map((month, i) => {
                     const isTaken = i < circle.currentMembers;
                     const isSelected = selectedSlot === month;
                     return (
@@ -428,7 +430,7 @@ export function RejoindreCircleScreen() {
                   {agreedToRules && <CheckCircle2 className="w-3 h-3 text-white" />}
                 </div>
                 <p className="text-xs text-[#64748B] leading-relaxed font-medium">
-                  J'accepte les règles immuables du cercle, les conditions d'utilisation KAURI et je m'engage juridiquement à honorer mes appels de fonds sous peine de dégradation immédiate de mon Trust Score.
+                  J'accepte les règles immuables du cercle, les conditions d'utilisation KAURI et je m'engage juridiquement à honorer mes cotisations mensuelles sur toute la durée du contrat.
                 </p>
               </button>
             </div>
