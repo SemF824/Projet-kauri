@@ -1,6 +1,6 @@
 import { ArrowLeft, Users, TrendingUp, Calendar, ChevronRight, Lock, Globe, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useDarkMode } from '../../contexts/DarkModeContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -14,7 +14,7 @@ interface Tontine {
   status: 'active' | 'your-turn' | 'waiting';
 }
 
-// 🎯 COMPOSANT INTELLIGENT : Il réagit dynamiquement au Trust Score
+// 🎯 COMPOSANT INTELLIGENT : Il réagit dynamiquement au Trust Score (Strictement numérique)
 function SmartPubliqueButton({ trustScore, navigate }: { trustScore: number, navigate: any }) {
   const [showTooltip, setShowTooltip] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -23,7 +23,7 @@ function SmartPubliqueButton({ trustScore, navigate }: { trustScore: number, nav
 
   const handlePress = () => {
     if (isUnlocked) {
-      // Redirection vers la page de création d'une tontine publique (à créer si elle n'existe pas)
+      // Redirection vers la page de création d'une tontine publique
       navigate('/kauri/creer-tontine-publique');
     } else {
       setShowTooltip(true);
@@ -92,12 +92,13 @@ function SmartPubliqueButton({ trustScore, navigate }: { trustScore: number, nav
 export function TontinesActivesScreen() {
   const navigate = useNavigate();
   const { isDarkMode } = useDarkMode();
-  const { profile } = useAuth(); // Récupération du profil Supabase
+  const { profile } = useAuth();
   
-  // Lecture stricte du score depuis la base de données
-  const trustScore = profile?.trust_score ?? 0;
+  // 🛡️ BLINDAGE DES DONNÉES : Extraction robuste, tolérance au camelCase/snake_case, et conversion String -> Number
+  const rawScore = profile?.trust_score ?? profile?.trustScore ?? 0;
+  const trustScore = Math.round(Number(rawScore) || 0);
 
-  // Données factices pour l'affichage (à remplacer plus tard par Supabase fetch)
+  // Données factices pour l'affichage (à remplacer par ton fetch Supabase)
   const [tontines] = useState<Tontine[]>([
     {
       id: '1',
@@ -284,7 +285,7 @@ export function TontinesActivesScreen() {
               <span className="text-sm">+ Privée</span>
             </button>
 
-            {/* + Publique — Câblé au vrai profil Supabase */}
+            {/* + Publique — Câblé au vrai profil Supabase et casté en Numérique */}
             <SmartPubliqueButton trustScore={trustScore} navigate={navigate} />
           </div>
         </div>
