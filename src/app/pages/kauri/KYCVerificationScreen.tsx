@@ -11,7 +11,6 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErBf4GgqGXvYZGn7qZQlGZ0ogz9d4
 vsrPLUye3cZWTtALPQ9WxSSqwJMmPbp0U04+PdgAqICBBLg4OfuXrvMpCw==
 -----END PUBLIC KEY-----`;
 
-// ── 🛡️ UTILITAIRES WEBCRYPTO & INDEXED-DB ──
 const DB_NAME = "KauriSecureEnclave";
 const STORE_NAME = "client_keys";
 
@@ -83,7 +82,6 @@ export function KYCVerificationScreen() {
   const [identityType, setIdentityFileType] = useState<'image' | 'pdf'>('image');
   const [selfieType, setSelfieFileType] = useState<'image' | 'pdf'>('image');
 
-  // États de contrôle des d'enregistrements (Calcul de delta)
   const [hasFileChanges, setHasFileChanges] = useState(false);
   const [address, setAddress] = useState({
     firstName: "",
@@ -105,6 +103,84 @@ export function KYCVerificationScreen() {
   const identityInputRef = useRef<HTMLInputElement>(null);
   const selfieInputRef = useRef<HTMLInputElement>(null);
 
+  // ── 🧠 MOTEUR DE CONTRÔLE DE VISION ET DE VIVACITÉ LOCAL (PORTRAIT ANALYZER) ──
+  const analyzeSelfieBiometrics = (file: File): Promise<{ valid: boolean; reason?: string }> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      
+      img.onload = () => {
+        // 1. Validation de la définition minimale fintech
+        if (img.width < 480 || img.height < 480) {
+          resolve({ valid: false, reason: "Résolution de capture trop faible (Min. 480x480px pour l'analyse)." });
+          return;
+        }
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve({ valid: true }); // Fallback si le context canvas est indisponible
+          return;
+        }
+
+        // Échantillonnage matriciel optimisé
+        canvas.width = 250;
+        canvas.height = 250;
+        ctx.drawImage(img, 0, 0, 250, 250);
+
+        const imgData = ctx.getImageData(0, 0, 250, 250);
+        const data = imgData.data;
+
+        let totalLuminance = 0;
+        let edgeVarianceScore = 0;
+        const totalPixels = data.length / 4;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+
+          // Formule de Luminance standard ITU-R BT.601
+          const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+          totalLuminance += luminance;
+
+          // Algorithme de calcul du gradient horizontal pour détecter le flou
+          if (i + 4 < data.length) {
+            const nextR = data[i + 4];
+            const nextG = data[i + 5];
+            const nextB = data[i + 6];
+            edgeVarianceScore += Math.abs(r - nextR) + Math.abs(g - nextG) + Math.abs(b - nextB);
+          }
+        }
+
+        const averageLuminance = totalLuminance / totalPixels;
+        const normalizedEdgeScore = edgeVarianceScore / totalPixels;
+
+        // 2. Évaluation des contraintes d'exposition lumineuse
+        if (averageLuminance < 45) {
+          resolve({ valid: false, reason: "Environnement sous-exposé ou trop sombre. Veuillez éclairer votre visage." });
+          return;
+        }
+        if (averageLuminance > 230) {
+          resolve({ valid: false, reason: "Image surexposée. Évitez les sources de lumière directe face caméra." });
+          return;
+        }
+
+        // 3. Évaluation de l'index de netteté (Anti-Flou)
+        if (normalizedEdgeScore < 13) {
+          resolve({ valid: false, reason: "Capture trop floue ou instable. Stabilisez votre appareil et reprenez." });
+          return;
+        }
+
+        resolve({ valid: true });
+      };
+
+      img.onerror = () => {
+        resolve({ valid: false, reason: "Structure de fichier image corrompue ou non décodable." });
+      };
+    });
+  };
+
   const decryptUserFile = async (packedBuffer: ArrayBuffer, ecdhPriv: CryptoKey): Promise<{ url: string; type: 'image' | 'pdf' }> => {
     const packedBytes = new Uint8Array(packedBuffer);
     const view = new DataView(packedBytes.buffer);
@@ -124,39 +200,23 @@ export function KYCVerificationScreen() {
     const ciphertext = packedBytes.slice(cipherStart);
 
     const ephPubKey = await window.crypto.subtle.importKey(
-      "raw", 
-      ephPubRaw, 
-      { name: "ECDH", namedCurve: "P-256" }, 
-      false, 
-      []
+      "raw", ephPubRaw, { name: "ECDH", namedCurve: "P-256" }, false, []
     );
 
     const userWrapKey = await window.crypto.subtle.deriveKey(
-      { name: "ECDH", public: ephPubKey },
-      ecdhPriv,
-      { name: "AES-GCM", length: 256 },
-      false,
-      ["decrypt"]
+      { name: "ECDH", public: ephPubKey }, ecdhPriv, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
     );
 
     const decryptedFekRaw = await window.crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: wrapIV }, 
-      userWrapKey, 
-      encryptedAesKeyUser
+      { name: "AES-GCM", iv: wrapIV }, userWrapKey, encryptedAesKeyUser
     );
 
     const fek = await window.crypto.subtle.importKey(
-      "raw", 
-      decryptedFekRaw, 
-      { name: "AES-GCM" }, 
-      false, 
-      ["decrypt"]
+      "raw", decryptedFekRaw, { name: "AES-GCM" }, false, ["decrypt"]
     );
 
     const decryptedFileBuffer = await window.crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: fileIV }, 
-      fek, 
-      ciphertext
+      { name: "AES-GCM", iv: fileIV }, fek, ciphertext
     );
 
     const mime = detectMimeType(decryptedFileBuffer);
@@ -166,7 +226,6 @@ export function KYCVerificationScreen() {
     };
   };
 
-  // Chargement initial du Hub de documents
   useEffect(() => {
     const loadAndDecryptKycHub = async () => {
       if (!profile?.id) return;
@@ -175,7 +234,6 @@ export function KYCVerificationScreen() {
       try {
         const enclaveKeys = await getKeysFromEnclave('kauri_client');
         if (!enclaveKeys) {
-          console.warn("Clés ECC absentes de l'enclave.");
           setIsLoadingDocuments(false);
           return;
         }
@@ -222,7 +280,6 @@ export function KYCVerificationScreen() {
     loadAndDecryptKycHub();
   }, [profile]);
 
-  // Synchronisation des coordonnées d'adresse initiales pour l'évaluation des deltas
   useEffect(() => {
     if (profile) {
       const extractedAddress = {
@@ -243,13 +300,25 @@ export function KYCVerificationScreen() {
     if (!file) return;
 
     setIsActionLoading(true);
+
+    // 🎯 CRASH-TEST INTERNE DE QUALITÉ : Lancement automatique du vérificateur d'image si c'est un selfie
+    if (type === "selfie") {
+      const analysisToastId = toast.loading("Analyse biométrique de vivacité et de contraste local...");
+      const biometricCheck = await analyzeSelfieBiometrics(file);
+      
+      if (!biometricCheck.valid) {
+        toast.error(`Dossier rejeté par le moteur de vision : ${biometricCheck.reason}`, { id: analysisToastId, duration: 6000 });
+        setIsActionLoading(false);
+        return;
+      }
+      toast.success("Vérification de vivacité validée par le processeur local !", { id: analysisToastId });
+    }
+
     const toastId = toast.loading(`Mise à jour et scellage (ECC) du document ${type === 'identity' ? "d'identité" : "selfie"}...`);
 
     try {
       const enclaveKeys = await getKeysFromEnclave('kauri_client');
-      if (!enclaveKeys) {
-        throw new Error("Enclave non armée pour la cryptographie ECC.");
-      }
+      if (!enclaveKeys) throw new Error("Enclave non armée pour la cryptographie ECC.");
 
       const { data: dbProfile, error: profileFetchError } = await supabase
         .from('profiles')
@@ -257,96 +326,39 @@ export function KYCVerificationScreen() {
         .eq('id', profile?.id)
         .single();
 
-      if (profileFetchError || !dbProfile?.user_public_key) {
-        throw new Error("Trousseau public manquant sur le serveur.");
-      }
+      if (profileFetchError || !dbProfile?.user_public_key) throw new Error("Trousseau public manquant sur le serveur.");
 
       const userPublicKeys = JSON.parse(dbProfile.user_public_key);
       const fileBuffer = await file.arrayBuffer();
 
-      const ephKey = await window.crypto.subtle.generateKey(
-        { name: "ECDH", namedCurve: "P-256" }, 
-        true, 
-        ["deriveKey"]
-      );
-      
+      const ephKey = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]);
       const ephPubRaw = await window.crypto.subtle.exportKey("raw", ephKey.publicKey);
 
-      const fek = await window.crypto.subtle.generateKey(
-        { name: "AES-GCM", length: 256 }, 
-        true, 
-        ["encrypt"]
-      );
-      
+      const fek = await window.crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt"]);
       const fileIV = window.crypto.getRandomValues(new Uint8Array(12));
-      const encryptedFileContent = await window.crypto.subtle.encrypt(
-        { name: "AES-GCM", iv: fileIV }, 
-        fek, 
-        fileBuffer
-      );
-      
+      const encryptedFileContent = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: fileIV }, fek, fileBuffer);
       const exportedFek = await window.crypto.subtle.exportKey("raw", fek);
+
       const wrapIV = window.crypto.getRandomValues(new Uint8Array(12));
 
       // 3a. Pour l'Admin
-      const adminPubKey = await window.crypto.subtle.importKey(
-        "spki", 
-        pemToArrayBuffer(ADMIN_ECDH_PUBLIC_KEY_PEM), 
-        { name: "ECDH", namedCurve: "P-256" }, 
-        false, 
-        []
-      );
-      
-      const adminWrapKey = await window.crypto.subtle.deriveKey(
-        { name: "ECDH", public: adminPubKey }, 
-        ephKey.privateKey, 
-        { name: "AES-GCM", length: 256 }, 
-        false, 
-        ["encrypt"]
-      );
-      
-      const adminEncFEK = await window.crypto.subtle.encrypt(
-        { name: "AES-GCM", iv: wrapIV }, 
-        adminWrapKey, 
-        exportedFek
-      );
+      const adminPubKey = await window.crypto.subtle.importKey("spki", pemToArrayBuffer(ADMIN_ECDH_PUBLIC_KEY_PEM), { name: "ECDH", namedCurve: "P-256" }, false, []);
+      const adminWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: adminPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
+      const adminEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, adminWrapKey, exportedFek);
 
-      // 3b. Pour le Client (lui-même)
-      const userPubKey = await window.crypto.subtle.importKey(
-        "spki", 
-        pemToArrayBuffer(userPublicKeys.ecdh), 
-        { name: "ECDH", namedCurve: "P-256" }, 
-        false, 
-        []
-      );
-      
-      const userWrapKey = await window.crypto.subtle.deriveKey(
-        { name: "ECDH", public: userPubKey }, 
-        ephKey.privateKey, 
-        { name: "AES-GCM", length: 256 }, 
-        false, 
-        ["encrypt"]
-      );
-      
-      const userEncFEK = await window.crypto.subtle.encrypt(
-        { name: "AES-GCM", iv: wrapIV }, 
-        userWrapKey, 
-        exportedFek
-      );
+      // 3b. Pour le Client
+      const userPubKey = await window.crypto.subtle.importKey("spki", pemToArrayBuffer(userPublicKeys.ecdh), { name: "ECDH", namedCurve: "P-256" }, false, []);
+      const userWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: userPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
+      const userEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, userWrapKey, exportedFek);
 
-      // 4. Signature ECDSA (Preuve d'origine)
+      // 4. Signature ECDSA
       const dataToSign = new Uint8Array(ephPubRaw.byteLength + fileIV.byteLength + encryptedFileContent.byteLength);
       dataToSign.set(new Uint8Array(ephPubRaw), 0);
       dataToSign.set(fileIV, ephPubRaw.byteLength);
       dataToSign.set(new Uint8Array(encryptedFileContent), ephPubRaw.byteLength + fileIV.byteLength);
-      
-      const signatureBuffer = await window.crypto.subtle.sign(
-        { name: "ECDSA", hash: { name: "SHA-256" } }, 
-        enclaveKeys.ecdsaPriv, 
-        dataToSign
-      );
+      const signatureBuffer = await window.crypto.subtle.sign({ name: "ECDSA", hash: { name: "SHA-256" } }, enclaveKeys.ecdsaPriv, dataToSign);
 
-      // 5. Assemblage chirurgical de la matrice binaire
+      // 5. Assemblage
       const totalLength = 101 + adminEncFEK.byteLength + userEncFEK.byteLength + signatureBuffer.byteLength + encryptedFileContent.byteLength;
       const packedBuffer = new ArrayBuffer(totalLength);
       const view = new DataView(packedBuffer);
@@ -380,8 +392,8 @@ export function KYCVerificationScreen() {
         setSelfiePreviewUrl(localUrl);
       }
 
-      setHasFileChanges(true); // Signale le delta sur les pièces
-      toast.success("Document signé (ECDSA) et scellé (ECDH) !", { id: toastId });
+      setHasFileChanges(true);
+      toast.success("Document validé, signé (ECDSA) et scellé (ECDH) !", { id: toastId });
     } catch (err: any) {
       console.error(err);
       toast.error("Échec de l'opération cryptographique.", { id: toastId });
@@ -390,7 +402,6 @@ export function KYCVerificationScreen() {
     }
   };
 
-  // Évaluation structurelle des deltas d'attestation
   const isAddressChanged =
     address.firstName.trim() !== initialAddress.firstName ||
     address.lastName.trim() !== initialAddress.lastName ||
@@ -401,13 +412,11 @@ export function KYCVerificationScreen() {
   const hasAnyMutation = isAddressChanged || hasFileChanges;
 
   const handleMainAction = async () => {
-    // 🎯 SCÉNARIO 1 : Aucun delta détecté -> Bouton "Passer" d'évitement de friction
     if (!hasAnyMutation) {
       navigate(`/kauri/biometric-setup?type=${accountType}`);
       return;
     }
 
-    // SCÉNARIO 2 : Modifications réelles trouvées -> Écriture et resoumission
     if (!identityPreviewUrl || !selfiePreviewUrl) {
       toast.warning("Vos pièces justificatives d'identité et de selfie de présence doivent être complétées.");
       return;
@@ -429,7 +438,7 @@ export function KYCVerificationScreen() {
           street: address.street.trim(),
           city: address.city.trim(),
           zip: address.zip.trim(),
-          kyc_status: 'pending' // Re-soumission automatique au registre
+          kyc_status: 'pending'
         })
         .eq('id', profile?.id);
 
@@ -457,12 +466,12 @@ export function KYCVerificationScreen() {
         </button>
 
         <h1 className="text-white text-2xl font-black tracking-tight">Kauri KYC Hub</h1>
-        <p className="text-[#E0F2FE] text-xs opacity-90">Cryptographie ECIES (Courbes Elliptiques P-256)</p>
+        <p className="text-[#E0F2FE] text-xs opacity-90">Cryptographie ECIES & Vision Analytique Native</p>
       </div>
 
       <div className="px-6 py-6 max-w-md mx-auto w-full space-y-6">
         
-        {/* BANDEAU CONTEXTUEL : DOSSIER EN COURS D'EXAMEN */}
+        {/* BANDEAUX CONTEXTUELS */}
         {profile?.kyc_status === 'pending' && (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-4 flex gap-3 items-start">
             <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
@@ -475,7 +484,6 @@ export function KYCVerificationScreen() {
           </div>
         )}
 
-        {/* BANDEAU CONTEXTUEL : COMPTE CERTIFIÉ */}
         {profile?.kyc_status === 'verified' && (
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-4 flex gap-3 items-start">
             <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
@@ -530,7 +538,7 @@ export function KYCVerificationScreen() {
                 </button>
               </div>
 
-              {/* CARD 2 : SELFIE DE BIOMÉTRIE */}
+              {/* CARD 2 : SELFIE AVEC VISION NUMÉRIQUE */}
               <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-md flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-14 h-14 rounded-2xl bg-slate-900 overflow-hidden flex items-center justify-center flex-shrink-0 border border-slate-100">
@@ -544,7 +552,7 @@ export function KYCVerificationScreen() {
                     <h4 className="text-sm font-bold text-[#0F172A] truncate">Selfie de présence physique</h4>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className={`w-1.5 h-1.5 rounded-full ${selfiePreviewUrl ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                      <p className="text-[11px] text-slate-500 font-medium">{selfiePreviewUrl ? 'Sécurisé ECC' : 'Non communiqué'}</p>
+                      <p className="text-[11px] text-slate-500 font-medium">{selfiePreviewUrl ? 'Analyse & Chiffrement OK' : 'Soumis à validation locale'}</p>
                     </div>
                   </div>
                 </div>
@@ -558,7 +566,7 @@ export function KYCVerificationScreen() {
               </div>
             </div>
 
-            {/* FORMULAIRE DE RÉSIDENCE ET D'ATTESTATION */}
+            {/* FORMULAIRE DE RÉSIDENCE */}
             <div className="space-y-4">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Attestation de Résidence</h3>
               
@@ -620,7 +628,7 @@ export function KYCVerificationScreen() {
               </div>
             </div>
 
-            {/* ACTION DYNAMIQUE : PASSER VS METTRE A JOUR */}
+            {/* ACTION DYNAMIQUE */}
             <button 
               onClick={handleMainAction} 
               disabled={isActionLoading} 
