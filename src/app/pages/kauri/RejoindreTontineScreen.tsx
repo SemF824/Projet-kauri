@@ -249,14 +249,15 @@ export function RejoindreTontineScreen() {
 
   const trustScore = Math.round(Number(profile?.trust_score ?? profile?.trustScore) || 0);
 
-  useEffect(() => {
+useEffect(() => {
     const fetchGlobalTontinesCatalogue = async () => {
       try {
         const supabase = getSupabase();
+        // Modification ici : on sélectionne "type" et on filtre sur 'publique'
         const { data, error } = await supabase
           .from('tontines')
-          .select('id, name, contribution_amount, frequency, start_date, max_members, description, min_trust_score, is_public')
-          .eq('is_public', true)
+          .select('id, name, contribution_amount, frequency, start_date, max_members, description, min_trust_score, type')
+          .eq('type', 'publique')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -271,6 +272,11 @@ export function RejoindreTontineScreen() {
           const maxM = Number(t.max_members) || 12;
           const currentMembersCount = Math.floor(Math.random() * 4) + 4;
 
+          // Traduction de la fréquence pour l'affichage UI français
+          let displayFrequency: 'Mensuelle' | 'Bimensuelle' | 'Hebdomadaire' = 'Mensuelle';
+          if (t.frequency === 'weekly') displayFrequency = 'Hebdomadaire';
+          if (t.frequency === 'biweekly') displayFrequency = 'Bimensuelle';
+
           return {
             id: t.id,
             name: t.name,
@@ -281,12 +287,12 @@ export function RejoindreTontineScreen() {
             members: Math.min(currentMembersCount, maxM),
             maxMembers: maxM,
             contribution: Number(t.contribution_amount) || 0,
-            frequency: t.frequency || 'Mensuelle',
+            frequency: displayFrequency,
             duration: 12,
             nextStart: new Date(t.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
             category: deducedCategory,
             categoryColor: CATEGORY_UI_CONFIG[deducedCategory]?.color || '#006D77',
-            isPrivate: !t.is_public,
+            isPrivate: t.type === 'privee',
             spotsLeft: Math.max(0, maxM - currentMembersCount),
             featured: t.min_trust_score >= 80,
             minTrustScore: Number(t.min_trust_score) || 0
