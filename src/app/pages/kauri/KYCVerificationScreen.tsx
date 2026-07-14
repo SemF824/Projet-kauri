@@ -1,4 +1,4 @@
-import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, AlertCircle, X, Focus } from "lucide-react";
+import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, AlertCircle, X, Focus, RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -103,29 +103,36 @@ export function KYCVerificationScreen() {
 
   const identityInputRef = useRef<HTMLInputElement>(null);
 
-  // ── 🎥 ÉTATS ET CONTRÔLE DU LIVENESS CHECK (CAMÉRA EN DIRECT) ──
+  // ── 🎥 ÉTATS DU LIVENESS CHECK SÉQUENTIEL ──
   const [showCamera, setShowCamera] = useState(false);
+  const [livenessState, setLivenessState] = useState<'idle' | 'center' | 'turn' | 'processing'>('idle');
   const videoRef = useRef<HTMLVideoElement>(null);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
   const startCamera = async () => {
     try {
+      // Forçage de l'aspect ratio Portrait (9:16) pour éviter le zoom/crop massif
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 } } 
+        video: { 
+          facingMode: "user", 
+          width: { ideal: 1080 }, 
+          height: { ideal: 1920 },
+          aspectRatio: { ideal: 0.5625 } 
+        } 
       });
       setMediaStream(stream);
-      setShowCamera(true); // Déclenche le rendu conditionnel de la modale
+      setShowCamera(true);
+      setLivenessState('idle');
     } catch (err) {
       console.error("Camera access denied or failed:", err);
       toast.error("Impossible d'accéder à la caméra. Vérifiez les permissions de votre navigateur.");
     }
   };
 
-  // Synchronisation stricte : On attache le flux uniquement quand la balise vidéo est prête
   useEffect(() => {
     if (showCamera && videoRef.current && mediaStream) {
       videoRef.current.srcObject = mediaStream;
-      videoRef.current.play().catch(e => console.error("Erreur de lecture vidéo:", e));
+      videoRef.current.play().catch(e => console.error("Erreur vidéo:", e));
     }
   }, [showCamera, mediaStream]);
 
@@ -135,9 +142,9 @@ export function KYCVerificationScreen() {
     }
     setMediaStream(null);
     setShowCamera(false);
+    setLivenessState('idle');
   };
 
-  // Nettoyage de sécurité en cas de démontage brutal
   useEffect(() => {
     return () => {
       if (mediaStream) {
@@ -146,45 +153,77 @@ export function KYCVerificationScreen() {
     };
   }, [mediaStream]);
 
-  const captureSelfieAndProcess = () => {
+  // ── 🧠 MOTEUR ANTI-SPOOFING (OPTICAL FLOW) ──
+  const captureLivenessSequence = async () => {
     if (!videoRef.current) return;
+    const video = videoRef.current;
     
     const canvas = document.createElement("canvas");
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    
-    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-    
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const file = new File([blob], "selfie_liveness.jpg", { type: "image/jpeg" });
+
+    try {
+      // 1. Capture de la frame centrale (Le Selfie réel)
+      setLivenessState('center');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const frame1Data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const faceBlob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/jpeg', 0.95));
+
+      // 2. Capture de la frame de mouvement
+      setLivenessState('turn');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const frame2Data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      setLivenessState('processing');
+
+      // 3. Calcul de la variance des pixels (Optical Flow basique)
+      let diff = 0;
+      const len = frame1Data.data.length;
+      for (let i = 0; i < len; i += 4) {
+        diff += Math.abs(frame1Data.data[i] - frame2Data.data[i]);       // R
+        diff += Math.abs(frame1Data.data[i + 1] - frame2Data.data[i + 1]); // G
+        diff += Math.abs(frame1Data.data[i + 2] - frame2Data.data[i + 2]); // B
+      }
+      
+      const avgDiff = diff / (len / 4);
+
+      // Si avgDiff est très bas (< 12), c'est une image imprimée statique.
+      if (avgDiff < 12) {
+        toast.error("Échec de la preuve de vie. Mouvement insuffisant ou photo statique détectée.");
+        setLivenessState('idle');
+        return;
+      }
+
+      if (faceBlob) {
+        const file = new File([faceBlob], "selfie_liveness.jpg", { type: "image/jpeg" });
         stopCamera();
         handleUploadAndEncrypt("selfie", file);
       }
-    }, "image/jpeg", 0.95);
+    } catch (e) {
+      toast.error("Erreur lors de la séquence biométrique.");
+      setLivenessState('idle');
+    }
   };
 
-  // ── 🧠 MOTEUR DE CONTRÔLE DE VISION ET DE VIVACITÉ LOCAL (PORTRAIT ANALYZER) ──
+  // ── 🧠 MOTEUR DE CONTRÔLE DE NETTETÉ ET LUMINANCE (Seuils Ajustés) ──
   const analyzeSelfieBiometrics = (file: File): Promise<{ valid: boolean; reason?: string }> => {
     return new Promise((resolve) => {
       const img = new Image();
       img.src = URL.createObjectURL(file);
       
       img.onload = () => {
-        // Seuil ajusté à 320px pour englober toutes les caméras frontales
-        if (img.width < 320 || img.height < 320) {
+        if (img.width < 250 || img.height < 250) {
           resolve({ valid: false, reason: "Résolution de capture trop faible." });
           return;
         }
 
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          resolve({ valid: true }); 
-          return;
-        }
+        if (!ctx) { resolve({ valid: true }); return; }
 
         canvas.width = 250;
         canvas.height = 250;
@@ -216,23 +255,23 @@ export function KYCVerificationScreen() {
         const averageLuminance = totalLuminance / totalPixels;
         const normalizedEdgeScore = edgeVarianceScore / totalPixels;
 
-        if (averageLuminance < 45) {
+        if (averageLuminance < 35) {
           resolve({ valid: false, reason: "Environnement sous-exposé ou trop sombre. Veuillez éclairer votre visage." });
           return;
         }
-        if (averageLuminance > 230) {
+        if (averageLuminance > 240) {
           resolve({ valid: false, reason: "Image surexposée. Évitez les sources de lumière directe face caméra." });
           return;
         }
-        if (normalizedEdgeScore < 13) {
-          resolve({ valid: false, reason: "Capture trop floue ou instable. Stabilisez votre appareil et reprenez." });
+        // Seuil abaissé à 8 pour tolérer le bruit natif des caméras frontales mobiles
+        if (normalizedEdgeScore < 8) {
+          resolve({ valid: false, reason: "Capture trop floue ou instable. Stabilisez votre appareil." });
           return;
         }
 
         resolve({ valid: true });
       };
-
-      img.onerror = () => resolve({ valid: false, reason: "Structure de fichier image corrompue." });
+      img.onerror = () => resolve({ valid: false, reason: "Structure de fichier corrompue." });
     });
   };
 
@@ -254,25 +293,11 @@ export function KYCVerificationScreen() {
     const cipherStart = 101 + adminFekLen + userFekLen + sigLen;
     const ciphertext = packedBytes.slice(cipherStart);
 
-    const ephPubKey = await window.crypto.subtle.importKey(
-      "raw", ephPubRaw, { name: "ECDH", namedCurve: "P-256" }, false, []
-    );
-
-    const userWrapKey = await window.crypto.subtle.deriveKey(
-      { name: "ECDH", public: ephPubKey }, ecdhPriv, { name: "AES-GCM", length: 256 }, false, ["decrypt"]
-    );
-
-    const decryptedFekRaw = await window.crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: wrapIV }, userWrapKey, encryptedAesKeyUser
-    );
-
-    const fek = await window.crypto.subtle.importKey(
-      "raw", decryptedFekRaw, { name: "AES-GCM" }, false, ["decrypt"]
-    );
-
-    const decryptedFileBuffer = await window.crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: fileIV }, fek, ciphertext
-    );
+    const ephPubKey = await window.crypto.subtle.importKey("raw", ephPubRaw, { name: "ECDH", namedCurve: "P-256" }, false, []);
+    const userWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: ephPubKey }, ecdhPriv, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    const decryptedFekRaw = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: wrapIV }, userWrapKey, encryptedAesKeyUser);
+    const fek = await window.crypto.subtle.importKey("raw", decryptedFekRaw, { name: "AES-GCM" }, false, ["decrypt"]);
+    const decryptedFileBuffer = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: fileIV }, fek, ciphertext);
 
     const mime = detectMimeType(decryptedFileBuffer);
     return {
@@ -351,7 +376,7 @@ export function KYCVerificationScreen() {
     setIsActionLoading(true);
 
     if (type === "selfie") {
-      const analysisToastId = toast.loading("Analyse biométrique de vivacité et de netteté locale...");
+      const analysisToastId = toast.loading("Contrôle biométrique des paramètres d'image...");
       const biometricCheck = await analyzeSelfieBiometrics(file);
       
       if (!biometricCheck.valid) {
@@ -359,7 +384,7 @@ export function KYCVerificationScreen() {
         setIsActionLoading(false);
         return;
       }
-      toast.success("Vivacité certifiée par le moteur de vision local !", { id: analysisToastId });
+      toast.success("Validation optique réussie !", { id: analysisToastId });
     }
 
     const toastId = toast.loading(`Scellage asymétrique (ECC P-256) du document...`);
@@ -368,12 +393,7 @@ export function KYCVerificationScreen() {
       const enclaveKeys = await getKeysFromEnclave('kauri_client');
       if (!enclaveKeys) throw new Error("Enclave non armée pour la cryptographie ECC.");
 
-      const { data: dbProfile, error: profileFetchError } = await supabase
-        .from('profiles')
-        .select('user_public_key')
-        .eq('id', profile?.id)
-        .single();
-
+      const { data: dbProfile, error: profileFetchError } = await supabase.from('profiles').select('user_public_key').eq('id', profile?.id).single();
       if (profileFetchError || !dbProfile?.user_public_key) throw new Error("Trousseau public manquant sur le serveur.");
 
       const userPublicKeys = JSON.parse(dbProfile.user_public_key);
@@ -386,7 +406,6 @@ export function KYCVerificationScreen() {
       const fileIV = window.crypto.getRandomValues(new Uint8Array(12));
       const encryptedFileContent = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: fileIV }, fek, fileBuffer);
       const exportedFek = await window.crypto.subtle.exportKey("raw", fek);
-
       const wrapIV = window.crypto.getRandomValues(new Uint8Array(12));
 
       // Admin
@@ -399,7 +418,7 @@ export function KYCVerificationScreen() {
       const userWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: userPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
       const userEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, userWrapKey, exportedFek);
 
-      // Signature ECDSA
+      // Signature
       const dataToSign = new Uint8Array(ephPubRaw.byteLength + fileIV.byteLength + encryptedFileContent.byteLength);
       dataToSign.set(new Uint8Array(ephPubRaw), 0);
       dataToSign.set(fileIV, ephPubRaw.byteLength);
@@ -424,10 +443,7 @@ export function KYCVerificationScreen() {
       packedBytes.set(new Uint8Array(signatureBuffer), offset); offset += signatureBuffer.byteLength;
       packedBytes.set(new Uint8Array(encryptedFileContent), offset);
 
-      const { error: uploadError } = await supabase.storage
-        .from('secure-kyc')
-        .upload(`${profile?.id}/${type}.enc`, new Blob([packedBytes], { type: "application/octet-stream" }), { cacheControl: '3600', upsert: true });
-
+      const { error: uploadError } = await supabase.storage.from('secure-kyc').upload(`${profile?.id}/${type}.enc`, new Blob([packedBytes], { type: "application/octet-stream" }), { cacheControl: '3600', upsert: true });
       if (uploadError) throw uploadError;
 
       const localUrl = URL.createObjectURL(file);
@@ -477,17 +493,14 @@ export function KYCVerificationScreen() {
     const toastId = toast.loading("Actualisation globale de votre dossier de conformité...");
     
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
+      const { error } = await supabase.from('profiles').update({
           first_name: address.firstName.trim(),
           last_name: address.lastName.trim(),
           street: address.street.trim(),
           city: address.city.trim(),
           zip: address.zip.trim(),
           kyc_status: 'pending'
-        })
-        .eq('id', profile?.id);
+        }).eq('id', profile?.id);
 
       if (error) throw error;
       await refreshProfile();
@@ -502,7 +515,6 @@ export function KYCVerificationScreen() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-24 font-sans select-none">
-      {/* L'input natif n'est conservé que pour la pièce d'identité */}
       <input 
         type="file" 
         ref={identityInputRef} 
@@ -511,7 +523,6 @@ export function KYCVerificationScreen() {
         className="hidden" 
       />
 
-      {/* BANDEAU SUPÉRIEUR */}
       <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
         <button onClick={() => navigate(-1)} className="mb-4 text-white flex items-center gap-2 bg-transparent border-none cursor-pointer opacity-90 hover:opacity-100 transition-all">
           <ArrowLeft className="w-5 h-5" />
@@ -530,7 +541,7 @@ export function KYCVerificationScreen() {
             <div>
               <h4 className="text-xs font-bold text-amber-600">Dossier en cours d'analyse</h4>
               <p className="text-[11px] text-amber-700/80 font-medium leading-normal mt-0.5">
-                Vos pièces sont en cours d'analyse par le registre central. Vous pouvez modifier vos informations ou simplement poursuivre votre progression.
+                Vos pièces sont en cours d'analyse par le registre central.
               </p>
             </div>
           </div>
@@ -542,7 +553,7 @@ export function KYCVerificationScreen() {
             <div>
               <h4 className="text-xs font-bold text-emerald-600">Identité Certifiée</h4>
               <p className="text-[11px] text-emerald-700/80 font-medium leading-normal mt-0.5">
-                Votre compte possède le statut vérifié de conformité. Vos justificatifs matériels sont validés.
+                Votre compte possède le statut vérifié de conformité.
               </p>
             </div>
           </div>
@@ -555,7 +566,6 @@ export function KYCVerificationScreen() {
           </div>
         ) : (
           <>
-            {/* HUB DES PIÈCES SÉCURISÉES */}
             <div className="space-y-4">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Justificatifs Matériels</h3>
 
@@ -626,55 +636,25 @@ export function KYCVerificationScreen() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Prénom légal</label>
-                    <input 
-                      type="text" 
-                      value={address.firstName} 
-                      onChange={(e) => setAddress({ ...address, firstName: e.target.value })} 
-                      placeholder="Marie" 
-                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
-                    />
+                    <input type="text" value={address.firstName} onChange={(e) => setAddress({ ...address, firstName: e.target.value })} placeholder="Marie" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
                   </div>
                   <div>
                     <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Nom de famille</label>
-                    <input 
-                      type="text" 
-                      value={address.lastName} 
-                      onChange={(e) => setAddress({ ...address, lastName: e.target.value })} 
-                      placeholder="Dupont" 
-                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
-                    />
+                    <input type="text" value={address.lastName} onChange={(e) => setAddress({ ...address, lastName: e.target.value })} placeholder="Dupont" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
                   </div>
                 </div>
                 <div>
                   <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Numéro et libellé de voie</label>
-                  <input 
-                    type="text" 
-                    value={address.street} 
-                    onChange={(e) => setAddress({ ...address, street: e.target.value })} 
-                    placeholder="1 Rue de la Solidarité" 
-                    className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
-                  />
+                  <input type="text" value={address.street} onChange={(e) => setAddress({ ...address, street: e.target.value })} placeholder="1 Rue de la Solidarité" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Code postal</label>
-                    <input 
-                      type="text" 
-                      value={address.zip} 
-                      onChange={(e) => setAddress({ ...address, zip: e.target.value })} 
-                      placeholder="75001" 
-                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
-                    />
+                    <input type="text" value={address.zip} onChange={(e) => setAddress({ ...address, zip: e.target.value })} placeholder="75001" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
                   </div>
                   <div>
                     <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Ville de résidence</label>
-                    <input 
-                      type="text" 
-                      value={address.city} 
-                      onChange={(e) => setAddress({ ...address, city: e.target.value })} 
-                      placeholder="Paris" 
-                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
-                    />
+                    <input type="text" value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} placeholder="Paris" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
                   </div>
                 </div>
               </div>
@@ -683,11 +663,7 @@ export function KYCVerificationScreen() {
             <button 
               onClick={handleMainAction} 
               disabled={isActionLoading} 
-              className={`w-full py-4 rounded-2xl mt-4 shadow-lg font-bold text-sm tracking-wide transition-all active:scale-[0.99] border-none cursor-pointer flex items-center justify-center gap-2 ${
-                hasAnyMutation 
-                  ? "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20" 
-                  : "bg-slate-800 hover:bg-slate-900 text-white shadow-slate-900/10"
-              }`}
+              className={`w-full py-4 rounded-2xl mt-4 shadow-lg font-bold text-sm tracking-wide transition-all active:scale-[0.99] border-none cursor-pointer flex items-center justify-center gap-2 ${hasAnyMutation ? "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20" : "bg-slate-800 hover:bg-slate-900 text-white shadow-slate-900/10"}`}
             >
               {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               <span>{hasAnyMutation ? "Appliquer les modifications et re-soumettre" : "Passer / Étape suivante"}</span>
@@ -697,19 +673,19 @@ export function KYCVerificationScreen() {
 
       </div>
 
-      {/* 🎥 MODALE DE CAPTURE CAMÉRA SÉCURISÉE (MASQUE CSS) */}
+      {/* 🎥 MODALE DE LIVENESS CHECK SEQUENCE */}
       {showCamera && (
         <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col">
           
-          {/* Header */}
           <div className="px-6 py-6 flex items-center justify-between z-20 absolute top-0 w-full">
             <button onClick={stopCamera} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur flex items-center justify-center border-none cursor-pointer text-white">
               <X className="w-5 h-5" />
             </button>
-            <span className="text-white text-xs font-bold uppercase tracking-widest bg-black/40 px-4 py-1.5 rounded-full backdrop-blur">Liveness Check</span>
+            <span className="text-white text-xs font-bold uppercase tracking-widest bg-black/40 px-4 py-1.5 rounded-full backdrop-blur">
+              Liveness Check
+            </span>
           </div>
 
-          {/* Wrapper principal avec overflow-hidden pour contraindre l'ombre infinie */}
           <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-slate-900 z-0">
             <video 
               ref={videoRef} 
@@ -719,30 +695,51 @@ export function KYCVerificationScreen() {
               autoPlay
             />
             
-            {/* L'astuce CSS : Ovale parfait avec une ombre infinie pour créer le masque sombre autour */}
             <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-10 overflow-hidden">
-              <div className="w-[260px] h-[360px] sm:w-[300px] sm:h-[400px] rounded-[50%] border-2 border-dashed border-[#D4AF37] shadow-[0_0_0_9999px_rgba(15,23,42,0.85)] relative">
+              {/* Ovale de cadrage fixe pour éviter les déformations SVG */}
+              <div className={`w-[260px] h-[360px] sm:w-[300px] sm:h-[400px] rounded-[50%] border-2 border-dashed ${livenessState === 'processing' ? 'border-emerald-500' : 'border-[#D4AF37]'} shadow-[0_0_0_9999px_rgba(15,23,42,0.85)] relative transition-colors duration-300`}>
                 
-                {/* Le texte est fixé relativement au masque pour ne jamais mordre sur la ligne, peu importe l'écran */}
-                <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-screen px-8 text-center">
-                  <p className="text-white font-medium text-sm drop-shadow-md">
-                    Placez votre visage au centre de l'ovale dans un environnement bien éclairé.
-                  </p>
+                <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-screen px-8 text-center flex flex-col items-center">
+                  {livenessState === 'idle' && (
+                    <p className="text-white font-medium text-sm drop-shadow-md">Placez votre visage au centre de l'ovale dans un environnement clair.</p>
+                  )}
+                  {livenessState === 'center' && (
+                    <div className="bg-black/60 backdrop-blur-md px-6 py-3 rounded-xl border border-white/20 animate-pulse">
+                      <p className="text-white font-bold text-sm">Étape 1 : Regardez fixement l'objectif...</p>
+                    </div>
+                  )}
+                  {livenessState === 'turn' && (
+                    <div className="bg-[#D4AF37]/20 backdrop-blur-md px-6 py-3 rounded-xl border border-[#D4AF37]/50 animate-pulse">
+                      <p className="text-[#D4AF37] font-bold text-sm">Étape 2 : Tournez légèrement la tête...</p>
+                    </div>
+                  )}
+                  {livenessState === 'processing' && (
+                    <div className="bg-emerald-500/20 backdrop-blur-md px-6 py-3 rounded-xl border border-emerald-500/50 flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 text-emerald-400 animate-spin" />
+                      <p className="text-emerald-400 font-bold text-sm">Analyse biométrique en cours...</p>
+                    </div>
+                  )}
                 </div>
 
               </div>
             </div>
           </div>
 
-          {/* Déclencheur (Placé au-dessus du masque) */}
           <div className="bg-slate-950 pb-12 pt-8 flex items-center justify-center z-20 shadow-[0_-10px_20px_rgba(15,23,42,1)]">
             <button 
-              onClick={captureSelfieAndProcess}
-              className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center p-1 cursor-pointer bg-transparent transition-transform active:scale-90"
+              onClick={captureLivenessSequence}
+              disabled={livenessState !== 'idle'}
+              className="px-8 py-4 rounded-full border border-white/20 flex items-center justify-center gap-2 cursor-pointer bg-white text-slate-900 transition-transform active:scale-95 disabled:opacity-50 font-bold text-sm shadow-xl"
             >
-              <div className="w-full h-full bg-white rounded-full flex items-center justify-center text-slate-900">
-                <Focus className="w-8 h-8 opacity-80" />
-              </div>
+              {livenessState === 'idle' ? (
+                <>
+                  <Focus className="w-5 h-5" /> Démarrer l'analyse
+                </>
+              ) : (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" /> Veuillez patienter...
+                </>
+              )}
             </button>
           </div>
         </div>
