@@ -94,6 +94,12 @@ function JoinSheet({ tontine, onClose, onConfirm, isDarkMode }: JoinSheetProps) 
     }
   };
 
+  // 📐 FORMULE FINANCIÈRE FINTECH RÉPARÉE :
+  // Le pot unitaire reçu par le gagnant du tour = contribution * nombre max de participants
+  const potUnitaire = tontine.contribution * tontine.maxMembers;
+  // La cagnotte globale brassée par le smart contract sur tout le cycle = potUnitaire * nombre total de tours (égal à maxMembers)
+  const cagnotteGlobaleDuCycle = potUnitaire * tontine.maxMembers;
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(3px)' }} />
@@ -123,10 +129,10 @@ function JoinSheet({ tontine, onClose, onConfirm, isDarkMode }: JoinSheetProps) 
           <div style={{ background: isDarkMode ? '#0F172A' : '#F8FAFC', borderRadius: 14, padding: '14px 16px', marginBottom: 14, border: `1px solid ${border}` }}>
             {[
               { label: 'Contribution', value: `${tontine.contribution} € / ${tontine.frequency.toLowerCase()}` },
-              { label: 'Durée', value: `${tontine.duration} mois` },
-              { label: 'Cagnotte totale', value: `${(tontine.contribution * tontine.maxMembers * tontine.duration).toLocaleString('fr-FR')} €` },
-              { label: 'Tu recevras', value: `${(tontine.contribution * tontine.maxMembers).toLocaleString('fr-FR')} €`, highlight: true },
-              { label: 'Membres', value: `${tontine.members} / ${tontine.maxMembers}` },
+              { label: 'Durée du cycle', value: `${tontine.duration} mois` },
+              { label: 'Cagnotte totale du cycle', value: `${cagnotteGlobaleDuCycle.toLocaleString('fr-FR')} €` },
+              { label: 'Tu recevras à ton tour', value: `${potUnitaire.toLocaleString('fr-FR')} €`, highlight: true },
+              { label: 'Membres inscrits', value: `${tontine.members} / ${tontine.maxMembers}` },
               { label: 'Prochain départ', value: tontine.nextStart },
             ].map((row: any, i, arr) => (
               <div key={row.label} style={{
@@ -255,7 +261,7 @@ export function RejoindreTontineScreen() {
         const supabase = getSupabase();
         const { data, error } = await supabase
           .from('tontines')
-          .select('id, name, contribution_amount, frequency, start_date, max_members, description, min_trust_score, type')
+          .select('id, name, contribution_amount, frequency, start_date, max_members, description, min_trust_score, type, duration_months')
           .eq('type', 'publique')
           .order('created_at', { ascending: false });
 
@@ -286,7 +292,7 @@ export function RejoindreTontineScreen() {
             maxMembers: maxM,
             contribution: Number(t.contribution_amount) || 0,
             frequency: displayFrequency,
-            duration: 12,
+            duration: Number(t.duration_months) || maxM, // Aligné sur la colonne duration_months de ta db
             nextStart: new Date(t.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
             category: deducedCategory,
             categoryColor: CATEGORY_UI_CONFIG[deducedCategory]?.color || '#006D77',
