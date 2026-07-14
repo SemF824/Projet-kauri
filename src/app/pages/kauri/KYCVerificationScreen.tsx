@@ -83,7 +83,6 @@ export function KYCVerificationScreen() {
   const [identityType, setIdentityFileType] = useState<'image' | 'pdf'>('image');
   const [selfieType, setSelfieFileType] = useState<'image' | 'pdf'>('image');
 
-  // États de contrôle des modifications (Deltas)
   const [hasFileChanges, setHasFileChanges] = useState(false);
   const [address, setAddress] = useState({
     firstName: "",
@@ -104,7 +103,7 @@ export function KYCVerificationScreen() {
 
   const identityInputRef = useRef<HTMLInputElement>(null);
 
-  // ── 🎥 ÉTATS DU LIVENESS CHECK (CAMÉRA EN DIRECT) ──
+  // ── 🎥 ÉTATS ET CONTRÔLE DU LIVENESS CHECK (CAMÉRA EN DIRECT) ──
   const [showCamera, setShowCamera] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
@@ -112,19 +111,23 @@ export function KYCVerificationScreen() {
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } 
+        video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 } } 
       });
       setMediaStream(stream);
-      setShowCamera(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
+      setShowCamera(true); // Déclenche le rendu conditionnel de la modale
     } catch (err) {
       console.error("Camera access denied or failed:", err);
       toast.error("Impossible d'accéder à la caméra. Vérifiez les permissions de votre navigateur.");
     }
   };
+
+  // Synchronisation stricte : On attache le flux uniquement quand la balise vidéo est prête
+  useEffect(() => {
+    if (showCamera && videoRef.current && mediaStream) {
+      videoRef.current.srcObject = mediaStream;
+      videoRef.current.play().catch(e => console.error("Erreur de lecture vidéo:", e));
+    }
+  }, [showCamera, mediaStream]);
 
   const stopCamera = () => {
     if (mediaStream) {
@@ -133,6 +136,15 @@ export function KYCVerificationScreen() {
     setMediaStream(null);
     setShowCamera(false);
   };
+
+  // Nettoyage de sécurité en cas de démontage brutal
+  useEffect(() => {
+    return () => {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [mediaStream]);
 
   const captureSelfieAndProcess = () => {
     if (!videoRef.current) return;
@@ -143,10 +155,8 @@ export function KYCVerificationScreen() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     
-    // Capture de la trame vidéo
     ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
     
-    // Conversion en Blob puis en Fichier
     canvas.toBlob((blob) => {
       if (blob) {
         const file = new File([blob], "selfie_liveness.jpg", { type: "image/jpeg" });
@@ -156,15 +166,6 @@ export function KYCVerificationScreen() {
     }, "image/jpeg", 0.95);
   };
 
-  // Nettoyage de la caméra en cas de démontage du composant
-  useEffect(() => {
-    return () => {
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [mediaStream]);
-
   // ── 🧠 MOTEUR DE CONTRÔLE DE VISION ET DE VIVACITÉ LOCAL (PORTRAIT ANALYZER) ──
   const analyzeSelfieBiometrics = (file: File): Promise<{ valid: boolean; reason?: string }> => {
     return new Promise((resolve) => {
@@ -172,7 +173,8 @@ export function KYCVerificationScreen() {
       img.src = URL.createObjectURL(file);
       
       img.onload = () => {
-        if (img.width < 480 || img.height < 480) {
+        // Seuil ajusté à 320px pour englober toutes les caméras frontales
+        if (img.width < 320 || img.height < 320) {
           resolve({ valid: false, reason: "Résolution de capture trop faible." });
           return;
         }
@@ -200,11 +202,9 @@ export function KYCVerificationScreen() {
           const g = data[i + 1];
           const b = data[i + 2];
 
-          // ITU-R BT.601
           const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
           totalLuminance += luminance;
 
-          // Sobel/Gradient
           if (i + 4 < data.length) {
             const nextR = data[i + 4];
             const nextG = data[i + 5];
@@ -344,7 +344,6 @@ export function KYCVerificationScreen() {
     }
   }, [profile]);
 
-  // Modifié pour accepter directement un File (depuis l'input OU depuis la capture caméra)
   const handleUploadAndEncrypt = async (type: "identity" | "selfie", fileFromParam?: File) => {
     const file = fileFromParam;
     if (!file) return;
@@ -390,24 +389,23 @@ export function KYCVerificationScreen() {
 
       const wrapIV = window.crypto.getRandomValues(new Uint8Array(12));
 
-      // 3a. Admin
+      // Admin
       const adminPubKey = await window.crypto.subtle.importKey("spki", pemToArrayBuffer(ADMIN_ECDH_PUBLIC_KEY_PEM), { name: "ECDH", namedCurve: "P-256" }, false, []);
       const adminWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: adminPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
       const adminEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, adminWrapKey, exportedFek);
 
-      // 3b. Client
+      // Client
       const userPubKey = await window.crypto.subtle.importKey("spki", pemToArrayBuffer(userPublicKeys.ecdh), { name: "ECDH", namedCurve: "P-256" }, false, []);
       const userWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: userPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
       const userEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, userWrapKey, exportedFek);
 
-      // 4. Signature
+      // Signature ECDSA
       const dataToSign = new Uint8Array(ephPubRaw.byteLength + fileIV.byteLength + encryptedFileContent.byteLength);
       dataToSign.set(new Uint8Array(ephPubRaw), 0);
       dataToSign.set(fileIV, ephPubRaw.byteLength);
       dataToSign.set(new Uint8Array(encryptedFileContent), ephPubRaw.byteLength + fileIV.byteLength);
       const signatureBuffer = await window.crypto.subtle.sign({ name: "ECDSA", hash: { name: "SHA-256" } }, enclaveKeys.ecdsaPriv, dataToSign);
 
-      // 5. Packaging
       const totalLength = 101 + adminEncFEK.byteLength + userEncFEK.byteLength + signatureBuffer.byteLength + encryptedFileContent.byteLength;
       const packedBuffer = new ArrayBuffer(totalLength);
       const view = new DataView(packedBuffer);
@@ -526,7 +524,6 @@ export function KYCVerificationScreen() {
 
       <div className="px-6 py-6 max-w-md mx-auto w-full space-y-6">
         
-        {/* BANDEAUX CONTEXTUELS */}
         {profile?.kyc_status === 'pending' && (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-4 flex gap-3 items-start">
             <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
@@ -593,7 +590,7 @@ export function KYCVerificationScreen() {
                 </button>
               </div>
 
-              {/* CARD 2 : LIVENESS CHECK (CAMERA NATIVE) */}
+              {/* CARD 2 : LIVENESS CHECK */}
               <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-md flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-14 h-14 rounded-2xl bg-slate-900 overflow-hidden flex items-center justify-center flex-shrink-0 border border-slate-100">
@@ -683,7 +680,6 @@ export function KYCVerificationScreen() {
               </div>
             </div>
 
-            {/* ACTION DYNAMIQUE */}
             <button 
               onClick={handleMainAction} 
               disabled={isActionLoading} 
@@ -701,19 +697,20 @@ export function KYCVerificationScreen() {
 
       </div>
 
-      {/* 🎥 MODALE DE CAPTURE CAMÉRA (LIVENESS CHECK) */}
+      {/* 🎥 MODALE DE CAPTURE CAMÉRA SÉCURISÉE (MASQUE CSS) */}
       {showCamera && (
         <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col">
-          {/* Header de la caméra */}
-          <div className="px-6 py-6 flex items-center justify-between z-10 absolute top-0 w-full">
+          
+          {/* Header */}
+          <div className="px-6 py-6 flex items-center justify-between z-20 absolute top-0 w-full">
             <button onClick={stopCamera} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur flex items-center justify-center border-none cursor-pointer text-white">
               <X className="w-5 h-5" />
             </button>
             <span className="text-white text-xs font-bold uppercase tracking-widest bg-black/40 px-4 py-1.5 rounded-full backdrop-blur">Liveness Check</span>
           </div>
 
-          {/* Flux Vidéo et Masque SVG */}
-          <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black">
+          {/* Wrapper principal avec overflow-hidden pour contraindre l'ombre infinie */}
+          <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-slate-900 z-0">
             <video 
               ref={videoRef} 
               className="absolute inset-0 w-full h-full object-cover"
@@ -722,25 +719,23 @@ export function KYCVerificationScreen() {
               autoPlay
             />
             
-            {/* Le masque d'alignement de visage (Dark overlay avec trou ovale transparent) */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
-              <defs>
-                <mask id="face-hole">
-                  <rect width="100%" height="100%" fill="white" />
-                  <ellipse cx="50%" cy="45%" rx="30%" ry="25%" fill="black" />
-                </mask>
-              </defs>
-              <rect width="100%" height="100%" fill="rgba(15, 23, 42, 0.85)" mask="url(#face-hole)" />
-              <ellipse cx="50%" cy="45%" rx="30%" ry="25%" fill="none" stroke="#D4AF37" strokeWidth="2" strokeDasharray="6 6" />
-            </svg>
+            {/* L'astuce CSS : Ovale parfait avec une ombre infinie pour créer le masque sombre autour */}
+            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center z-10 overflow-hidden">
+              <div className="w-[260px] h-[360px] sm:w-[300px] sm:h-[400px] rounded-[50%] border-2 border-dashed border-[#D4AF37] shadow-[0_0_0_9999px_rgba(15,23,42,0.85)] relative">
+                
+                {/* Le texte est fixé relativement au masque pour ne jamais mordre sur la ligne, peu importe l'écran */}
+                <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-screen px-8 text-center">
+                  <p className="text-white font-medium text-sm drop-shadow-md">
+                    Placez votre visage au centre de l'ovale dans un environnement bien éclairé.
+                  </p>
+                </div>
 
-            <div className="absolute top-[20%] text-center px-8 text-white/90 font-medium text-sm drop-shadow-md">
-              Placez votre visage au centre de l'ovale dans un environnement bien éclairé.
+              </div>
             </div>
           </div>
 
-          {/* Bouton de capture */}
-          <div className="bg-slate-950 pb-12 pt-8 flex items-center justify-center z-10">
+          {/* Déclencheur (Placé au-dessus du masque) */}
+          <div className="bg-slate-950 pb-12 pt-8 flex items-center justify-center z-20 shadow-[0_-10px_20px_rgba(15,23,42,1)]">
             <button 
               onClick={captureSelfieAndProcess}
               className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center p-1 cursor-pointer bg-transparent transition-transform active:scale-90"
