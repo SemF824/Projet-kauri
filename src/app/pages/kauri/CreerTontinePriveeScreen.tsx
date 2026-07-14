@@ -26,6 +26,116 @@ type OrdrePassage = "aleatoire" | "fixe";
 type ModeInvitation = "lien" | "qr" | "les_deux";
 type Duree = "3" | "6" | "9" | "12" | "18" | "24";
 
+// ── COMPOSANTS EXTRAITS DE LA CLOSURE POUR CONSERVER LE FOCUS ──
+
+function Field({
+  label,
+  icon: Icon,
+  textSecondary,
+  children,
+}: {
+  label: string;
+  icon: any;
+  textSecondary: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label
+        className="flex items-center gap-1.5 text-xs font-semibold mb-2"
+        style={{ color: textSecondary }}
+      >
+        <Icon style={{ width: 13, height: 13 }} />
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function Input({
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  inputBg,
+  border,
+  textPrimary,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  type?: string;
+  inputBg: string;
+  border: string;
+  textPrimary: string;
+}) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors"
+      style={{
+        backgroundColor: inputBg,
+        border: `1.5px solid ${border}`,
+        color: textPrimary,
+      }}
+    />
+  );
+}
+
+function ToggleGroup<T extends string>({
+  options,
+  value,
+  onChange,
+  color,
+  isDarkMode,
+  textSecondary,
+}: {
+  options: { value: T; label: string; icon?: any }[];
+  value: T;
+  onChange: (v: T) => void;
+  color: string;
+  isDarkMode: boolean;
+  textSecondary: string;
+}) {
+  return (
+    <div
+      className="flex rounded-xl p-1"
+      style={{
+        backgroundColor: isDarkMode ? "#0F172A" : "#F1F5F9",
+      }}
+    >
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition-all border-none cursor-pointer"
+          style={{
+            backgroundColor:
+              value === opt.value ? color : "transparent",
+            color:
+              value === opt.value ? "#fff" : textSecondary,
+            boxShadow:
+              value === opt.value
+                ? `0 2px 8px ${color}44`
+                : "none",
+          }}
+        >
+          {opt.icon && (
+            <opt.icon style={{ width: 13, height: 13 }} />
+          )}
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── COMPOSANT PRINCIPAL ──
+
 export function CreerTontinePriveeScreen() {
   const navigate = useNavigate();
   const { isDarkMode } = useDarkMode();
@@ -35,17 +145,15 @@ export function CreerTontinePriveeScreen() {
   const [cotisation, setCotisation] = useState("");
   const [maxMembres, setMaxMembres] = useState("");
   const [dateDebut, setDateDebut] = useState("");
-  const [frequence, setFrequence] =
-    useState<Frequence>("mensuelle");
+  const [frequence, setFrequence] = useState<Frequence>("mensuelle");
   const [ordre, setOrdre] = useState<OrdrePassage>("aleatoire");
-  const [invitation, setInvitation] =
-    useState<ModeInvitation>("lien");
+  const [invitation, setInvitation] = useState<ModeInvitation>("lien");
   const [duree, setDuree] = useState<Duree | "">("");
   const [showFrequence, setShowFrequence] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const bg = isDarkMode ? "#0F172A" : "#F8FAFC";
-  const cardBg = isDarkMode ? "#1E293B" : "#ffffff";
+  const cardBg = isDarkMode ? '#1E293B' : '#ffffff';
   const border = isDarkMode ? "#334155" : "#E8EDF2";
   const textPrimary = isDarkMode ? "#ffffff" : "#0F172A";
   const textSecondary = "#94A3B8";
@@ -64,100 +172,6 @@ export function CreerTontinePriveeScreen() {
         parseInt(duree)
       : null;
 
-  function Field({
-    label,
-    icon: Icon,
-    children,
-  }: {
-    label: string;
-    icon: any;
-    children: React.ReactNode;
-  }) {
-    return (
-      <div>
-        <label
-          className="flex items-center gap-1.5 text-xs font-semibold mb-2"
-          style={{ color: textSecondary }}
-        >
-          <Icon style={{ width: 13, height: 13 }} />
-          {label}
-        </label>
-        {children}
-      </div>
-    );
-  }
-
-  function Input({
-    value,
-    onChange,
-    placeholder,
-    type = "text",
-  }: {
-    value: string;
-    onChange: (v: string) => void;
-    placeholder: string;
-    type?: string;
-  }) {
-    return (
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors"
-        style={{
-          backgroundColor: inputBg,
-          border: `1.5px solid ${border}`,
-          color: textPrimary,
-        }}
-      />
-    );
-  }
-
-  function ToggleGroup<T extends string>({
-    options,
-    value,
-    onChange,
-    color,
-  }: {
-    options: { value: T; label: string; icon?: any }[];
-    value: T;
-    onChange: (v: T) => void;
-    color: string;
-  }) {
-    return (
-      <div
-        className="flex rounded-xl p-1"
-        style={{
-          backgroundColor: isDarkMode ? "#0F172A" : "#F1F5F9",
-        }}
-      >
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition-all"
-            style={{
-              backgroundColor:
-                value === opt.value ? color : "transparent",
-              color:
-                value === opt.value ? "#fff" : textSecondary,
-              boxShadow:
-                value === opt.value
-                  ? `0 2px 8px ${color}44`
-                  : "none",
-            }}
-          >
-            {opt.icon && (
-              <opt.icon style={{ width: 13, height: 13 }} />
-            )}
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    );
-  }
-
   const isValid =
     nom.trim() &&
     cotisation &&
@@ -172,7 +186,6 @@ export function CreerTontinePriveeScreen() {
     try {
       const supabase = getSupabase();
 
-      // Obtention sécurisée de l'utilisateur connecté
       const {
         data: { user },
         error: authError,
@@ -180,7 +193,6 @@ export function CreerTontinePriveeScreen() {
       if (authError || !user)
         throw new Error("Session expirée ou introuvable.");
 
-      // 1. Insertion de la Tontine dans PostgreSQL
       const { data: newTontine, error: tontineError } =
         await supabase
           .from("tontines")
@@ -196,7 +208,7 @@ export function CreerTontinePriveeScreen() {
             order_type: ordre,
             invitation_mode: invitation,
             type: "privee",
-            status: "en_attente",
+            status: "pending", // Sync strict avec les contraintes check de ton schéma PG
             current_round: 0,
             total_rounds: Number(maxMembres),
           })
@@ -205,7 +217,6 @@ export function CreerTontinePriveeScreen() {
 
       if (tontineError) throw tontineError;
 
-      // 2. Rattachement immédiat du créateur comme Admin du groupe
       const { error: memberError } = await supabase
         .from("tontine_members")
         .insert({
@@ -218,12 +229,11 @@ export function CreerTontinePriveeScreen() {
       if (memberError) throw memberError;
 
       toast.success("Tontine privée créée avec succès !");
-      navigate("/kauri/mes-tontines");
+      navigate("/kauri/tontines-actives");
     } catch (err: any) {
       console.error(err);
       toast.error(
-        err.message ||
-          "Erreur lors de la communication avec Supabase",
+        err.message || "Erreur lors de la communication avec Supabase",
       );
     } finally {
       setIsSubmitting(false);
@@ -245,7 +255,7 @@ export function CreerTontinePriveeScreen() {
       >
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-white/80 hover:text-white mb-5 transition-colors"
+          className="flex items-center gap-2 text-white/80 hover:text-white mb-5 transition-colors bg-transparent border-none cursor-pointer"
         >
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm font-medium">Retour</span>
@@ -258,7 +268,7 @@ export function CreerTontinePriveeScreen() {
             <Lock className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="text-white/70 text-xs uppercase tracking-widest">
+            <p className="text-white/70 text-xs uppercase tracking-widest font-bold">
               Nouvelle tontine
             </p>
             <h1 className="text-white text-xl font-bold">
@@ -284,15 +294,18 @@ export function CreerTontinePriveeScreen() {
             Informations générales
           </p>
 
-          <Field label="Nom de la tontine" icon={Lock}>
+          <Field label="Nom de la tontine" icon={Lock} textSecondary={textSecondary}>
             <Input
               value={nom}
               onChange={setNom}
               placeholder="Ex : Cercle Familial"
+              inputBg={inputBg}
+              border={border}
+              textPrimary={textPrimary}
             />
           </Field>
 
-          <Field label="Description (optionnel)" icon={Lock}>
+          <Field label="Description (optionnel)" icon={Lock} textSecondary={textSecondary}>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -324,25 +337,31 @@ export function CreerTontinePriveeScreen() {
           </p>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Cotisation (€)" icon={Euro}>
+            <Field label="Cotisation (€)" icon={Euro} textSecondary={textSecondary}>
               <Input
                 value={cotisation}
                 onChange={setCotisation}
                 placeholder="100"
                 type="number"
+                inputBg={inputBg}
+                border={border}
+                textPrimary={textPrimary}
               />
             </Field>
-            <Field label="Membres max" icon={Users}>
+            <Field label="Membres max" icon={Users} textSecondary={textSecondary}>
               <Input
                 value={maxMembres}
                 onChange={setMaxMembres}
                 placeholder="10"
                 type="number"
+                inputBg={inputBg}
+                border={border}
+                textPrimary={textPrimary}
               />
             </Field>
           </div>
 
-          <Field label="Durée de la tontine" icon={Calendar}>
+          <Field label="Durée de la tontine" icon={Calendar} textSecondary={textSecondary}>
             <div className="grid grid-cols-3 gap-2">
               {(
                 ["3", "6", "9", "12", "18", "24"] as Duree[]
@@ -350,7 +369,7 @@ export function CreerTontinePriveeScreen() {
                 <button
                   key={d}
                   onClick={() => setDuree(d)}
-                  className="py-2.5 rounded-xl text-xs font-semibold transition-all"
+                  className="py-2.5 rounded-xl text-xs font-semibold transition-all border-none cursor-pointer"
                   style={{
                     background: duree === d ? TEAL : inputBg,
                     color: duree === d ? "#fff" : textSecondary,
@@ -370,10 +389,11 @@ export function CreerTontinePriveeScreen() {
           <Field
             label="Fréquence de cotisation"
             icon={Calendar}
+            textSecondary={textSecondary}
           >
             <button
               onClick={() => setShowFrequence((v) => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm"
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm cursor-pointer border-none"
               style={{
                 backgroundColor: inputBg,
                 border: `1.5px solid ${border}`,
@@ -410,7 +430,7 @@ export function CreerTontinePriveeScreen() {
                       setFrequence(f.value);
                       setShowFrequence(false);
                     }}
-                    className="w-full px-4 py-3 text-sm text-left transition-colors"
+                    className="w-full px-4 py-3 text-sm text-left transition-colors border-none cursor-pointer"
                     style={{
                       backgroundColor:
                         frequence === f.value
@@ -431,12 +451,15 @@ export function CreerTontinePriveeScreen() {
             )}
           </Field>
 
-          <Field label="Date de début" icon={Calendar}>
+          <Field label="Date de début" icon={Calendar} textSecondary={textSecondary}>
             <Input
               value={dateDebut}
               onChange={setDateDebut}
               placeholder=""
               type="date"
+              inputBg={inputBg}
+              border={border}
+              textPrimary={textPrimary}
             />
           </Field>
 
@@ -492,45 +515,53 @@ export function CreerTontinePriveeScreen() {
             Règles du groupe
           </p>
 
-          <Field label="Ordre de passage" icon={Shuffle}>
-            <ToggleGroup
-              value={ordre}
-              onChange={setOrdre}
-              color={TEAL}
-              options={[
-                {
-                  value: "aleatoire",
-                  label: "Aléatoire",
-                  icon: Shuffle,
-                },
-                { value: "fixe", label: "Fixe", icon: Users },
-              ]}
-            />
-          </Field>
+          <div className="w-full block">
+            <Field label="Ordre de passage" icon={Shuffle} textSecondary={textSecondary}>
+              <ToggleGroup
+                value={ordre}
+                onChange={setOrdre}
+                color={TEAL}
+                isDarkMode={isDarkMode}
+                textSecondary={textSecondary}
+                options={[
+                  {
+                    value: "aleatoire",
+                    label: "Aléatoire",
+                    icon: Shuffle,
+                  },
+                  { value: "fixe", label: "Fixe", icon: Users },
+                ]}
+              />
+            </Field>
+          </div>
 
-          <Field label="Mode d'invitation" icon={Link2}>
-            <ToggleGroup
-              value={invitation}
-              onChange={setInvitation}
-              color={TEAL}
-              options={[
-                { value: "lien", label: "Lien", icon: Link2 },
-                { value: "qr", label: "QR Code", icon: QrCode },
-                {
-                  value: "les_deux",
-                  label: "Les deux",
-                  icon: Users,
-                },
-              ]}
-            />
-          </Field>
+          <div className="w-full block">
+            <Field label="Mode d'invitation" icon={Link2} textSecondary={textSecondary}>
+              <ToggleGroup
+                value={invitation}
+                onChange={setInvitation}
+                color={TEAL}
+                isDarkMode={isDarkMode}
+                textSecondary={textSecondary}
+                options={[
+                  { value: "lien", label: "Lien", icon: Link2 },
+                  { value: "qr", label: "QR Code", icon: QrCode },
+                  {
+                    value: "les_deux",
+                    label: "Les deux",
+                    icon: Users,
+                  },
+                ]}
+              />
+            </Field>
+          </div>
         </div>
 
         {/* CTA */}
         <button
           disabled={!isValid || isSubmitting}
           onClick={handleCreate}
-          className="w-full py-4 rounded-2xl text-white text-sm font-bold shadow-lg transition-opacity flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full py-4 rounded-2xl text-white text-sm font-bold shadow-lg transition-all border-none flex items-center justify-center gap-2 cursor-pointer"
           style={{
             background: isValid
               ? `linear-gradient(135deg, ${TEAL}, #0D9488)`
@@ -555,10 +586,11 @@ export function CreerTontinePriveeScreen() {
           className="text-center text-xs pb-4"
           style={{ color: textSecondary }}
         >
-          Un lien d'invitation sera généré automatiquement après
-          création.
+          Un lien d'invitation sera généré automatiquement après création.
         </p>
       </div>
     </div>
   );
 }
+
+export default CreerTontinePriveeScreen;
