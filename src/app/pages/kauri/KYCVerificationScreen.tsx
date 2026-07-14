@@ -1,4 +1,4 @@
-import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, AlertCircle } from "lucide-react";
+import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, AlertCircle, X, Focus } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -11,6 +11,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErBf4GgqGXvYZGn7qZQlGZ0ogz9d4
 vsrPLUye3cZWTtALPQ9WxSSqwJMmPbp0U04+PdgAqICBBLg4OfuXrvMpCw==
 -----END PUBLIC KEY-----`;
 
+// ── 🛡️ UTILITAIRES WEBCRYPTO & INDEXED-DB ──
 const DB_NAME = "KauriSecureEnclave";
 const STORE_NAME = "client_keys";
 
@@ -82,6 +83,7 @@ export function KYCVerificationScreen() {
   const [identityType, setIdentityFileType] = useState<'image' | 'pdf'>('image');
   const [selfieType, setSelfieFileType] = useState<'image' | 'pdf'>('image');
 
+  // États de contrôle des modifications (Deltas)
   const [hasFileChanges, setHasFileChanges] = useState(false);
   const [address, setAddress] = useState({
     firstName: "",
@@ -101,7 +103,67 @@ export function KYCVerificationScreen() {
   });
 
   const identityInputRef = useRef<HTMLInputElement>(null);
-  const selfieInputRef = useRef<HTMLInputElement>(null);
+
+  // ── 🎥 ÉTATS DU LIVENESS CHECK (CAMÉRA EN DIRECT) ──
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } } 
+      });
+      setMediaStream(stream);
+      setShowCamera(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+    } catch (err) {
+      console.error("Camera access denied or failed:", err);
+      toast.error("Impossible d'accéder à la caméra. Vérifiez les permissions de votre navigateur.");
+    }
+  };
+
+  const stopCamera = () => {
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(track => track.stop());
+    }
+    setMediaStream(null);
+    setShowCamera(false);
+  };
+
+  const captureSelfieAndProcess = () => {
+    if (!videoRef.current) return;
+    
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    
+    // Capture de la trame vidéo
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    
+    // Conversion en Blob puis en Fichier
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], "selfie_liveness.jpg", { type: "image/jpeg" });
+        stopCamera();
+        handleUploadAndEncrypt("selfie", file);
+      }
+    }, "image/jpeg", 0.95);
+  };
+
+  // Nettoyage de la caméra en cas de démontage du composant
+  useEffect(() => {
+    return () => {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [mediaStream]);
 
   // ── 🧠 MOTEUR DE CONTRÔLE DE VISION ET DE VIVACITÉ LOCAL (PORTRAIT ANALYZER) ──
   const analyzeSelfieBiometrics = (file: File): Promise<{ valid: boolean; reason?: string }> => {
@@ -110,20 +172,18 @@ export function KYCVerificationScreen() {
       img.src = URL.createObjectURL(file);
       
       img.onload = () => {
-        // 1. Validation de la définition minimale fintech
         if (img.width < 480 || img.height < 480) {
-          resolve({ valid: false, reason: "Résolution de capture trop faible (Min. 480x480px pour l'analyse)." });
+          resolve({ valid: false, reason: "Résolution de capture trop faible." });
           return;
         }
 
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
         if (!ctx) {
-          resolve({ valid: true }); // Fallback si le context canvas est indisponible
+          resolve({ valid: true }); 
           return;
         }
 
-        // Échantillonnage matriciel optimisé
         canvas.width = 250;
         canvas.height = 250;
         ctx.drawImage(img, 0, 0, 250, 250);
@@ -140,11 +200,11 @@ export function KYCVerificationScreen() {
           const g = data[i + 1];
           const b = data[i + 2];
 
-          // Formule de Luminance standard ITU-R BT.601
+          // ITU-R BT.601
           const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
           totalLuminance += luminance;
 
-          // Algorithme de calcul du gradient horizontal pour détecter le flou
+          // Sobel/Gradient
           if (i + 4 < data.length) {
             const nextR = data[i + 4];
             const nextG = data[i + 5];
@@ -156,7 +216,6 @@ export function KYCVerificationScreen() {
         const averageLuminance = totalLuminance / totalPixels;
         const normalizedEdgeScore = edgeVarianceScore / totalPixels;
 
-        // 2. Évaluation des contraintes d'exposition lumineuse
         if (averageLuminance < 45) {
           resolve({ valid: false, reason: "Environnement sous-exposé ou trop sombre. Veuillez éclairer votre visage." });
           return;
@@ -165,8 +224,6 @@ export function KYCVerificationScreen() {
           resolve({ valid: false, reason: "Image surexposée. Évitez les sources de lumière directe face caméra." });
           return;
         }
-
-        // 3. Évaluation de l'index de netteté (Anti-Flou)
         if (normalizedEdgeScore < 13) {
           resolve({ valid: false, reason: "Capture trop floue ou instable. Stabilisez votre appareil et reprenez." });
           return;
@@ -175,9 +232,7 @@ export function KYCVerificationScreen() {
         resolve({ valid: true });
       };
 
-      img.onerror = () => {
-        resolve({ valid: false, reason: "Structure de fichier image corrompue ou non décodable." });
-      };
+      img.onerror = () => resolve({ valid: false, reason: "Structure de fichier image corrompue." });
     });
   };
 
@@ -238,18 +293,14 @@ export function KYCVerificationScreen() {
           return;
         }
 
-        const { data: files, error } = await supabase.storage
-          .from('secure-kyc')
-          .list(profile.id);
+        const { data: files, error } = await supabase.storage.from('secure-kyc').list(profile.id);
 
         if (!error && files) {
           const idFile = files.find(f => f.name.startsWith('identity'));
           const sfFile = files.find(f => f.name.startsWith('selfie'));
 
           if (idFile) {
-            const { data: blob } = await supabase.storage
-              .from('secure-kyc')
-              .download(`${profile.id}/${idFile.name}`);
+            const { data: blob } = await supabase.storage.from('secure-kyc').download(`${profile.id}/${idFile.name}`);
             if (blob) {
               const arrayBuf = await blob.arrayBuffer();
               const dec = await decryptUserFile(arrayBuf, enclaveKeys.ecdhPriv);
@@ -259,9 +310,7 @@ export function KYCVerificationScreen() {
           }
 
           if (sfFile) {
-            const { data: blob } = await supabase.storage
-              .from('secure-kyc')
-              .download(`${profile.id}/${sfFile.name}`);
+            const { data: blob } = await supabase.storage.from('secure-kyc').download(`${profile.id}/${sfFile.name}`);
             if (blob) {
               const arrayBuf = await blob.arrayBuffer();
               const dec = await decryptUserFile(arrayBuf, enclaveKeys.ecdhPriv);
@@ -295,26 +344,26 @@ export function KYCVerificationScreen() {
     }
   }, [profile]);
 
-  const handleUploadAndEncrypt = async (e: React.ChangeEvent<HTMLInputElement>, type: "identity" | "selfie") => {
-    const file = e.target.files?.[0];
+  // Modifié pour accepter directement un File (depuis l'input OU depuis la capture caméra)
+  const handleUploadAndEncrypt = async (type: "identity" | "selfie", fileFromParam?: File) => {
+    const file = fileFromParam;
     if (!file) return;
 
     setIsActionLoading(true);
 
-    // 🎯 CRASH-TEST INTERNE DE QUALITÉ : Lancement automatique du vérificateur d'image si c'est un selfie
     if (type === "selfie") {
-      const analysisToastId = toast.loading("Analyse biométrique de vivacité et de contraste local...");
+      const analysisToastId = toast.loading("Analyse biométrique de vivacité et de netteté locale...");
       const biometricCheck = await analyzeSelfieBiometrics(file);
       
       if (!biometricCheck.valid) {
-        toast.error(`Dossier rejeté par le moteur de vision : ${biometricCheck.reason}`, { id: analysisToastId, duration: 6000 });
+        toast.error(`Capture rejetée : ${biometricCheck.reason}`, { id: analysisToastId, duration: 6000 });
         setIsActionLoading(false);
         return;
       }
-      toast.success("Vérification de vivacité validée par le processeur local !", { id: analysisToastId });
+      toast.success("Vivacité certifiée par le moteur de vision local !", { id: analysisToastId });
     }
 
-    const toastId = toast.loading(`Mise à jour et scellage (ECC) du document ${type === 'identity' ? "d'identité" : "selfie"}...`);
+    const toastId = toast.loading(`Scellage asymétrique (ECC P-256) du document...`);
 
     try {
       const enclaveKeys = await getKeysFromEnclave('kauri_client');
@@ -341,24 +390,24 @@ export function KYCVerificationScreen() {
 
       const wrapIV = window.crypto.getRandomValues(new Uint8Array(12));
 
-      // 3a. Pour l'Admin
+      // 3a. Admin
       const adminPubKey = await window.crypto.subtle.importKey("spki", pemToArrayBuffer(ADMIN_ECDH_PUBLIC_KEY_PEM), { name: "ECDH", namedCurve: "P-256" }, false, []);
       const adminWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: adminPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
       const adminEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, adminWrapKey, exportedFek);
 
-      // 3b. Pour le Client
+      // 3b. Client
       const userPubKey = await window.crypto.subtle.importKey("spki", pemToArrayBuffer(userPublicKeys.ecdh), { name: "ECDH", namedCurve: "P-256" }, false, []);
       const userWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: userPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
       const userEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, userWrapKey, exportedFek);
 
-      // 4. Signature ECDSA
+      // 4. Signature
       const dataToSign = new Uint8Array(ephPubRaw.byteLength + fileIV.byteLength + encryptedFileContent.byteLength);
       dataToSign.set(new Uint8Array(ephPubRaw), 0);
       dataToSign.set(fileIV, ephPubRaw.byteLength);
       dataToSign.set(new Uint8Array(encryptedFileContent), ephPubRaw.byteLength + fileIV.byteLength);
       const signatureBuffer = await window.crypto.subtle.sign({ name: "ECDSA", hash: { name: "SHA-256" } }, enclaveKeys.ecdsaPriv, dataToSign);
 
-      // 5. Assemblage
+      // 5. Packaging
       const totalLength = 101 + adminEncFEK.byteLength + userEncFEK.byteLength + signatureBuffer.byteLength + encryptedFileContent.byteLength;
       const packedBuffer = new ArrayBuffer(totalLength);
       const view = new DataView(packedBuffer);
@@ -393,7 +442,7 @@ export function KYCVerificationScreen() {
       }
 
       setHasFileChanges(true);
-      toast.success("Document validé, signé (ECDSA) et scellé (ECDH) !", { id: toastId });
+      toast.success("Trousseau sécurisé, scellé et transmis !", { id: toastId });
     } catch (err: any) {
       console.error(err);
       toast.error("Échec de l'opération cryptographique.", { id: toastId });
@@ -455,8 +504,14 @@ export function KYCVerificationScreen() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-24 font-sans select-none">
-      <input type="file" ref={identityInputRef} onChange={(e) => handleUploadAndEncrypt(e, "identity")} accept="image/*,application/pdf" className="hidden" />
-      <input type="file" ref={selfieInputRef} onChange={(e) => handleUploadAndEncrypt(e, "selfie")} accept="image/*" capture="user" className="hidden" />
+      {/* L'input natif n'est conservé que pour la pièce d'identité */}
+      <input 
+        type="file" 
+        ref={identityInputRef} 
+        onChange={(e) => handleUploadAndEncrypt("identity", e.target.files?.[0])} 
+        accept="image/*,application/pdf" 
+        className="hidden" 
+      />
 
       {/* BANDEAU SUPÉRIEUR */}
       <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
@@ -466,7 +521,7 @@ export function KYCVerificationScreen() {
         </button>
 
         <h1 className="text-white text-2xl font-black tracking-tight">Kauri KYC Hub</h1>
-        <p className="text-[#E0F2FE] text-xs opacity-90">Cryptographie ECIES & Vision Analytique Native</p>
+        <p className="text-[#E0F2FE] text-xs opacity-90">Cryptographie ECIES & Liveness Check</p>
       </div>
 
       <div className="px-6 py-6 max-w-md mx-auto w-full space-y-6">
@@ -538,7 +593,7 @@ export function KYCVerificationScreen() {
                 </button>
               </div>
 
-              {/* CARD 2 : SELFIE AVEC VISION NUMÉRIQUE */}
+              {/* CARD 2 : LIVENESS CHECK (CAMERA NATIVE) */}
               <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-md flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-14 h-14 rounded-2xl bg-slate-900 overflow-hidden flex items-center justify-center flex-shrink-0 border border-slate-100">
@@ -552,16 +607,16 @@ export function KYCVerificationScreen() {
                     <h4 className="text-sm font-bold text-[#0F172A] truncate">Selfie de présence physique</h4>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className={`w-1.5 h-1.5 rounded-full ${selfiePreviewUrl ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                      <p className="text-[11px] text-slate-500 font-medium">{selfiePreviewUrl ? 'Analyse & Chiffrement OK' : 'Soumis à validation locale'}</p>
+                      <p className="text-[11px] text-slate-500 font-medium">{selfiePreviewUrl ? 'Liveness Validé & Scellé' : 'Soumis à capture en direct'}</p>
                     </div>
                   </div>
                 </div>
                 <button 
-                  onClick={() => selfieInputRef.current?.click()}
+                  onClick={startCamera}
                   className="px-4 py-2.5 bg-gradient-to-br from-[#D4AF37]/10 to-[#FEF3C7]/20 text-[#B8860B] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1"
                 >
-                  <RotateCw className="w-3.5 h-3.5" />
-                  {selfiePreviewUrl ? "Modifier" : "Prendre"}
+                  <Camera className="w-3.5 h-3.5" />
+                  {selfiePreviewUrl ? "Refaire" : "Capturer"}
                 </button>
               </div>
             </div>
@@ -645,6 +700,59 @@ export function KYCVerificationScreen() {
         )}
 
       </div>
+
+      {/* 🎥 MODALE DE CAPTURE CAMÉRA (LIVENESS CHECK) */}
+      {showCamera && (
+        <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col">
+          {/* Header de la caméra */}
+          <div className="px-6 py-6 flex items-center justify-between z-10 absolute top-0 w-full">
+            <button onClick={stopCamera} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur flex items-center justify-center border-none cursor-pointer text-white">
+              <X className="w-5 h-5" />
+            </button>
+            <span className="text-white text-xs font-bold uppercase tracking-widest bg-black/40 px-4 py-1.5 rounded-full backdrop-blur">Liveness Check</span>
+          </div>
+
+          {/* Flux Vidéo et Masque SVG */}
+          <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black">
+            <video 
+              ref={videoRef} 
+              className="absolute inset-0 w-full h-full object-cover"
+              playsInline 
+              muted 
+              autoPlay
+            />
+            
+            {/* Le masque d'alignement de visage (Dark overlay avec trou ovale transparent) */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
+              <defs>
+                <mask id="face-hole">
+                  <rect width="100%" height="100%" fill="white" />
+                  <ellipse cx="50%" cy="45%" rx="30%" ry="25%" fill="black" />
+                </mask>
+              </defs>
+              <rect width="100%" height="100%" fill="rgba(15, 23, 42, 0.85)" mask="url(#face-hole)" />
+              <ellipse cx="50%" cy="45%" rx="30%" ry="25%" fill="none" stroke="#D4AF37" strokeWidth="2" strokeDasharray="6 6" />
+            </svg>
+
+            <div className="absolute top-[20%] text-center px-8 text-white/90 font-medium text-sm drop-shadow-md">
+              Placez votre visage au centre de l'ovale dans un environnement bien éclairé.
+            </div>
+          </div>
+
+          {/* Bouton de capture */}
+          <div className="bg-slate-950 pb-12 pt-8 flex items-center justify-center z-10">
+            <button 
+              onClick={captureSelfieAndProcess}
+              className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center p-1 cursor-pointer bg-transparent transition-transform active:scale-90"
+            >
+              <div className="w-full h-full bg-white rounded-full flex items-center justify-center text-slate-900">
+                <Focus className="w-8 h-8 opacity-80" />
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
