@@ -68,7 +68,6 @@ export function KauriBottomNav() {
       style={{ 
         backgroundColor: bg, 
         borderTop: `1px solid ${border}`,
-        // ── LIBÉRATION DU PADDING INFÉRIEUR POUR EMPECHER LE BLOCAGE DE LA BORDURE ──
         paddingTop: '14px',
         paddingBottom: 'calc(26px + env(safe-area-inset-bottom, 0px))',
         boxShadow: isDarkMode 
@@ -76,33 +75,43 @@ export function KauriBottomNav() {
           : '0 -12px 30px -5px rgba(0, 0, 0, 0.04), 0 -4px 12px -5px rgba(0, 0, 0, 0.02)'
       }}
     >
-      <div className="flex items-center justify-around px-2">
+      <div className="flex items-center justify-around px-2 relative">
         {tabs.map((tab) => {
           const isActive = active === tab.id;
           const Icon = tab.icon;
 
           if (tab.isCenter) {
             return (
-              <div key={tab.id} className="relative flex flex-col items-center justify-center" style={{ minWidth: 64, height: 44 }}>
+              <div 
+                key={tab.id} 
+                className="relative flex flex-col items-center justify-center" 
+                style={{ width: 64, height: 40, flexShrink: 0 }}
+              >
                 <button
                   onClick={() => navigate(tab.target)}
-                  className="cursor-pointer border-none outline-none"
+                  className="cursor-pointer border-none outline-none flex-shrink-0"
                   style={{
-                    width: 58, height: 58, borderRadius: '50%',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    // ── SURÉLÉVATION STRATÉGIQUE POUR SÉPARER LE LOGO DU RESTE DU BLOC ──
-                    transform: 'translateY(-16px)',
+                    width: 56, 
+                    height: 56, 
+                    borderRadius: '50%',
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    // ── POSITIONNEMENT ABSOLU POUR NEUTRALISER L'ÉCRASEMENT FLEXBOX ──
+                    position: 'absolute',
+                    top: -24,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
                     boxShadow: '0 6px 20px rgba(212,175,55,0.45), 0 3px 8px rgba(0,0,0,0.12)',
                     border: isActive ? '2.5px solid #ffffff' : '2px solid rgba(255,255,255,0.4)',
-                    transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
                     background: 'linear-gradient(135deg, #D4AF37, #F59E0B)',
                   }}
                 >
-                  <svg viewBox="0 0 100 100" style={{ width: 26, height: 26, color: '#fff', margin: 'auto' }}>
+                  <svg viewBox="0 0 100 100" style={{ width: 26, height: 26, color: '#fff', display: 'block', margin: 'auto' }}>
                     <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
                   </svg>
                   
-                  {/* Plus Badge ajusté au millimètre supérieur */}
+                  {/* Badge Plus */}
                   <div
                     style={{
                       position: 'absolute',
