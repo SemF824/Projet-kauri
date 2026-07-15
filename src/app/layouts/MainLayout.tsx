@@ -1,4 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router';
+import { useEffect, useState, useRef } from 'react';
 import { LayoutDashboard, TrendingUp, User, Leaf } from 'lucide-react';
 import { useDarkMode } from '../contexts/DarkModeContext';
 
@@ -7,7 +8,7 @@ type NavTab = 'accueil' | 'investissement' | 'kauri' | 'social' | 'profil';
 // ── Icône Sociale Customisée Interconnectée ──────────────────────────────────
 function SocialIcon({ color, size = 24 }: { color: string; size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="pointer-events-none">
       <circle cx="12" cy="12" r="9.5" stroke={color} strokeWidth="1.6" />
       <path d="M3 12 Q7 9.5 12 9.5 Q17 9.5 21 12" stroke={color} strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.5" />
       <circle cx="7" cy="10.5" r="1.1" fill={color} />
@@ -39,9 +40,14 @@ export function KauriBottomNav() {
   const activeColor = '#0D9488';   
   const inactiveColor = '#94A3B8'; 
   
-  const bg = isDarkMode ? 'rgba(30, 41, 59, 0.90)' : 'rgba(255, 255, 255, 0.90)';
+  const bg = isDarkMode ? 'rgba(30, 41, 59, 0.92)' : 'rgba(255, 255, 255, 0.92)';
   const border = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.06)';
+  const capsuleActiveBg = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.05)';
   const currentPath = location.pathname;
+
+  // États du moteur de suivi tactile global
+  const [isSliding, setIsSliding] = useState(false);
+  const isSlidingRef = useRef(false);
 
   const getActiveTab = (): NavTab => {
     if (currentPath === '/dashboard' || currentPath.includes('/kauri/normal-dashboard')) return 'accueil';
@@ -62,9 +68,48 @@ export function KauriBottomNav() {
     { id: 'profil',         label: 'Profile',  icon: User,            target: currentPath.includes('/kauri/') ? '/kauri/profil-particulier' : '/profile' },
   ];
 
+  // Sécurité : Nettoyage global de l'état de glissement
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      setIsSliding(false);
+      isSlidingRef.current = false;
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
+
+  // ── ⚙️ MOTEUR DE BALAYAGE TACTILE CONTINU (RAYCASTING ENCLAVE DOM) ──
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isSlidingRef.current) return;
+    
+    const touch = e.touches[0];
+    // Analyse du composant situé précisément sous les coordonnées du doigt
+    const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!targetElement) return;
+
+    // Recherche de l'attribut de routage de la cible survolée
+    const buttonNode = targetElement.closest('[data-kauri-target]');
+    if (buttonNode) {
+      const targetPath = buttonNode.getAttribute('data-kauri-target');
+      if (targetPath && targetPath !== currentPath) {
+        // Déclenchement d'un micro-retour sensoriel vibratoire si supporté
+        if (navigator.vibrate) navigator.vibrate(8);
+        navigate(targetPath);
+      }
+    }
+  };
+
+  const activateSlideGesture = (targetPath: string) => {
+    setIsSliding(true);
+    isSlidingRef.current = true;
+    if (currentPath !== targetPath) {
+      navigate(targetPath);
+    }
+  };
+
   return (
     <nav 
-      className="fixed left-1/2 -translate-x-1/2 z-50 backdrop-blur-xl transition-all select-none"
+      className="fixed left-1/2 -translate-x-1/2 z-50 backdrop-blur-xl transition-all select-none touch-none"
       style={{ 
         backgroundColor: bg, 
         bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
@@ -79,6 +124,7 @@ export function KauriBottomNav() {
           : '0 16px 36px -6px rgba(15, 23, 42, 0.06), 0 4px 16px -4px rgba(15, 23, 42, 0.03)',
         WebkitUserSelect: 'none',
       }}
+      onTouchMove={handleTouchMove}
     >
       <div className="flex items-center justify-around px-2 relative">
         {tabs.map((tab) => {
@@ -89,17 +135,19 @@ export function KauriBottomNav() {
             return (
               <div 
                 key={tab.id} 
+                data-kauri-target={tab.target}
                 className="flex flex-col items-center gap-1.5 relative" 
                 style={{ minWidth: 50, userSelect: 'none' }}
+                onMouseDown={() => activateSlideGesture(tab.target)}
+                onMouseEnter={() => isSlidingRef.current && navigate(tab.target)}
+                onTouchStart={() => activateSlideGesture(tab.target)}
+                onTouchEnd={() => { setIsSliding(false); isSlidingRef.current = false; }}
               >
-                {/* Gabarit de calage optique */}
-                <div className="w-[20px] h-[20px] invisible" />
-                <span className="text-[10px] font-bold invisible select-none">Kauri</span>
+                <div className="w-[20px] h-[20px] invisible pointer-events-none" />
+                <span className="text-[10px] font-bold invisible select-none pointer-events-none">Kauri</span>
                 
-                {/* ── INTERACTION INSTANTANÉE + EFFET DE PRESSION REVOLUT-STYLE ── */}
                 <button
-                  onClick={() => navigate(tab.target)}
-                  className="cursor-pointer border-none outline-none absolute left-1/2 -translate-x-1/2 transition-all active:scale-90 active:top-[-2px]"
+                  className="cursor-pointer border-none outline-none absolute pointer-events-none"
                   style={{
                     width: 54, 
                     height: 54, 
@@ -107,7 +155,9 @@ export function KauriBottomNav() {
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    top: -6, // Alignement optique parfait au repos
+                    top: -6, 
+                    left: '50%',
+                    transform: 'translateX(-50%)',
                     boxShadow: '0 6px 16px rgba(212,175,55,0.30), 0 3px 6px rgba(0,0,0,0.08)',
                     border: isActive ? '2.5px solid #ffffff' : '2px solid rgba(255,255,255,0.45)',
                     background: 'linear-gradient(135deg, #D4AF37, #F59E0B)',
@@ -118,7 +168,6 @@ export function KauriBottomNav() {
                     <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
                   </svg>
                   
-                  {/* Plus Badge */}
                   <div
                     style={{
                       position: 'absolute',
@@ -145,20 +194,31 @@ export function KauriBottomNav() {
           return (
             <button
               key={tab.id}
-              onClick={() => navigate(tab.target)}
-              className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-0 relative outline-none transition-transform active:scale-90"
-              style={{ color: isActive ? activeColor : inactiveColor, minWidth: 50 }}
+              data-kauri-target={tab.target}
+              onMouseDown={() => activateSlideGesture(tab.target)}
+              onMouseEnter={() => isSlidingRef.current && navigate(tab.target)}
+              onTouchStart={() => activateSlideGesture(tab.target)}
+              onTouchEnd={() => { setIsSliding(false); isSlidingRef.current = false; }}
+              className="flex flex-col items-center gap-1 bg-transparent border-none cursor-pointer p-0 relative outline-none py-2 px-3 rounded-2xl transition-all duration-300"
+              style={{ 
+                color: isActive ? activeColor : inactiveColor, 
+                minWidth: 58,
+                // ── 🎨 CAPSULE FLUIDE STYLE INSTAGRAM ──
+                backgroundColor: isActive ? capsuleActiveBg : 'transparent'
+              }}
             >
-              {tab.id === 'social' ? (
-                <SocialIcon color={isActive ? activeColor : inactiveColor} size={22} />
-              ) : (
-                Icon && <Icon className="w-[20px] h-[20px]" style={{ strokeWidth: isActive ? 2.4 : 1.8 }} />
-              )}
-              <span className="text-[10px] font-bold tracking-wide transition-colors">{tab.label}</span>
+              <div className="flex flex-col items-center gap-1 pointer-events-none">
+                {tab.id === 'social' ? (
+                  <SocialIcon color={isActive ? activeColor : inactiveColor} size={22} />
+                ) : (
+                  Icon && <Icon className="w-[20px] h-[20px]" style={{ strokeWidth: isActive ? 2.4 : 1.8 }} />
+                )}
+                <span className="text-[10px] font-bold tracking-wide transition-colors">{tab.label}</span>
+              </div>
               {isActive && (
                 <span 
-                  className="absolute rounded-full" 
-                  style={{ bottom: -6, width: 4, height: 4, backgroundColor: activeColor }} 
+                  className="absolute rounded-full pointer-events-none" 
+                  style={{ bottom: 2, width: 4, height: 4, backgroundColor: activeColor }} 
                 />
               )}
             </button>
