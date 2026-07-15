@@ -39,8 +39,8 @@ export function KauriBottomNav() {
   const activeColor = '#0D9488';   
   const inactiveColor = '#94A3B8'; 
   
-  const bg = isDarkMode ? 'rgba(30, 41, 59, 0.94)' : 'rgba(255, 255, 255, 0.92)';
-  const border = isDarkMode ? 'rgba(51, 65, 85, 0.5)' : 'rgba(232, 237, 242, 0.8)';
+  const bg = isDarkMode ? 'rgba(30, 41, 59, 0.88)' : 'rgba(255, 255, 255, 0.88)';
+  const border = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.06)';
   const currentPath = location.pathname;
 
   const getActiveTab = (): NavTab => {
@@ -64,15 +64,20 @@ export function KauriBottomNav() {
 
   return (
     <nav 
-      className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 backdrop-blur-xl transition-all"
+      className="fixed left-1/2 -translate-x-1/2 z-50 backdrop-blur-xl transition-all"
       style={{ 
         backgroundColor: bg, 
-        borderTop: `1px solid ${border}`,
-        paddingTop: '12px',
-        paddingBottom: 'calc(26px + env(safe-area-inset-bottom, 0px))',
+        // ── TRANSFORMATIONS CONTRAINTES CAPSULE PREMIUM ──
+        bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+        width: 'calc(100% - 24px)',
+        maxWidth: '406px',
+        border: `1px solid ${border}`,
+        borderRadius: '32px',
+        paddingTop: '11px',
+        paddingBottom: '11px',
         boxShadow: isDarkMode 
-          ? '0 -12px 30px -5px rgba(0, 0, 0, 0.4), 0 -4px 12px -5px rgba(0, 0, 0, 0.3)' 
-          : '0 -12px 30px -5px rgba(0, 0, 0, 0.04), 0 -4px 12px -5px rgba(0, 0, 0, 0.02)'
+          ? '0 16px 36px -6px rgba(0, 0, 0, 0.6), 0 4px 16px -4px rgba(0, 0, 0, 0.4)' 
+          : '0 16px 36px -6px rgba(15, 23, 42, 0.08), 0 4px 16px -4px rgba(15, 23, 42, 0.04)'
       }}
     >
       <div className="flex items-center justify-around px-2 relative">
@@ -85,39 +90,39 @@ export function KauriBottomNav() {
               <div 
                 key={tab.id} 
                 className="relative flex flex-col items-center justify-center" 
-                style={{ width: 64, height: 44, flexShrink: 0 }}
+                style={{ width: 64, height: 40, flexShrink: 0 }}
               >
                 <button
                   onClick={() => navigate(tab.target)}
                   className="cursor-pointer border-none outline-none flex-shrink-0"
                   style={{
-                    width: 56, 
-                    height: 56, 
+                    width: 54, 
+                    height: 54, 
                     borderRadius: '50%',
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    // ── ABAISSEMENT CHIRURGICAL (-24px -> -10px) POUR ALIGNER LE CENTRE DE GRAVITÉ ──
                     position: 'absolute',
-                    top: -10,
+                    // Ajusté géométriquement par rapport aux courbes de la capsule capsule
+                    top: -16,
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    boxShadow: '0 6px 16px rgba(212,175,55,0.35), 0 3px 8px rgba(0,0,0,0.1)',
-                    border: isActive ? '2.5px solid #ffffff' : '2px solid rgba(255,255,255,0.4)',
+                    boxShadow: '0 8px 20px rgba(212,175,55,0.4), 0 3px 8px rgba(0,0,0,0.12)',
+                    border: isActive ? '2.5px solid #ffffff' : '2px solid rgba(255,255,255,0.45)',
                     background: 'linear-gradient(135deg, #D4AF37, #F59E0B)',
-                    transition: 'transform 0.15s ease, border 0.15s ease',
+                    transition: 'transform 0.15s ease',
                   }}
                 >
-                  <svg viewBox="0 0 100 100" style={{ width: 26, height: 26, color: '#fff', display: 'block', margin: 'auto' }}>
+                  <svg viewBox="0 0 100 100" style={{ width: 24, height: 26, color: '#fff', display: 'block', margin: 'auto' }}>
                     <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
                   </svg>
                   
-                  {/* Badge Plus ajusté */}
+                  {/* Badge de ralliement */}
                   <div
                     style={{
                       position: 'absolute',
-                      top: -2,
-                      right: -2,
+                      top: -1,
+                      right: -1,
                       width: 18,
                       height: 18,
                       borderRadius: '50%',
@@ -126,7 +131,7 @@ export function KauriBottomNav() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      boxShadow: '0 2px 5px rgba(0,0,0,0.25)',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
                     }}
                   >
                     <span style={{ color: '#ffffff', fontSize: 13, fontWeight: 900, lineHeight: 1, marginTop: -1 }}>+</span>
@@ -140,19 +145,19 @@ export function KauriBottomNav() {
             <button
               key={tab.id}
               onClick={() => navigate(tab.target)}
-              className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-0 relative outline-none transition-transform active:scale-95"
+              className="flex flex-col items-center gap-1 bg-transparent border-none cursor-pointer p-0 relative outline-none transition-transform active:scale-95"
               style={{ color: isActive ? activeColor : inactiveColor, minWidth: 50 }}
             >
               {tab.id === 'social' ? (
-                <SocialIcon color={isActive ? activeColor : inactiveColor} size={24} />
+                <SocialIcon color={isActive ? activeColor : inactiveColor} size={22} />
               ) : (
-                Icon && <Icon className="w-[22px] h-[22px]" style={{ strokeWidth: isActive ? 2.3 : 1.7 }} />
+                Icon && <Icon className="w-[20px] h-[20px]" style={{ strokeWidth: isActive ? 2.4 : 1.8 }} />
               )}
-              <span className="text-[11px] font-bold tracking-wide transition-colors">{tab.label}</span>
+              <span className="text-[10px] font-bold tracking-wide transition-colors">{tab.label}</span>
               {isActive && (
                 <span 
                   className="absolute rounded-full" 
-                  style={{ bottom: -8, width: 4, height: 4, backgroundColor: activeColor }} 
+                  style={{ bottom: -6, width: 4, height: 4, backgroundColor: activeColor }} 
                 />
               )}
             </button>
