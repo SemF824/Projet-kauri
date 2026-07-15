@@ -18,8 +18,6 @@ import {
   Smartphone,
   Bell,
   Eye,
-  Home,
-  Wallet,
   Briefcase,
   Rocket,
   ArrowRight,
@@ -29,6 +27,7 @@ import { useNavigate } from "react-router";
 import { useState, useEffect } from "react";
 import { useDarkMode } from "../../contexts/DarkModeContext";
 import { useAuth } from "../../contexts/AuthContext";
+import { KauriBottomNav } from "../../layouts/MainLayout"; // Importation unifiée
 import { toast } from "sonner";
 
 const TEAL = "#0A847E";
@@ -37,9 +36,7 @@ const GOLD = "#D4AF37";
 export function ProfilParticulierScreen() {
   const navigate = useNavigate();
   const { isDarkMode, resetDarkMode } = useDarkMode();
-  const [activeSpace, setActiveSpace] = useState<
-    "personnel" | "professionnel"
-  >("personnel");
+  const [activeSpace, setActiveSpace] = useState<"personnel" | "professionnel">("personnel");
   
   const [isPasskeyActive, setIsPasskeyActive] = useState(false);
   const [isActivatingBio, setIsActivatingBio] = useState(false);
@@ -49,18 +46,19 @@ export function ProfilParticulierScreen() {
   const trustScore =
     profile?.trustScore !== undefined
       ? Math.round(profile.trustScore)
-      : 40;
+      : (profile?.trust_score !== undefined ? Math.round(Number(profile.trust_score)) : 40);
 
   const fullName = profile
-    ? `${profile.firstName} ${profile.lastName}`
+    ? `${profile.firstName ?? profile.first_name ?? ''} ${profile.lastName ?? profile.last_name ?? ''}`.trim()
     : "Utilisateur";
+    
   const initials =
     profile?.firstName && profile?.lastName
       ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
-      : "KA";
+      : (profile?.first_name && profile?.last_name ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase() : "KA");
 
-  const memberSince = profile?.createdAt
-    ? new Date(profile.createdAt).toLocaleDateString("fr-FR", {
+  const memberSince = profile?.createdAt || profile?.created_at
+    ? new Date(profile.createdAt || profile.created_at).toLocaleDateString("fr-FR", {
         month: "long",
         year: "numeric",
       })
@@ -73,7 +71,6 @@ export function ProfilParticulierScreen() {
     }
   }, [user]);
 
-  // 🎯 VRAI SYSTÈME DE PASSKEY : Interrogation de l'enclave sécurisée de l'appareil
   const handleTogglePasskey = async () => {
     if (!user?.email || !user?.id) return;
 
@@ -93,11 +90,9 @@ export function ProfilParticulierScreen() {
     setIsActivatingBio(true);
 
     try {
-      // 1. Génération d'un vrai challenge cryptographique binaire requis par l'OS
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const userIdBuffer = Uint8Array.from(user.id.slice(0, 16), c => c.charCodeAt(0));
 
-      // 2. Configuration des options WebAuthn natives pour forcer l'ouverture de Face ID / Touch ID / Windows Hello
       const options: CredentialCreationOptions = {
         publicKey: {
           challenge,
@@ -108,25 +103,23 @@ export function ProfilParticulierScreen() {
             displayName: fullName,
           },
           pubKeyCredParams: [
-            { type: "public-key", alg: -7 },   // ES256 (Algorithme standard Apple/Android)
-            { type: "public-key", alg: -257 }  // RS256 (Windows Hello)
+            { type: "public-key", alg: -7 },
+            { type: "public-key", alg: -257 }
           ],
           authenticatorSelection: {
-            authenticatorAttachment: "platform", // Force l'utilisation du capteur intégré (FaceID, empreinte)
+            authenticatorAttachment: "platform",
             userVerification: "required",
           },
           timeout: 60000,
         }
       };
 
-      // 3. Déclenchement de la boîte de dialogue native du système d'exploitation
       const credential = await navigator.credentials.create(options);
       
       if (!credential) {
         throw new Error("L'authentification matérielle a été rejetée ou annulée.");
       }
       
-      // 4. Persistance sécurisée locale après validation de la clé d'accès matérielle
       localStorage.setItem(`kauri_bio_active_${user.email}`, "true");
       localStorage.setItem("kauri_rememberED_email", user.email);
       setIsPasskeyActive(true);
@@ -170,7 +163,7 @@ export function ProfilParticulierScreen() {
     return (
       <button
         onClick={onClick}
-        className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left outline-none"
+        className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none"
         style={{
           backgroundColor: card,
           border: `1.5px solid ${border}`,
@@ -204,7 +197,7 @@ export function ProfilParticulierScreen() {
 
   return (
     <div
-      className="min-h-screen pb-28 transition-colors"
+      className="min-h-screen pb-32 transition-colors"
       style={{ backgroundColor: bg }}
     >
       {/* Header */}
@@ -236,7 +229,7 @@ export function ProfilParticulierScreen() {
           </div>
           <button
             onClick={() => navigate("/kauri/manage-account")}
-            className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer relative z-10"
+            className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer relative z-10 border-none outline-none"
             style={{ backgroundColor: "rgba(255,255,255,0.18)" }}
           >
             <Edit style={{ width: 16, height: 16, color: "#fff" }} />
@@ -285,7 +278,7 @@ export function ProfilParticulierScreen() {
         >
           <button
             onClick={() => setActiveSpace("personnel")}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full transition-all cursor-pointer"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full transition-all cursor-pointer border-none"
             style={{
               backgroundColor: activeSpace === "personnel" ? "#fff" : "transparent",
               boxShadow: activeSpace === "personnel" ? "0 2px 10px rgba(0,0,0,0.20)" : "none",
@@ -299,7 +292,7 @@ export function ProfilParticulierScreen() {
 
           <button
             onClick={() => setActiveSpace("professionnel")}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full transition-all cursor-pointer"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full transition-all cursor-pointer border-none"
             style={{
               backgroundColor: activeSpace === "professionnel" ? "#fff" : "transparent",
               boxShadow: activeSpace === "professionnel" ? "0 2px 10px rgba(0,0,0,0.20)" : "none",
@@ -319,7 +312,7 @@ export function ProfilParticulierScreen() {
           <>
             <div className="grid grid-cols-3 gap-3">
               {[
-                { icon: Users, color: TEAL, bg: `${TEAL}14`, label: "Tontines", value: "3", path: "/kauri/mes-tontines" },
+                { icon: Users, color: TEAL, bg: `${TEAL}14`, label: "Tontines", value: "3", path: "/kauri/tontines-actives" },
                 { icon: TrendingUp, color: GOLD, bg: `${GOLD}18`, label: "Investis", value: "2", path: "/kauri/mes-investissements" },
                 { icon: Award, color: "#8B5CF6", bg: "#8B5CF614", label: "Badges", value: "12", path: "/kauri/badges" },
               ].map(({ icon: Icon, color, bg: ibg, label, value, path }) => (
@@ -341,7 +334,7 @@ export function ProfilParticulierScreen() {
                   { icon: Phone, color: "#3B82F6", ibg: "#3B82F612", label: "Téléphone", sub: profile?.phone || "Non renseigné" },
                   { icon: MapPin, color: "#8B5CF6", ibg: "#8B5CF612", label: "Adresse", sub: "Paris, France" },
                 ].map(({ icon: Icon, color, ibg, label, sub }) => (
-                  <button key={label} onClick={() => navigate("/kauri/manage-account")} className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left outline-none" style={{ backgroundColor: card, border: `1.5px solid ${border}` }}>
+                  <button key={label} onClick={() => navigate("/kauri/manage-account")} className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none" style={{ backgroundColor: card, border: `1.5px solid ${border}` }}>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: ibg }}>
                         <Icon style={{ width: 18, height: 18, color }} />
@@ -362,11 +355,10 @@ export function ProfilParticulierScreen() {
               <div className="space-y-2.5">
                 <SettingRow icon={Lock} color="#0A847E" bg={`${TEAL}12`} label="Mot de passe" sub="Modifier votre mot de passe" onClick={() => navigate("/kauri/biometric-setup")} />
                 
-                {/* 🎯 CELLULE PASSKEY SYSTEME REEL */}
                 <button
                   onClick={handleTogglePasskey}
                   disabled={isActivatingBio}
-                  className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left outline-none transition-all active:scale-[0.99]"
+                  className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none transition-all active:scale-[0.99]"
                   style={{ backgroundColor: card, border: `1.5px solid ${border}` }}
                 >
                   <div className="flex items-center gap-3">
@@ -394,7 +386,6 @@ export function ProfilParticulierScreen() {
               </div>
             </div>
 
-            {/* Cartes */}
             <div>
               <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: textS }}>Paramètres de la carte</p>
               <div className="space-y-2.5">
@@ -402,7 +393,7 @@ export function ProfilParticulierScreen() {
                   { type: "Virtuelle", number: "**** 8762", expires: "12/27" },
                   { type: "Physique", number: "**** 3421", expires: "08/28" },
                 ].map((card_) => (
-                  <button key={card_.number} onClick={() => navigate("/kauri/portefeuille")} className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left outline-none" style={{ backgroundColor: card, border: `1.5px solid ${border}` }}>
+                  <button key={card_.number} onClick={() => navigate("/kauri/portefeuille")} className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none" style={{ backgroundColor: card, border: `1.5px solid ${border}` }}>
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${TEAL}, #0D9488)` }}>
                         <CreditCard style={{ width: 18, height: 18, color: "#fff" }} />
@@ -418,14 +409,13 @@ export function ProfilParticulierScreen() {
               </div>
             </div>
 
-            {/* Documents */}
             <div>
               <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: textS }}>Préférences</p>
               <div className="space-y-2.5">
                 <SettingRow icon={Bell} color="#F59E0B" bg="#F59E0B14" label="Notifications" sub="Gérer les alertes" onClick={() => navigate("/kauri/notifications")} />
                 <SettingRow icon={Eye} color="#B05B3B" bg="#B05B3B14" label="Confidentialité" sub="Contrôler vos données" onClick={() => navigate("/kauri/preferences-contenu")} />
 
-                <button onClick={() => navigate("/kauri/coffre-numerique")} className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left outline-none" style={{ backgroundColor: card, border: `1.5px solid ${border}` }}>
+                <button onClick={() => navigate("/kauri/coffre-numerique")} className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none" style={{ backgroundColor: card, border: `1.5px solid ${border}` }}>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center relative" style={{ background: `linear-gradient(135deg, ${TEAL}, #0D9488)` }}>
                       <FolderOpen style={{ width: 18, height: 18, color: "#fff" }} />
@@ -444,7 +434,6 @@ export function ProfilParticulierScreen() {
               </div>
             </div>
 
-            {/* Premium */}
             <div onClick={() => navigate("/kauri/premium-paywall")} className="rounded-3xl p-6 relative overflow-hidden cursor-pointer" style={{ background: "linear-gradient(135deg, #D4AF37 0%, #B8860B 60%, #D4AF37 100%)", boxShadow: "0 8px 28px rgba(212,175,55,0.40)" }}>
               <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.10)", pointerEvents: "none" }} />
               <div style={{ position: "absolute", bottom: -30, left: -20, width: 100, height: 100, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
@@ -471,12 +460,11 @@ export function ProfilParticulierScreen() {
                     <p className="text-white/70 text-xs">À partir de</p>
                     <p className="text-white font-bold text-lg">4,99€ / mois</p>
                   </div>
-                  <button className="px-4 py-2 rounded-xl text-sm font-bold cursor-pointer" style={{ backgroundColor: "#fff", color: "#B8860B" }}>Découvrir</button>
+                  <button className="px-4 py-2 rounded-xl text-sm font-bold cursor-pointer border-none" style={{ backgroundColor: "#fff", color: "#B8860B" }}>Découvrir</button>
                 </div>
               </div>
             </div>
 
-            {/* Espace Pro Onboarding */}
             <div className="rounded-3xl p-5 relative overflow-hidden" style={{ background: isDarkMode ? "linear-gradient(135deg, #1A1200 0%, #2A1E00 100%)" : "linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)", border: `2px solid ${GOLD}55`, boxShadow: `0 6px 28px ${GOLD}22` }}>
               <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${GOLD}25 0%, transparent 70%)`, pointerEvents: "none" }} />
               <div className="flex items-center gap-3 mb-4">
@@ -496,14 +484,14 @@ export function ProfilParticulierScreen() {
                   <span key={tag} className="text-xs font-semibold px-3 py-1 rounded-full" style={{ backgroundColor: `${GOLD}22`, color: isDarkMode ? GOLD : "#92400E", border: `1px solid ${GOLD}44` }}>{tag}</span>
                 ))}
               </div>
-              <button onClick={() => navigate("/kauri/pro-verification")} className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl text-sm font-bold transition-all active:scale-[0.98] cursor-pointer" style={{ background: `linear-gradient(135deg, ${GOLD}, #B8860B)`, color: "#fff", boxShadow: `0 4px 16px ${GOLD}55` }}>
+              <button onClick={() => navigate("/kauri/pro-verification")} className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl text-sm font-bold transition-all active:scale-[0.98] cursor-pointer border-none" style={{ background: `linear-gradient(135deg, ${GOLD}, #B8860B)`, color: "#fff", boxShadow: `0 4px 16px ${GOLD}55` }}>
                 <Zap style={{ width: 16, height: 16 }} />
                 Activer le profil Professionnel
                 <ArrowRight style={{ width: 16, height: 16 }} />
               </button>
             </div>
 
-            <button onClick={handleLogout} className="w-full rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer" style={{ background: "linear-gradient(135deg, #B05B3B, #DC2626)", color: "#fff", boxShadow: "0 3px 12px rgba(220,38,38,0.35)" }}>
+            <button onClick={handleLogout} className="w-full rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer border-none" style={{ background: "linear-gradient(135deg, #B05B3B, #DC2626)", color: "#fff", boxShadow: "0 3px 12px rgba(220,38,38,0.35)" }}>
               <LogOut style={{ width: 17, height: 17 }} />
               Déconnexion
             </button>
@@ -519,7 +507,7 @@ export function ProfilParticulierScreen() {
             <p className="text-sm leading-relaxed mb-6" style={{ color: textS, maxWidth: 280, margin: "0 auto 24px" }}>
               Activez votre profil Pro pour accéder aux outils de financement participatif et piloter vos projets.
             </p>
-            <button onClick={() => navigate("/kauri/pro-verification")} className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-sm font-bold cursor-pointer" style={{ background: `linear-gradient(135deg, ${GOLD}, #B8860B)`, color: "#fff", boxShadow: `0 4px 16px ${GOLD}44` }}>
+            <button onClick={() => navigate("/kauri/pro-verification")} className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-sm font-bold cursor-pointer border-none" style={{ background: `linear-gradient(135deg, ${GOLD}, #B8860B)`, color: "#fff", boxShadow: `0 4px 16px ${GOLD}44` }}>
               <Rocket style={{ width: 16, height: 16 }} />
               Activer le profil Professionnel
             </button>
@@ -527,49 +515,10 @@ export function ProfilParticulierScreen() {
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto" style={{ backgroundColor: isDarkMode ? "#1E293B" : "#fff", borderTop: `1px solid ${isDarkMode ? "#334155" : "#E8EDF2"}`, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
-        <div className="flex items-end justify-around px-2 pt-1.5 pb-3">
-          {[{ id: "accueil", icon: Home, label: "Accueil", path: "/kauri/normal-dashboard" }, { id: "investissement", icon: Wallet, label: "Investissement", path: "/kauri/investissement" }].map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button key={tab.id} onClick={() => navigate(tab.path)} className="flex flex-col items-center gap-0.5 cursor-pointer text-center outline-none" style={{ minWidth: 44, paddingTop: 6, paddingBottom: 2 }}>
-                <Icon style={{ width: 22, height: 22, color: inactive, strokeWidth: 1.8 }} />
-                <span style={{ fontSize: 10, color: inactive }}>{tab.label}</span>
-              </button>
-            );
-          })}
-
-          <button onClick={() => navigate("/kauri/tontines-actives")} style={{ width: 56, height: 56, borderRadius: "50%", display: "flex", alignItems: "center", justifycontent: "center", boxShadow: "0 4px 16px rgba(212,175,55,0.5), 0 2px 8px rgba(0,0,0,0.18)", border: "2px solid rgba(255,255,255,0.2)", marginBottom: 6, flexShrink: 0, background: "linear-gradient(135deg, #D4AF37, #F59E0B)", cursor: "pointer" }}>
-            <svg viewBox="0 0 100 100" style={{ width: 28, height: 28, color: "#fff", margin: "0 auto" }}>
-              <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
-            </svg>
-          </button>
-
-          <button onClick={() => navigate("/kauri/social-hub-gateway")} className="flex flex-col items-center gap-0.5 cursor-pointer text-center outline-none" style={{ minWidth: 44, paddingTop: 6, paddingBottom: 2 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9.5" stroke={inactive} strokeWidth="1.6" />
-              <path d="M3 12 Q7 9.5 12 9.5 Q17 9.5 21 12" stroke={inactive} strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.5" />
-              <circle cx="7" cy="10.5" r="1.1" fill={inactive} />
-              <path d="M5.8 13.5 Q7 12.5 8.2 13.5" stroke={inactive} strokeWidth="1.1" strokeLinecap="round" fill="none" />
-              <circle cx="17" cy="10.5" r="1.1" fill={inactive} />
-              <path d="M15.8 13.5 Q17 12.5 18.2 13.5" stroke={inactive} strokeWidth="1.1" strokeLinecap="round" fill="none" />
-              <circle cx="12" cy="6.5" r="1.1" fill={inactive} />
-              <path d="M10.8 9.5 Q12 8.5 13.2 9.5" stroke={inactive} strokeWidth="1.1" strokeLinecap="round" fill="none" />
-              <line x1="8" y1="11" x2="11" y2="7.5" stroke={inactive} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />
-              <line x1="16" y1="11" x2="13" y2="7.5" stroke={inactive} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />
-              <line x1="8.5" y1="12" x2="15.5" y2="12" stroke={inactive} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />
-            </svg>
-            <span style={{ fontSize: 10, color: inactive }}>Social</span>
-          </button>
-
-          <button className="flex flex-col items-center gap-0.5 relative text-center outline-none">
-            <User style={{ width: 22, height: 22, color: TEAL, strokeWidth: 2.2 }} />
-            <span style={{ fontSize: 10, fontWeight: 600, color: TEAL }}>Profil</span>
-            <span style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", backgroundColor: TEAL }} />
-          </button>
-        </div>
-      </nav>
+      {/* Remplacement propre de l'ancienne barre locale */}
+      <KauriBottomNav />
     </div>
   );
 }
+
+export default ProfilParticulierScreen;
