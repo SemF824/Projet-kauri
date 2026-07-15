@@ -4,131 +4,7 @@ import { useNavigate } from 'react-router';
 import { useDarkMode } from '../../contexts/DarkModeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getSupabase } from '../../../utils/supabase';
-
-// ── Custom social icon: planet + interconnected people ───────────────────────
-function SocialIcon({ color, size = 22 }: { color: string; size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="9.5" stroke={color} strokeWidth="1.6" />
-      <path d="M3 12 Q7 9.5 12 9.5 Q17 9.5 21 12" stroke={color} strokeWidth="1.2" strokeLinecap="round" fill="none" opacity="0.5" />
-      <circle cx="7" cy="10.5" r="1.1" fill={color} />
-      <path d="M5.8 13.5 Q7 12.5 8.2 13.5" stroke={color} strokeWidth="1.1" strokeLinecap="round" fill="none" />
-      <circle cx="17" cy="10.5" r="1.1" fill={color} />
-      <path d="M15.8 13.5 Q17 12.5 18.2 13.5" stroke={color} strokeWidth="1.1" strokeLinecap="round" fill="none" />
-      <circle cx="12" cy="6.5" r="1.1" fill={color} />
-      <path d="M10.8 9.5 Q12 8.5 13.2 9.5" stroke={color} strokeWidth="1.1" strokeLinecap="round" fill="none" />
-      <line x1="8" y1="11" x2="11" y2="7.5" stroke={color} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />
-      <line x1="16" y1="11" x2="13" y2="7.5" stroke={color} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />
-      <line x1="8.5" y1="12" x2="15.5" y2="12" stroke={color} strokeWidth="0.9" strokeLinecap="round" opacity="0.6" />
-    </svg>
-  );
-}
-
-// ── Shared bottom nav (5 tabs) ────────────────────────────────────────────────
-type NavTab = 'accueil' | 'investissement' | 'kauri' | 'social' | 'profil';
-
-function KauriBottomNav({ active, isDarkMode, navigate }: { active: NavTab; isDarkMode: boolean; navigate: (p: string) => void }) {
-  const TEAL = '#006D77';
-  const bg     = isDarkMode ? '#1E293B' : '#ffffff';
-  const border = isDarkMode ? '#334155' : '#E8EDF2';
-  const inactive = isDarkMode ? '#475569' : '#94A3B8';
-
-  const tabs: { id: NavTab; icon: React.ElementType | null; label: string; path?: string; isCenter?: boolean }[] = [
-    { id: 'accueil',        icon: Home,              label: 'Accueil',        path: '/kauri/normal-dashboard'   },
-    { id: 'investissement', icon: Wallet,            label: 'Investissement', path: '/kauri/investissement'     },
-    { id: 'kauri',          icon: Leaf,              label: 'Kauri',          path: '/kauri/tontines-actives', isCenter: true },
-    { id: 'social',         icon: null,              label: 'Social',         path: '/kauri/social-hub-gateway' },
-    { id: 'profil',         icon: User,              label: 'Profil',         path: '/kauri/profil-particulier' },
-  ];
-
-  return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50"
-      style={{ backgroundColor: bg, borderTop: `1px solid ${border}`, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-    >
-      <div className="flex items-end justify-around px-2 pt-1.5 pb-3">
-        {tabs.map(tab => {
-          const isActive = active === tab.id;
-          const Icon = tab.icon;
-
-          if (tab.isCenter) {
-            return (
-              <div 
-                key={tab.id} 
-                className="relative flex flex-col items-center justify-end" 
-                style={{ minWidth: 60, paddingBottom: 2 }}
-              >
-                <button
-                  onClick={() => tab.path && navigate(tab.path)}
-                  aria-label="Kauri"
-                  className="cursor-pointer border-none relative"
-                  style={{
-                    width: 56, height: 56, borderRadius: '50%',
-                    display: 'flex', alignItems: 'center', justifycontent: 'center', justifyContent: 'center',
-                    boxShadow: '0 4px 16px rgba(212,175,55,0.50), 0 2px 8px rgba(0,0,0,0.18)',
-                    border: isActive ? '2.5px solid rgba(255,255,255,0.5)' : '2px solid rgba(255,255,255,0.2)',
-                    transform: isActive ? 'scale(1.08)' : 'scale(1)',
-                    transition: 'transform 0.15s ease',
-                    flexShrink: 0,
-                    overflow: 'visible', // Permet au badge de déborder sans être masqué
-                    background: 'linear-gradient(135deg, #D4AF37, #F59E0B)',
-                  }}
-                >
-                  <svg viewBox="0 0 100 100" style={{ width: 28, height: 28, color: '#fff', margin: 'auto' }}>
-                    <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
-                  </svg>
-
-                  {/* ── 🎯 MICRO-BADGE "+" EN HAUT À DROITE CALQUÉ SUR L'IMAGE DE RÉFÉRENCE ── */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: -2,
-                      right: -2,
-                      width: 18,
-                      height: 18,
-                      borderRadius: '50%',
-                      backgroundColor: isDarkMode ? '#0F172A' : '#006D77',
-                      border: isDarkMode ? '1.5px solid #334155' : '1.5px solid #ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                      zIndex: 10
-                    }}
-                  >
-                    <span style={{ color: '#ffffff', fontSize: 13, fontWeight: 900, lineHeight: 1, marginTop: -1 }}>
-                      +
-                    </span>
-                  </div>
-                </button>
-              </div>
-            );
-          }
-
-          return (
-            <button
-              key={tab.id}
-              onClick={() => tab.path && navigate(tab.path)}
-              aria-label={tab.label}
-              className="flex flex-col items-center gap-0.5 relative cursor-pointer border-none bg-transparent"
-              style={{ minWidth: 44, paddingTop: 6, paddingBottom: 2 }}
-            >
-              {tab.id === 'social'
-                ? <SocialIcon color={isActive ? TEAL : inactive} size={22} />
-                : Icon && <Icon style={{ width: 22, height: 22, color: isActive ? TEAL : inactive, strokeWidth: isActive ? 2.2 : 1.8, transition: 'color 0.15s' }} />}
-              <span style={{ fontSize: 10, fontWeight: isActive ? 600 : 400, color: isActive ? TEAL : inactive, transition: 'color 0.15s' }}>
-                {tab.label}
-              </span>
-              {isActive && (
-                <span style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', backgroundColor: TEAL }} />
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </nav>
-  );
-}
+import { KauriBottomNav } from '../../layouts/MainLayout';
 
 export function NormalDashboardScreen() {
   const navigate = useNavigate();
@@ -512,7 +388,8 @@ export function NormalDashboardScreen() {
         </div>
       )}
 
-      <KauriBottomNav active="accueil" isDarkMode={isDarkMode} navigate={navigate} />
+      {/* INTÉGRATION DE LA BARRE CENTRALE */}
+      <KauriBottomNav />
     </div>
   );
 }
