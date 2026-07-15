@@ -24,7 +24,7 @@ function SocialIcon({ color, size = 24 }: { color: string; size?: number }) {
   );
 }
 
-// ── Barre de Navigation Basse Universelle Premium Flottante ──────────────────
+// ── Barre de Navigation Basse Universelle Premium Flottante Capsule ──────────
 export function KauriBottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,14 +40,19 @@ export function KauriBottomNav() {
   const activeColor = '#0D9488';   
   const inactiveColor = '#94A3B8'; 
   
-  const bg = isDarkMode ? 'rgba(30, 41, 59, 0.92)' : 'rgba(255, 255, 255, 0.92)';
+  const bg = isDarkMode ? 'rgba(30, 41, 59, 0.90)' : 'rgba(255, 255, 255, 0.90)';
   const border = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.06)';
   const capsuleActiveBg = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.05)';
   const currentPath = location.pathname;
 
-  // États du moteur de suivi tactile global
-  const [isSliding, setIsSliding] = useState(false);
+  // ── 🛡️ SYNC LOCKS : Références matérielles pour empêcher le spam de navigation ──
   const isSlidingRef = useRef(false);
+  const lastNavigatedPathRef = useRef(currentPath);
+
+  // Synchronisation forcée du pointeur de référence lors des changements de route externes
+  useEffect(() => {
+    lastNavigatedPathRef.current = currentPath;
+  }, [currentPath]);
 
   const getActiveTab = (): NavTab => {
     if (currentPath === '/dashboard' || currentPath.includes('/kauri/normal-dashboard')) return 'accueil';
@@ -68,48 +73,55 @@ export function KauriBottomNav() {
     { id: 'profil',         label: 'Profile',  icon: User,            target: currentPath.includes('/kauri/') ? '/kauri/profil-particulier' : '/profile' },
   ];
 
-  // Sécurité : Nettoyage global de l'état de glissement
   useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      setIsSliding(false);
+    const handleGlobalRelease = () => {
       isSlidingRef.current = false;
     };
-    window.addEventListener('mouseup', handleGlobalMouseUp);
-    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+    window.addEventListener('mouseup', handleGlobalRelease);
+    window.addEventListener('touchend', handleGlobalRelease);
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalRelease);
+      window.removeEventListener('touchend', handleGlobalRelease);
+    };
   }, []);
 
-  // ── ⚙️ MOTEUR DE BALAYAGE TACTILE CONTINU (RAYCASTING ENCLAVE DOM) ──
+  // ── ⚡ MOTEUR D'INTERCEPTION GÉOMÉTRIQUE CONTINU À HAUTE FLUIDITÉ ──
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isSlidingRef.current) return;
     
     const touch = e.touches[0];
-    // Analyse du composant situé précisément sous les coordonnées du doigt
+    // Extraction immédiate de l'élément positionné sous le capteur de pression
     const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
     if (!targetElement) return;
 
-    // Recherche de l'attribut de routage de la cible survolée
     const buttonNode = targetElement.closest('[data-kauri-target]');
     if (buttonNode) {
       const targetPath = buttonNode.getAttribute('data-kauri-target');
-      if (targetPath && targetPath !== currentPath) {
-        // Déclenchement d'un micro-retour sensoriel vibratoire si supporté
-        if (navigator.vibrate) navigator.vibrate(8);
-        navigate(targetPath);
+      
+      // 🛡️ SÉCURISATION CHIRURGICALE : Comparaison synchrone instantanée avec la référence cible
+      if (targetPath && targetPath !== lastNavigatedPathRef.current) {
+        lastNavigatedPathRef.current = targetPath; // Verrouillage immédiat du chemin pour bloquer le prochain événement tactile
+        
+        if (navigator.vibrate) {
+          navigator.vibrate(10); // Micro-vibration de retour haptique
+        }
+        
+        navigate(targetPath); // Changement de page dynamique instantané
       }
     }
   };
 
-  const activateSlideGesture = (targetPath: string) => {
-    setIsSliding(true);
+  const handleGestureStart = (targetPath: string) => {
     isSlidingRef.current = true;
     if (currentPath !== targetPath) {
+      lastNavigatedPathRef.current = targetPath;
       navigate(targetPath);
     }
   };
 
   return (
     <nav 
-      className="fixed left-1/2 -translate-x-1/2 z-50 backdrop-blur-xl transition-all select-none touch-none"
+      className="fixed left-1/2 -translate-x-1/2 z-50 backdrop-blur-xl transition-all select-none"
       style={{ 
         backgroundColor: bg, 
         bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
@@ -136,18 +148,17 @@ export function KauriBottomNav() {
               <div 
                 key={tab.id} 
                 data-kauri-target={tab.target}
-                className="flex flex-col items-center gap-1.5 relative" 
+                className="flex flex-col items-center gap-1.5 relative cursor-pointer" 
                 style={{ minWidth: 50, userSelect: 'none' }}
-                onMouseDown={() => activateSlideGesture(tab.target)}
-                onMouseEnter={() => isSlidingRef.current && navigate(tab.target)}
-                onTouchStart={() => activateSlideGesture(tab.target)}
-                onTouchEnd={() => { setIsSliding(false); isSlidingRef.current = false; }}
+                onMouseDown={() => handleGestureStart(tab.target)}
+                onMouseEnter={() => isSlidingRef.current && currentPath !== tab.target && navigate(tab.target)}
+                onTouchStart={(e) => { handleGestureStart(tab.target); }}
               >
                 <div className="w-[20px] h-[20px] invisible pointer-events-none" />
                 <span className="text-[10px] font-bold invisible select-none pointer-events-none">Kauri</span>
                 
                 <button
-                  className="cursor-pointer border-none outline-none absolute pointer-events-none"
+                  className="cursor-pointer border-none outline-none absolute pointer-events-none transition-all active:scale-90"
                   style={{
                     width: 54, 
                     height: 54, 
@@ -195,16 +206,15 @@ export function KauriBottomNav() {
             <button
               key={tab.id}
               data-kauri-target={tab.target}
-              onMouseDown={() => activateSlideGesture(tab.target)}
-              onMouseEnter={() => isSlidingRef.current && navigate(tab.target)}
-              onTouchStart={() => activateSlideGesture(tab.target)}
-              onTouchEnd={() => { setIsSliding(false); isSlidingRef.current = false; }}
-              className="flex flex-col items-center gap-1 bg-transparent border-none cursor-pointer p-0 relative outline-none py-2 px-3 rounded-2xl transition-all duration-300"
+              onMouseDown={() => handleGestureStart(tab.target)}
+              onMouseEnter={() => isSlidingRef.current && currentPath !== tab.target && navigate(tab.target)}
+              onTouchStart={(e) => { handleGestureStart(tab.target); }}
+              className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-0 relative outline-none py-2 px-3 rounded-2xl transition-all duration-300 select-none"
               style={{ 
                 color: isActive ? activeColor : inactiveColor, 
                 minWidth: 58,
-                // ── 🎨 CAPSULE FLUIDE STYLE INSTAGRAM ──
-                backgroundColor: isActive ? capsuleActiveBg : 'transparent'
+                backgroundColor: isActive ? capsuleActiveBg : 'transparent',
+                WebkitTouchCallout: 'none'
               }}
             >
               <div className="flex flex-col items-center gap-1 pointer-events-none">
