@@ -55,13 +55,13 @@ function KauriBottomNav({ active, isDarkMode, navigate }: { active: NavTab; isDa
             return (
               <div 
                 key={tab.id} 
-                className="flex flex-col items-center justify-end" 
-                style={{ minWidth: 44, paddingBottom: 2 }}
+                className="relative flex flex-col items-center justify-end" 
+                style={{ minWidth: 60, paddingBottom: 2 }}
               >
                 <button
                   onClick={() => tab.path && navigate(tab.path)}
                   aria-label="Kauri"
-                  className="cursor-pointer window-center border-none"
+                  className="cursor-pointer border-none relative"
                   style={{
                     width: 56, height: 56, borderRadius: '50%',
                     display: 'flex', alignItems: 'center', justifycontent: 'center', justifyContent: 'center',
@@ -70,17 +70,37 @@ function KauriBottomNav({ active, isDarkMode, navigate }: { active: NavTab; isDa
                     transform: isActive ? 'scale(1.08)' : 'scale(1)',
                     transition: 'transform 0.15s ease',
                     flexShrink: 0,
-                    overflow: 'hidden',
+                    overflow: 'visible', // Permet au badge de déborder sans être masqué
                     background: 'linear-gradient(135deg, #D4AF37, #F59E0B)',
                   }}
                 >
                   <svg viewBox="0 0 100 100" style={{ width: 28, height: 28, color: '#fff', margin: 'auto' }}>
                     <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
                   </svg>
+
+                  {/* ── 🎯 MICRO-BADGE "+" EN HAUT À DROITE CALQUÉ SUR L'IMAGE DE RÉFÉRENCE ── */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: -2,
+                      right: -2,
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      backgroundColor: isDarkMode ? '#0F172A' : '#006D77',
+                      border: isDarkMode ? '1.5px solid #334155' : '1.5px solid #ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                      zIndex: 10
+                    }}
+                  >
+                    <span style={{ color: '#ffffff', fontSize: 13, fontWeight: 900, lineHeight: 1, marginTop: -1 }}>
+                      +
+                    </span>
+                  </div>
                 </button>
-                <span style={{ fontSize: 13, fontWeight: 900, color: isActive ? TEAL : inactive, transition: 'color 0.15s', marginTop: 3, lineHeight: 1 }}>
-                  +
-                </span>
               </div>
             );
           }
@@ -119,15 +139,12 @@ export function NormalDashboardScreen() {
   const [tontinesCount, setTontinesCount] = useState<number | null>(null);
   const [investmentsCount, setInvestmentsCount] = useState<number | null>(null);
 
-  // Valeurs financières cumulées de la base de données
   const [rwaTotalAmount, setRwaTotalAmount] = useState<number>(0);
   const [tontinesTotalAmount, setTontinesTotalAmount] = useState<number>(0);
 
-  // 1. Récupération stricte du Trust Score
   const rawScore = profile?.trust_score !== undefined ? profile.trust_score : (profile?.trustScore !== undefined ? profile.trustScore : 0);
   const trustScore = Math.round(Number(rawScore) || 0);
   
-  // 2. Calcul d'ancienneté du cycle
   const calculateStreak = () => {
     if (!profile?.created_at) return 0;
     const createdDate = new Date(profile.created_at);
@@ -137,12 +154,9 @@ export function NormalDashboardScreen() {
   };
   const paymentStreak = calculateStreak();
 
-  // 3. Grade utilisateur
   const userStatus = trustScore >= 85 ? 'Membre Émérite' : trustScore >= 40 ? 'Membre Actif' : 'Nouveau Membre';
-  
   const firstName = profile?.firstName ?? profile?.first_name ?? 'Vous';
   
-  // 💰 LIQUIDITÉ ET PATRIMOINE AGREGÉ (Liquide + RWA + Capital Tontines)
   const availableLiquidity = Number(profile?.balance ?? 0);
   const totalCombinedWealth = availableLiquidity + rwaTotalAmount + tontinesTotalAmount;
   
@@ -175,7 +189,6 @@ export function NormalDashboardScreen() {
       try {
         const supabase = getSupabase();
         
-        // 1. Récupération & Calcul financier des Tontines Actives
         const { data: tData, error: tError } = await supabase
           .from('tontine_members')
           .select(`
@@ -192,7 +205,6 @@ export function NormalDashboardScreen() {
           setTontinesTotalAmount(totalTontineSum);
         }
 
-        // 2. Récupération & Calcul financier des actifs réels RWA
         const { data: iData, error: iError } = await supabase
           .from('rwa_investments')
           .select('id, amount');
@@ -226,12 +238,10 @@ export function NormalDashboardScreen() {
               </div>
             </div>
 
-            {/* ── ALIGNEMENT ET BADGE DE LIQUIDITÉ EN HAUT À DROITE ── */}
             <div className="flex items-center gap-2">
               <div 
                 onClick={() => navigate('/kauri/portefeuille')}
                 className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-black cursor-pointer transition-transform active:scale-95 shadow-sm"
-                title="Mon Solde Liquide Disponible"
               >
                 {availableLiquidity.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
               </div>
