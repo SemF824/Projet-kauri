@@ -1,5 +1,4 @@
 import { Outlet, useLocation, useNavigate } from 'react-router';
-import { useRef, useState } from 'react';
 import { LayoutDashboard, TrendingUp, User, Leaf } from 'lucide-react';
 import { useDarkMode } from '../contexts/DarkModeContext';
 
@@ -44,10 +43,6 @@ export function KauriBottomNav() {
   const border = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.06)';
   const currentPath = location.pathname;
 
-  // Gestionnaire d'état pour l'effet d'enfoncement physique au maintien
-  const [pressingTab, setPressingTab] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const getActiveTab = (): NavTab => {
     if (currentPath === '/dashboard' || currentPath.includes('/kauri/normal-dashboard')) return 'accueil';
     if (currentPath === '/investments' || currentPath.includes('/kauri/investissement')) return 'investissement';
@@ -67,27 +62,6 @@ export function KauriBottomNav() {
     { id: 'profil',         label: 'Profile',  icon: User,            target: currentPath.includes('/kauri/') ? '/kauri/profil-particulier' : '/profile' },
   ];
 
-  // ── ⚙️ LOGIQUE DE GESTION DU LONG PRESS (MAINTIEN PROLONGÉ) ──
-  const startPress = (tabId: string, target: string) => {
-    setPressingTab(tabId);
-    
-    if (timerRef.current) clearTimeout(timerRef.current);
-    
-    // Déclenchement de la navigation après 400ms de maintien continu
-    timerRef.current = setTimeout(() => {
-      navigate(target);
-      setPressingTab(null);
-    }, 400);
-  };
-
-  const cancelPress = () => {
-    setPressingTab(null);
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  };
-
   return (
     <nav 
       className="fixed left-1/2 -translate-x-1/2 z-50 backdrop-blur-xl transition-all select-none"
@@ -103,13 +77,12 @@ export function KauriBottomNav() {
         boxShadow: isDarkMode 
           ? '0 16px 36px -6px rgba(0, 0, 0, 0.6), 0 4px 16px -4px rgba(0, 0, 0, 0.4)' 
           : '0 16px 36px -6px rgba(15, 23, 42, 0.06), 0 4px 16px -4px rgba(15, 23, 42, 0.03)',
-        WebkitUserSelect: 'none', // Bloque la sélection de texte native sur iOS
+        WebkitUserSelect: 'none',
       }}
     >
       <div className="flex items-center justify-around px-2 relative">
         {tabs.map((tab) => {
           const isActive = active === tab.id;
-          const isCurrentlyPressed = pressingTab === tab.id;
           const Icon = tab.icon;
 
           if (tab.isCenter) {
@@ -119,16 +92,14 @@ export function KauriBottomNav() {
                 className="flex flex-col items-center gap-1.5 relative" 
                 style={{ minWidth: 50, userSelect: 'none' }}
               >
+                {/* Gabarit de calage optique */}
                 <div className="w-[20px] h-[20px] invisible" />
                 <span className="text-[10px] font-bold invisible select-none">Kauri</span>
                 
+                {/* ── INTERACTION INSTANTANÉE + EFFET DE PRESSION REVOLUT-STYLE ── */}
                 <button
-                  onMouseDown={() => startPress(tab.id, tab.target)}
-                  onMouseUp={cancelPress}
-                  onMouseLeave={cancelPress}
-                  onTouchStart={(e) => { e.preventDefault(); startPress(tab.id, tab.target); }}
-                  onTouchEnd={cancelPress}
-                  className="cursor-pointer border-none outline-none absolute"
+                  onClick={() => navigate(tab.target)}
+                  className="cursor-pointer border-none outline-none absolute left-1/2 -translate-x-1/2 transition-all active:scale-90 active:top-[-2px]"
                   style={{
                     width: 54, 
                     height: 54, 
@@ -136,23 +107,18 @@ export function KauriBottomNav() {
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    left: '50%',
+                    top: -6, // Alignement optique parfait au repos
+                    boxShadow: '0 6px 16px rgba(212,175,55,0.30), 0 3px 6px rgba(0,0,0,0.08)',
                     border: isActive ? '2.5px solid #ffffff' : '2px solid rgba(255,255,255,0.45)',
                     background: 'linear-gradient(135deg, #D4AF37, #F59E0B)',
-                    zIndex: 10,
-                    // Équation d'enfoncement dynamique basée sur la pression active
-                    top: isCurrentlyPressed ? -2 : -6,
-                    transform: `translateX(-50%) scale(${isCurrentlyPressed ? 0.92 : 1})`,
-                    boxShadow: isCurrentlyPressed 
-                      ? '0 3px 8px rgba(212,175,55,0.2)' 
-                      : '0 8px 20px rgba(212,175,55,0.35), 0 3px 8px rgba(0,0,0,0.1)',
-                    transition: 'transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.15s ease, boxShadow 0.15s ease',
+                    zIndex: 10
                   }}
                 >
                   <svg viewBox="0 0 100 100" style={{ width: 24, height: 24, color: '#fff', display: 'block', margin: 'auto' }}>
                     <path d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35" fill="currentColor" />
                   </svg>
                   
+                  {/* Plus Badge */}
                   <div
                     style={{
                       position: 'absolute',
@@ -179,19 +145,9 @@ export function KauriBottomNav() {
           return (
             <button
               key={tab.id}
-              onMouseDown={() => startPress(tab.id, tab.target)}
-              onMouseUp={cancelPress}
-              onMouseLeave={cancelPress}
-              onTouchStart={(e) => { e.preventDefault(); startPress(tab.id, tab.target); }}
-              onTouchEnd={cancelPress}
-              className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-0 relative outline-none"
-              style={{ 
-                color: isActive ? activeColor : inactiveColor, 
-                minWidth: 50,
-                transform: `scale(${isCurrentlyPressed ? 0.90 : 1})`,
-                transition: 'transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1)',
-                WebkitTouchCallout: 'none', // Désactive le menu de copie d'image ou lien de l'OS mobile
-              }}
+              onClick={() => navigate(tab.target)}
+              className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-0 relative outline-none transition-transform active:scale-90"
+              style={{ color: isActive ? activeColor : inactiveColor, minWidth: 50 }}
             >
               {tab.id === 'social' ? (
                 <SocialIcon color={isActive ? activeColor : inactiveColor} size={22} />
