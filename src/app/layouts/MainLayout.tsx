@@ -89,13 +89,13 @@ export function KauriBottomNav() {
               <div 
                 key={tab.id} 
                 className="flex flex-col items-center gap-1.5 relative" 
-                style={{ minWidth: 50, selectNone: 'none' } as any}
+                style={{ minWidth: 50, userSelect: 'none' }}
               >
-                {/* ── GABARIT FANTÔME POUR VERROUILLER L'ALIGNEMENT DES VOISINS ── */}
+                {/* Gabarit fantôme pour conserver les espacements Flexbox */}
                 <div className="w-[20px] h-[20px] invisible" />
                 <span className="text-[10px] font-bold invisible select-none">Kauri</span>
                 
-                {/* ── BOUTON FLOTTANT POSITIONNÉ SUR L'AXE OPTIQUE EXACT DE LA BARRE ── */}
+                {/* ── ALIGNEMENT VISUEL CORRIGÉ ET ABAISSÉ DE MANIÈRE FLUIDE ── */}
                 <button
                   onClick={() => navigate(tab.target)}
                   className="cursor-pointer border-none outline-none absolute"
@@ -106,10 +106,10 @@ export function KauriBottomNav() {
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    top: -17, // Alignement barycentrique parfait calculé sur l'axe des icônes
+                    top: -6, // Réduction de l'excentricité pour un ancrage parfait dans le dock
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    boxShadow: '0 8px 20px rgba(212,175,55,0.35), 0 3px 8px rgba(0,0,0,0.1)',
+                    boxShadow: '0 6px 16px rgba(212,175,55,0.30), 0 3px 6px rgba(0,0,0,0.08)',
                     border: isActive ? '2.5px solid #ffffff' : '2px solid rgba(255,255,255,0.45)',
                     background: 'linear-gradient(135deg, #D4AF37, #F59E0B)',
                     zIndex: 10
