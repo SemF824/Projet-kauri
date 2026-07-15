@@ -6,6 +6,7 @@ import {
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
 import { useDarkMode } from '../../contexts/DarkModeContext';
+import { KauriBottomNav } from '../../layouts/MainLayout';
 
 const GOLD = '#D4A373';
 const TEAL = '#0A847E';
@@ -14,7 +15,6 @@ function formatEur(n: number) {
   return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 }
 
-// ── Portfolio data ───────────────────────────────────────────────────────────
 const PORTFOLIO = [
   {
     id: 'i1', name: 'Kouroukan Énergie Verte', category: 'Agriculture',
@@ -46,7 +46,6 @@ const TOTAL_INVESTI = PORTFOLIO.reduce((s, p) => s + p.investi, 0);
 const TOTAL_VALEUR  = PORTFOLIO.reduce((s, p) => s + p.valeur, 0);
 const ROI_GLOBAL    = ((TOTAL_VALEUR - TOTAL_INVESTI) / TOTAL_INVESTI * 100).toFixed(1);
 
-// ── Marketplace data ─────────────────────────────────────────────────────────
 const PROJETS = [
   {
     id: 'm1', name: 'Modernisation Exploitation Bananière', region: 'Martinique',
@@ -70,14 +69,13 @@ const PROJETS = [
 
 const SOLDE_DISPO = 140;
 
-// ── Sub-components ────────────────────────────────────────────────────────────
 function PortfolioCard({ p, isDark }: { p: typeof PORTFOLIO[0]; isDark: boolean }) {
   const navigate = useNavigate();
   const Icon = p.icon;
   return (
     <button
       onClick={() => navigate('/kauri/projet-detail')}
-      className="w-full text-left rounded-2xl p-4 transition-all active:scale-[0.99]"
+      className="w-full text-left rounded-2xl p-4 transition-all active:scale-[0.99] border-none cursor-pointer"
       style={{
         backgroundColor: isDark ? '#1E293B' : '#fff',
         border: `1.5px solid ${isDark ? '#334155' : '#EEF2F7'}`,
@@ -139,7 +137,6 @@ function MarketCard({ p, isDark }: { p: typeof PROJETS[0]; isDark: boolean }) {
         boxShadow: '0 3px 14px rgba(0,0,0,0.07)',
       }}
     >
-      {/* Colored top strip */}
       <div className="px-4 pt-4 pb-3" style={{ background: `linear-gradient(135deg, ${p.color}22, ${p.color}08)` }}>
         <div className="flex items-start justify-between mb-2">
           <div>
@@ -158,7 +155,6 @@ function MarketCard({ p, isDark }: { p: typeof PROJETS[0]; isDark: boolean }) {
       </div>
 
       <div className="px-4 pb-4">
-        {/* Progress */}
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-xs text-[#94A3B8]">Progression</span>
@@ -172,10 +168,9 @@ function MarketCard({ p, isDark }: { p: typeof PROJETS[0]; isDark: boolean }) {
           </p>
         </div>
 
-        {/* CTA */}
         <button
           onClick={() => navigate('/kauri/projet-detail')}
-          className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 mb-2"
+          className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 mb-2 border-none cursor-pointer"
           style={{ background: `linear-gradient(135deg, ${p.color}, ${p.color}CC)`, color: '#fff', boxShadow: `0 3px 12px ${p.color}44` }}
         >
           <TrendingUp style={{ width: 15, height: 15 }} />
@@ -190,7 +185,6 @@ function MarketCard({ p, isDark }: { p: typeof PROJETS[0]; isDark: boolean }) {
   );
 }
 
-// ── Main screen ───────────────────────────────────────────────────────────────
 export function InvestissementScreen() {
   const navigate = useNavigate();
   const { isDarkMode } = useDarkMode();
@@ -201,15 +195,13 @@ export function InvestissementScreen() {
 
   return (
     <div className="min-h-screen pb-28" style={{ backgroundColor: bg }}>
-
-      {/* ── HEADER ── */}
       <div
         style={{ background: `linear-gradient(135deg, ${GOLD} 0%, #B8860B 100%)`, borderRadius: '0 0 28px 28px' }}
         className="px-5 pt-14 pb-6 shadow-xl"
       >
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/80 hover:text-white mb-5 transition-colors">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/80 hover:text-white mb-5 transition-colors bg-transparent border-none cursor-pointer font-bold">
           <ArrowLeft className="w-5 h-5" />
-          <span className="text-sm font-medium">Retour</span>
+          <span className="text-sm">Retour</span>
         </button>
 
         {tab === 'investir' ? (
@@ -217,7 +209,6 @@ export function InvestissementScreen() {
             <h1 className="text-white text-2xl font-bold mb-1">Investir au Pays</h1>
             <p className="text-white/70 text-sm mb-5">Fractionnez vos investissements dans l'économie réelle à partir de 10 €</p>
 
-            {/* Solde card */}
             <div
               className="rounded-2xl px-5 py-4 flex items-center justify-between"
               style={{ backgroundColor: 'rgba(0,0,0,0.20)', border: '1px solid rgba(255,255,255,0.15)' }}
@@ -238,7 +229,6 @@ export function InvestissementScreen() {
             <h1 className="text-white text-2xl font-bold mb-1">Mes Investissements</h1>
             <p className="text-white/70 text-sm mb-5">Portfolio & rendements</p>
 
-            {/* Overview card */}
             <div
               className="rounded-2xl p-5"
               style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)' }}
@@ -274,17 +264,16 @@ export function InvestissementScreen() {
         )}
       </div>
 
-      {/* ── TABS ── */}
       <div className="px-5 pt-5">
         <div className="flex rounded-2xl p-1 mb-5" style={{ backgroundColor: isDarkMode ? '#1E293B' : '#E8EDF2' }}>
           {([
-            ['investir',  'Investir',        TrendingUp],
+            ['investir',  'Investir',      TrendingUp],
             ['portfolio', 'Mon Portfolio',   Wallet],
           ] as const).map(([key, label, Icon]) => (
             <button
               key={key}
               onClick={() => setTab(key)}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border-none cursor-pointer"
               style={{
                 backgroundColor: tab === key ? '#fff' : 'transparent',
                 color: tab === key ? GOLD : '#64748B',
@@ -297,7 +286,6 @@ export function InvestissementScreen() {
           ))}
         </div>
 
-        {/* ── INVESTIR TAB ── */}
         {tab === 'investir' && (
           <div className="space-y-4">
             <p className="text-[#0F172A] text-sm font-bold flex items-center gap-2">
@@ -308,7 +296,6 @@ export function InvestissementScreen() {
           </div>
         )}
 
-        {/* ── PORTFOLIO TAB ── */}
         {tab === 'portfolio' && (
           <div className="space-y-3">
             <p className="text-[#0F172A] text-sm font-bold flex items-center gap-2">
@@ -319,6 +306,9 @@ export function InvestissementScreen() {
           </div>
         )}
       </div>
+      <KauriBottomNav />
     </div>
   );
 }
+
+export default InvestissementScreen;
