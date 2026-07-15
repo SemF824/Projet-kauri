@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router';
-import { useEffect, useState, useRef } from 'react';
+import { useRef } from 'react';
 import { LayoutDashboard, TrendingUp, User, Leaf } from 'lucide-react';
 import { useDarkMode } from '../contexts/DarkModeContext';
 
@@ -24,7 +24,7 @@ function SocialIcon({ color, size = 24 }: { color: string; size?: number }) {
   );
 }
 
-// ── Barre de Navigation Basse Universelle Premium Flottante Capsule ──────────
+// ── Barre de Navigation Basse Universelle Premium ────────────────────────────
 export function KauriBottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,17 +42,7 @@ export function KauriBottomNav() {
   
   const bg = isDarkMode ? 'rgba(30, 41, 59, 0.90)' : 'rgba(255, 255, 255, 0.90)';
   const border = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.06)';
-  const capsuleActiveBg = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.05)';
   const currentPath = location.pathname;
-
-  // ── 🛡️ SYNC LOCKS : Références matérielles pour empêcher le spam de navigation ──
-  const isSlidingRef = useRef(false);
-  const lastNavigatedPathRef = useRef(currentPath);
-
-  // Synchronisation forcée du pointeur de référence lors des changements de route externes
-  useEffect(() => {
-    lastNavigatedPathRef.current = currentPath;
-  }, [currentPath]);
 
   const getActiveTab = (): NavTab => {
     if (currentPath === '/dashboard' || currentPath.includes('/kauri/normal-dashboard')) return 'accueil';
@@ -73,50 +63,53 @@ export function KauriBottomNav() {
     { id: 'profil',         label: 'Profile',  icon: User,            target: currentPath.includes('/kauri/') ? '/kauri/profil-particulier' : '/profile' },
   ];
 
-  useEffect(() => {
-    const handleGlobalRelease = () => {
-      isSlidingRef.current = false;
-    };
-    window.addEventListener('mouseup', handleGlobalRelease);
-    window.addEventListener('touchend', handleGlobalRelease);
-    return () => {
-      window.removeEventListener('mouseup', handleGlobalRelease);
-      window.removeEventListener('touchend', handleGlobalRelease);
-    };
-  }, []);
+  // ── ⚡ MOTEUR DE BALAYAGE TACTILE (SWIPE) SAFARI-STYLE ──
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  
+  // Distance minimale en pixels pour qu'un glissement soit considéré comme une action volontaire
+  const minSwipeDistance = 45; 
 
-  // ── ⚡ MOTEUR D'INTERCEPTION GÉOMÉTRIQUE CONTINU À HAUTE FLUIDITÉ ──
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isSlidingRef.current) return;
-    
-    const touch = e.touches[0];
-    // Extraction immédiate de l'élément positionné sous le capteur de pression
-    const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
-    if (!targetElement) return;
-
-    const buttonNode = targetElement.closest('[data-kauri-target]');
-    if (buttonNode) {
-      const targetPath = buttonNode.getAttribute('data-kauri-target');
-      
-      // 🛡️ SÉCURISATION CHIRURGICALE : Comparaison synchrone instantanée avec la référence cible
-      if (targetPath && targetPath !== lastNavigatedPathRef.current) {
-        lastNavigatedPathRef.current = targetPath; // Verrouillage immédiat du chemin pour bloquer le prochain événement tactile
-        
-        if (navigator.vibrate) {
-          navigator.vibrate(10); // Micro-vibration de retour haptique
-        }
-        
-        navigate(targetPath); // Changement de page dynamique instantané
-      }
-    }
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+    touchEndX.current = null;
   };
 
-  const handleGestureStart = (targetPath: string) => {
-    isSlidingRef.current = true;
-    if (currentPath !== targetPath) {
-      lastNavigatedPathRef.current = targetPath;
-      navigate(targetPath);
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current === null || touchEndX.current === null) return;
+    
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe || isRightSwipe) {
+      const currentIndex = tabs.findIndex(t => t.id === active);
+      if (currentIndex === -1) return;
+
+      let nextIndex = currentIndex;
+      
+      if (isLeftSwipe) {
+        // Balayage de droite à gauche -> onglet suivant
+        nextIndex = Math.min(currentIndex + 1, tabs.length - 1);
+      } else if (isRightSwipe) {
+        // Balayage de gauche à droite -> onglet précédent
+        nextIndex = Math.max(currentIndex - 1, 0);
+      }
+
+      if (nextIndex !== currentIndex) {
+        // Retour haptique natif pour confirmer l'action au bout du doigt
+        if (navigator.vibrate) navigator.vibrate(15);
+        navigate(tabs[nextIndex].target);
+      }
     }
+    
+    // Réinitialisation du verrou
+    touchStartX.current = null;
+    touchEndX.current = null;
   };
 
   return (
@@ -135,10 +128,15 @@ export function KauriBottomNav() {
           ? '0 16px 36px -6px rgba(0, 0, 0, 0.6), 0 4px 16px -4px rgba(0, 0, 0, 0.4)' 
           : '0 16px 36px -6px rgba(15, 23, 42, 0.06), 0 4px 16px -4px rgba(15, 23, 42, 0.03)',
         WebkitUserSelect: 'none',
+        // touch-action autorise le scroll vertical de la page mais réserve les swipes horizontaux pour le JS
+        touchAction: 'pan-y',
       }}
+      // Branchement des écouteurs de balayage sur toute la surface de la capsule
+      onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
-      <div className="flex items-center justify-around px-2 relative">
+      <div className="flex items-center justify-around px-2 relative pointer-events-none sm:pointer-events-auto">
         {tabs.map((tab) => {
           const isActive = active === tab.id;
           const Icon = tab.icon;
@@ -147,18 +145,15 @@ export function KauriBottomNav() {
             return (
               <div 
                 key={tab.id} 
-                data-kauri-target={tab.target}
-                className="flex flex-col items-center gap-1.5 relative cursor-pointer" 
-                style={{ minWidth: 50, userSelect: 'none' }}
-                onMouseDown={() => handleGestureStart(tab.target)}
-                onMouseEnter={() => isSlidingRef.current && currentPath !== tab.target && navigate(tab.target)}
-                onTouchStart={(e) => { handleGestureStart(tab.target); }}
+                className="flex flex-col items-center gap-1.5 relative pointer-events-auto" 
+                style={{ minWidth: 50 }}
               >
-                <div className="w-[20px] h-[20px] invisible pointer-events-none" />
-                <span className="text-[10px] font-bold invisible select-none pointer-events-none">Kauri</span>
+                <div className="w-[20px] h-[20px] invisible" />
+                <span className="text-[10px] font-bold invisible select-none">Kauri</span>
                 
                 <button
-                  className="cursor-pointer border-none outline-none absolute pointer-events-none transition-all active:scale-90"
+                  onClick={() => navigate(tab.target)}
+                  className="cursor-pointer border-none outline-none absolute transition-all active:scale-90"
                   style={{
                     width: 54, 
                     height: 54, 
@@ -205,30 +200,20 @@ export function KauriBottomNav() {
           return (
             <button
               key={tab.id}
-              data-kauri-target={tab.target}
-              onMouseDown={() => handleGestureStart(tab.target)}
-              onMouseEnter={() => isSlidingRef.current && currentPath !== tab.target && navigate(tab.target)}
-              onTouchStart={(e) => { handleGestureStart(tab.target); }}
-              className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-0 relative outline-none py-2 px-3 rounded-2xl transition-all duration-300 select-none"
-              style={{ 
-                color: isActive ? activeColor : inactiveColor, 
-                minWidth: 58,
-                backgroundColor: isActive ? capsuleActiveBg : 'transparent',
-                WebkitTouchCallout: 'none'
-              }}
+              onClick={() => navigate(tab.target)}
+              className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-0 relative outline-none transition-transform active:scale-90 pointer-events-auto"
+              style={{ color: isActive ? activeColor : inactiveColor, minWidth: 50 }}
             >
-              <div className="flex flex-col items-center gap-1 pointer-events-none">
-                {tab.id === 'social' ? (
-                  <SocialIcon color={isActive ? activeColor : inactiveColor} size={22} />
-                ) : (
-                  Icon && <Icon className="w-[20px] h-[20px]" style={{ strokeWidth: isActive ? 2.4 : 1.8 }} />
-                )}
-                <span className="text-[10px] font-bold tracking-wide transition-colors">{tab.label}</span>
-              </div>
+              {tab.id === 'social' ? (
+                <SocialIcon color={isActive ? activeColor : inactiveColor} size={22} />
+              ) : (
+                Icon && <Icon className="w-[20px] h-[20px]" style={{ strokeWidth: isActive ? 2.4 : 1.8 }} />
+              )}
+              <span className="text-[10px] font-bold tracking-wide transition-colors">{tab.label}</span>
               {isActive && (
                 <span 
-                  className="absolute rounded-full pointer-events-none" 
-                  style={{ bottom: 2, width: 4, height: 4, backgroundColor: activeColor }} 
+                  className="absolute rounded-full" 
+                  style={{ bottom: -6, width: 4, height: 4, backgroundColor: activeColor }} 
                 />
               )}
             </button>
