@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useDarkMode } from '../../contexts/DarkModeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getSupabase } from '../../../utils/supabase';
+import { KauriBottomNav } from '../../layouts/MainLayout';
 
 interface Tontine {
   id: string;
@@ -15,7 +16,6 @@ interface Tontine {
   status: 'active' | 'your-turn' | 'waiting';
 }
 
-// 🎯 COMPOSANT INTELLIGENT : Il réagit dynamiquement au Trust Score (Strictement numérique)
 function SmartPubliqueButton({ trustScore, navigate }: { trustScore: number, navigate: any }) {
   const [showTooltip, setShowTooltip] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -24,7 +24,6 @@ function SmartPubliqueButton({ trustScore, navigate }: { trustScore: number, nav
 
   const handlePress = () => {
     if (isUnlocked) {
-      // Redirection vers la page de création d'une tontine publique
       navigate('/kauri/creer-tontine-publique');
     } else {
       setShowTooltip(true);
@@ -35,7 +34,6 @@ function SmartPubliqueButton({ trustScore, navigate }: { trustScore: number, nav
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* Tooltip d'avertissement (uniquement visible si verrouillé) */}
       {!isUnlocked && (
         <div
           style={{
@@ -60,7 +58,6 @@ function SmartPubliqueButton({ trustScore, navigate }: { trustScore: number, nav
           }}
         >
           🔒 Réservé aux Membres Émérites (Score ≥ 85)
-          {/* Flèche Tooltip */}
           <span style={{
             position: 'absolute',
             bottom: -5,
@@ -74,7 +71,6 @@ function SmartPubliqueButton({ trustScore, navigate }: { trustScore: number, nav
         </div>
       )}
 
-      {/* Le Bouton Dynamique */}
       <button
         onClick={handlePress}
         className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl font-bold transition-all shadow-md border-none ${
@@ -95,22 +91,18 @@ export function TontinesActivesScreen() {
   const { isDarkMode } = useDarkMode();
   const { profile, user } = useAuth();
   
-  // États de gestion de données asynchrones
   const [tontines, setTontines] = useState<Tontine[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // 🛡️ BLINDAGE DES DONNÉES : Extraction robuste, tolérance au camelCase/snake_case, et conversion String -> Number
   const rawScore = profile?.trust_score ?? profile?.trustScore ?? 0;
   const trustScore = Math.round(Number(rawScore) || 0);
 
-  // 🎯 REQUÊTE ET LIEN DYNAMIQUE SUPABASE
   useEffect(() => {
     const fetchActiveCercleData = async () => {
       if (!user) return;
       try {
         const supabase = getSupabase();
         
-        // Requête de jointure relationnelle sur les cercles de l'utilisateur
         const { data, error } = await supabase
           .from('tontine_members')
           .select(`
@@ -129,21 +121,19 @@ export function TontinesActivesScreen() {
 
         const filteredList = data?.map(item => item.tontines).filter(Boolean) || [];
         
-        // Formatage dynamique pour l'affichage de l'interface
         const formattedTontines: Tontine[] = filteredList.map((t: any) => {
-          // Extraction et nettoyage des statuts applicables à l'UI
           let uiStatus: 'active' | 'your-turn' | 'waiting' = 'active';
-          if (t.status === 'your-turn' || t.status === 'waiting') {
-            uiStatus = t.status;
+          if (t.status === 'your-turn' || t.status === 'waiting' || t.status === 'pending') {
+            uiStatus = t.status === 'pending' ? 'waiting' : t.status;
           }
 
           return {
             id: t.id,
             name: t.name,
-            members: Math.floor(Math.random() * 6) + 6, // Simulation du nombre (À lier avec un count SQL ultérieurement)
+            members: Math.floor(Math.random() * 6) + 6,
             amount: Number(t.contribution_amount) || 0,
             nextPayment: new Date(t.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }),
-            progress: Math.floor(Math.random() * 50) + 30, // Progression dynamique simulée basée sur le cycle
+            progress: Math.floor(Math.random() * 50) + 30,
             status: uiStatus
           };
         });
@@ -180,11 +170,11 @@ export function TontinesActivesScreen() {
   };
 
   return (
-    <div className={`min-h-screen pb-24 transition-colors font-sans select-none ${isDarkMode ? 'bg-[#0F172A]' : 'bg-gradient-to-b from-[#F8FAFC] to-[#E2E8F0]'}`}>
+    <div className={`min-h-screen pb-32 transition-colors font-sans select-none ${isDarkMode ? 'bg-[#0F172A]' : 'bg-gradient-to-b from-[#F8FAFC] to-[#E2E8F0]'}`}>
       <div className={`px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl ${isDarkMode ? 'bg-gradient-to-br from-[#1E293B] to-[#334155]' : 'bg-gradient-to-br from-[#006D77] to-[#0D9488]'}`}>
-        <button onClick={() => navigate(-1)} className="mb-6 text-white flex items-center gap-2 bg-transparent border-none cursor-pointer opacity-90 hover:opacity-100 transition-opacity">
+        <button onClick={() => navigate(-1)} className="mb-6 text-white flex items-center gap-2 bg-transparent border-none cursor-pointer opacity-90 hover:opacity-100 transition-opacity font-bold">
           <ArrowLeft className="w-5 h-5" />
-          <span className="text-sm font-bold">Retour</span>
+          <span className="text-sm">Retour</span>
         </button>
 
         <h1 className="text-white text-2xl mb-1 font-black tracking-tight">Tontines Actives</h1>
@@ -194,7 +184,6 @@ export function TontinesActivesScreen() {
       </div>
 
       <div className="px-6 py-6 space-y-4">
-        
         {isLoading ? (
           <div className="py-20 flex flex-col items-center justify-center space-y-3 bg-white/50 rounded-3xl backdrop-blur-sm border border-white/20">
             <Loader2 className="w-8 h-8 animate-spin text-[#006D77]" />
@@ -314,7 +303,6 @@ export function TontinesActivesScreen() {
           <span>Rejoindre un cercle existant</span>
         </button>
 
-        {/* ── CRÉER UNE TONTINE ── */}
         <div className={`mt-6 p-5 rounded-[20px] border ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'}`}>
           <h3 className={`text-sm font-black mb-4 flex items-center gap-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
             <span className="w-1.5 h-4 rounded-full bg-[#006D77] inline-block" />
@@ -322,7 +310,6 @@ export function TontinesActivesScreen() {
           </h3>
           
           <div className="grid grid-cols-2 gap-3">
-            {/* + Privée — Toujours actif */}
             <button
               onClick={() => navigate('/kauri/creer-tontine-privee')}
               className="flex items-center justify-center gap-2 py-4 rounded-xl shadow-md font-bold text-white bg-gradient-to-r from-[#006D77] to-[#0D9488] active:scale-95 transition-all cursor-pointer border-none"
@@ -331,11 +318,12 @@ export function TontinesActivesScreen() {
               <span className="text-sm">+ Privée</span>
             </button>
 
-            {/* + Publique — Câblé au vrai profil Supabase et casté en Numérique */}
             <SmartPubliqueButton trustScore={trustScore} navigate={navigate} />
           </div>
         </div>
       </div>
+
+      <KauriBottomNav />
     </div>
   );
 }
