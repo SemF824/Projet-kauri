@@ -76,7 +76,6 @@ export function AccountTypeSelectionScreen() {
   
   // ── ÉTATS KYC & MÉDIAS ──
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
-  const [idFile, setIdFile] = useState<File | null>(null);
   const [idPreviewUrl, setIdPreviewUrl] = useState<string | null>(null);
   const [selfiePreviewUrl, setSelfiePreviewUrl] = useState<string | null>(null);
   const identityInputRef = useRef<HTMLInputElement>(null);
@@ -90,7 +89,13 @@ export function AccountTypeSelectionScreen() {
   const videoChunksRef = useRef<BlobPart[]>([]);
   const keyframesRef = useRef<ImageData[]>([]);
 
-  // ── NAVIGATION ET VALIDATION ──
+  // ── INTERACTION D'ENTRÉE : FIX DE LA VARIABLE MANQUANTE ──
+  const selectType = (type: 'particulier' | 'professionnel') => {
+    setAccountType(type);
+    setStep('name');
+  };
+
+  // ── NAVIGATION ET VALIDATION MULTI-ÉTAPES ──
   const getStepsSequence = (): Step[] => accountType === 'professionnel' ? ['name', 'business', 'email', 'password', 'phone', 'documents'] : ['name', 'email', 'password', 'phone', 'documents'];
   const stepsSequence = getStepsSequence();
   const currentStepIndex = stepsSequence.indexOf(step);
@@ -118,7 +123,7 @@ export function AccountTypeSelectionScreen() {
     else if (step === 'business') setStep('email');
     else if (step === 'email') setStep('password');
     else if (step === 'password') setStep('phone');
-    else if (step === 'phone') handleCreateAccount(); // Création du compte avant le KYC
+    else if (step === 'phone') handleCreateAccount();
   };
 
   const handleBack = () => {
@@ -131,7 +136,6 @@ export function AccountTypeSelectionScreen() {
     else if (step === 'documents') setStep('phone');
   };
 
-  // ── LOGIQUE SOCIALE (OAuth) ──
   const handleSocialSignup = async (provider: 'google' | 'apple') => {
     setIsLoading(true);
     try {
@@ -146,13 +150,12 @@ export function AccountTypeSelectionScreen() {
       });
       if (error) throw error;
     } catch (e: any) {
-      toast.error(`Connexion ${provider} échouée : Vérifiez l'activation dans le dashboard Supabase.`);
+      toast.error(`Connexion ${provider} impossible. Activez le Provider sur votre dashboard Supabase.`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── ÉTAPE CLÉ : CRÉATION DU COMPTE AVANT LE KYC ──
   const handleCreateAccount = async () => {
     setIsLoading(true);
     try {
@@ -188,27 +191,24 @@ export function AccountTypeSelectionScreen() {
 
       if (signUpError) {
         if (signUpError.message.toLowerCase().includes('already')) {
-          toast.error('Email déjà utilisé. Connectez-vous.');
+          toast.error('Email déjà configuré. Connectez-vous.');
           navigate('/kauri/login');
           return;
         }
         throw signUpError;
       }
 
-      if (!signUpData.user?.id) throw new Error("ID utilisateur non généré.");
+      if (!signUpData.user?.id) throw new Error("ID d'enclave manquant.");
       setActiveUserId(signUpData.user.id);
-      
-      // Passage à l'écran KYC une fois authentifié
       setStep('documents');
-      toast.success('Profil sécurisé créé. Passons à la vérification.');
+      toast.success('Accès initialisé. Veuillez valider les justificatifs.');
     } catch (e: any) {
-      toast.error(`Erreur d'enregistrement : ${e.message}`);
+      toast.error(`Incident Infrastructure : ${e.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── MOTEUR LIVENESS VIDÉO ──
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
@@ -276,7 +276,7 @@ export function AccountTypeSelectionScreen() {
       videoChunksRef.current = [];
 
       if (!evaluateMotionVariance()) {
-        toast.error("Échec Anti-Fraude : Aucun mouvement détecté.");
+        toast.error("Échec Anti-Fraude : Aucun mouvement physique détecté.");
         setRecordingState('idle');
         return;
       }
@@ -293,19 +293,18 @@ export function AccountTypeSelectionScreen() {
     setTimeout(() => { captureKeyframe(); recorder.stop(); }, 6000);
   };
 
-  // ── MOTEUR DE CHIFFREMENT KYC ──
   const handleUploadAndEncrypt = async (type: "identity" | "selfie", fileData?: File | Blob) => {
     if (!fileData || !activeUserId) return;
     setIsLoading(true);
-    const toastId = toast.loading(`Chiffrement ECC du module ${type}...`);
+    const toastId = toast.loading(`Cryptage ECIES asymétrique de l'élément ${type}...`);
 
     try {
       const supabase = getSupabase();
       const enclaveKeys = await getKeysFromEnclave('kauri_client');
-      if (!enclaveKeys) throw new Error("Clés cryptographiques introuvables.");
+      if (!enclaveKeys) throw new Error("Trousseau local corrompu.");
 
       const { data: dbProfile } = await supabase.from('profiles').select('user_public_key').eq('id', activeUserId).single();
-      if (!dbProfile?.user_public_key) throw new Error("Trousseau public manquant.");
+      if (!dbProfile?.user_public_key) throw new Error("Clé distante introuvable.");
       const userPublicKeys = JSON.parse(dbProfile.user_public_key);
 
       const fileBuffer = await fileData.arrayBuffer();
@@ -318,12 +317,10 @@ export function AccountTypeSelectionScreen() {
       const exportedFek = await window.crypto.subtle.exportKey("raw", fek);
       const wrapIV = window.crypto.getRandomValues(new Uint8Array(12));
 
-      // Enclave Admin
       const adminPubKey = await window.crypto.subtle.importKey("spki", pemToArrayBuffer(ADMIN_ECDH_PUBLIC_KEY_PEM), { name: "ECDH", namedCurve: "P-256" }, false, []);
       const adminWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: adminPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
       const adminEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, adminWrapKey, exportedFek);
 
-      // Enclave Client
       const userPubKey = await window.crypto.subtle.importKey("spki", pemToArrayBuffer(userPublicKeys.ecdh), { name: "ECDH", namedCurve: "P-256" }, false, []);
       const userWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: userPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
       const userEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, userWrapKey, exportedFek);
@@ -357,14 +354,13 @@ export function AccountTypeSelectionScreen() {
 
       const localUrl = URL.createObjectURL(fileData instanceof Blob ? fileData : new Blob([fileData]));
       if (type === 'identity') {
-        setIdFile(fileData as File);
         setIdPreviewUrl(localUrl);
       } else {
         setSelfiePreviewUrl(localUrl);
       }
-      toast.success("Document sécurisé avec succès !", { id: toastId });
+      toast.success("Registre cryptographique validé !", { id: toastId });
     } catch (err: any) {
-      toast.error(`Échec: ${err.message}`, { id: toastId });
+      toast.error(`Incident Enclave : ${err.message}`, { id: toastId });
     } finally {
       setIsLoading(false);
     }
@@ -372,27 +368,32 @@ export function AccountTypeSelectionScreen() {
 
   const handleFinalize = async () => {
     if (!idPreviewUrl || !selfiePreviewUrl) {
-      toast.error("La pièce d'identité et la vérification Liveness sont obligatoires.");
+      toast.error("Renseignez l'intégralité des pièces d'identité requises.");
       return;
     }
     setIsLoading(true);
     try {
       const supabase = getSupabase();
       await supabase.from('profiles').update({ kyc_status: 'pending' }).eq('id', activeUserId);
-      toast.success("Dossier KYC transmis. Bienvenue sur KAURI !");
+      
+      const accessToken = (await supabase.auth.getSession()).data.session?.access_token ?? publicAnonKey;
+      await fetch(`${SERVER_URL}/wallet/init`, { method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}` } }).catch(() => {});
+      await fetch(`${SERVER_URL}/seed`, { method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}` } }).catch(() => {});
+
+      toast.success("Dossier validé. Synchronisation du tableau de bord.");
       navigate('/kauri/normal-dashboard');
     } catch (e) {
-      toast.error("Erreur de finalisation.");
+      toast.error("Erreur de routage final.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const field = (name: keyof typeof form, label: string, placeholder: string, type = 'text', icon: any) => {
+  const renderInputField = (name: keyof typeof form, label: string, placeholder: string, icon: any, type = 'text') => {
     const IconComponent = icon;
     return (
-      <div>
-        <label className="text-xs font-bold mb-1.5 block text-gray-500 uppercase tracking-wider">{label}</label>
+      <div className="space-y-2">
+        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</label>
         <div className="relative">
           <IconComponent className="absolute left-4 top-3.5 w-4 h-4 text-gray-400" />
           <input
@@ -404,12 +405,11 @@ export function AccountTypeSelectionScreen() {
             style={{ borderColor: errors[name] ? '#B05B3B' : '#E2E8F0' }}
           />
         </div>
-        {errors[name] && <p className="text-[10px] font-bold mt-1 text-[#B05B3B]">{errors[name]}</p>}
+        {errors[name] && <p className="text-[11px] font-bold mt-1 text-[#B05B3B]">{errors[name]}</p>}
       </div>
     );
   };
 
-  // ── RENDER : TUNNEL MULTI-ÉTAPES (RESPONSIVE W-FULL MAX-W-MD) ──
   if (step !== 'choose') {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans relative">
@@ -418,9 +418,9 @@ export function AccountTypeSelectionScreen() {
         <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl w-full">
           <div className="max-w-md mx-auto">
             <div className="flex items-center justify-between mb-4">
-              <button onClick={handleBack} disabled={step === 'documents'} className="text-white flex items-center gap-1 bg-transparent border-none cursor-pointer opacity-90 hover:opacity-100 disabled:opacity-50">
+              <button onClick={handleBack} disabled={step === 'documents'} className="text-white flex items-center gap-1 bg-transparent border-none cursor-pointer opacity-90 hover:opacity-100 disabled:opacity-50 font-bold">
                 <ChevronLeft className="w-5 h-5" />
-                <span className="text-sm font-semibold">Retour</span>
+                <span className="text-sm">Retour</span>
               </button>
               <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full">
                 Étape {currentStepIndex + 1} / {stepsSequence.length}
@@ -446,13 +446,13 @@ export function AccountTypeSelectionScreen() {
           <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 space-y-5">
             {step === 'name' && (
               <>
-                {field('firstName', 'Prénom légal', 'Marie', 'text', User)}
-                {field('lastName', 'Nom de famille', 'Dupont', 'text', User)}
+                {renderInputField('firstName', 'Prénom légal', 'Marie', User)}
+                {renderInputField('lastName', 'Nom de famille', 'Dupont', User)}
               </>
             )}
             
-            {step === 'business' && field('businessName', "Nom de l'entreprise", 'Kauri Corp', 'text', Briefcase)}
-            {step === 'email' && field('email', 'E-mail principal', 'marie@example.com', 'email', Mail)}
+            {step === 'business' && renderInputField('businessName', "Nom de l'entreprise", 'Kauri Corp', Briefcase)}
+            {step === 'email' && renderInputField('email', 'E-mail principal', 'marie@example.com', Mail, 'email')}
             
             {step === 'password' && (
               <div>
@@ -464,7 +464,7 @@ export function AccountTypeSelectionScreen() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                {form.password.length > 0 && !isPasswordRobust(form.password) && <p className="text-[10px] text-red-500 mt-1 font-bold">⚠️ Requis: 8 caractères, 1 Majuscule, 1 Chiffre.</p>}
+                {form.password.length > 0 && !isPasswordRobust(form.password) && <p className="text-[10px] text-red-500 mt-1 font-bold">⚠️ Requis : 8 caractères, 1 Majuscule, 1 Chiffre.</p>}
                 {errors.password && <p className="text-[10px] font-bold mt-1 text-[#B05B3B]">{errors.password}</p>}
               </div>
             )}
@@ -537,11 +537,11 @@ export function AccountTypeSelectionScreen() {
           </div>
         </div>
 
-        {/* 🎥 MODALE DE CAPTURE VIDÉO */}
+        {/* ── 🎥 MODALE DE CAPTURE VIDÉO LIVENESS ── */}
         {showCamera && (
           <div className="fixed inset-0 z-50 bg-[#0F172A] flex flex-col items-center justify-center">
             <div className="absolute top-6 left-6 z-20">
-              <button onClick={stopCamera} disabled={recordingState !== 'idle'} className="bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer border-none">
+              <button onClick={stopCamera} disabled={recordingState !== 'idle'} className="bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer border-none font-bold">
                 <ChevronLeft className="w-4 h-4" /> Annuler
               </button>
             </div>
@@ -571,7 +571,7 @@ export function AccountTypeSelectionScreen() {
     );
   }
 
-  // ── ÉTAPE 1 : CHOIX DU COMPTE (RESPONSIVE) ──
+  // ── ÉTAPE 1 : SELECTION TYPE DE COMPTE ──
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#006D77] to-[#0A5C7A] flex flex-col font-sans">
       <div className="flex-1 w-full max-w-md mx-auto px-6 py-12 flex flex-col justify-center">
