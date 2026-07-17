@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { ArrowRight, User, Briefcase, Eye, EyeOff, ChevronLeft, Mail, Lock } from 'lucide-react';
+import { ArrowRight, User, Briefcase, Eye, EyeOff, ChevronLeft, Mail, Lock, Smartphone } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { getSupabase, SERVER_URL, publicAnonKey } from '../../../utils/supabase';
 import { toast } from 'sonner';
 
-type Step = 'choose' | 'register';
+type Step = 'choose' | 'identity' | 'credentials';
 
 // ── 🛡️ PIPELINE DE STOCKAGE DE L'ENCLAVE MATÉRIELLE CLIENT (ECC V2) ──
 const DB_NAME = "KauriSecureEnclave";
@@ -62,31 +62,77 @@ export function AccountTypeSelectionScreen() {
 
   const selectType = (type: 'particulier' | 'professionnel') => {
     setAccountType(type);
-    setStep('register');
+    setStep('identity');
   };
 
   const validateEmail = (emailStr: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
   const isPasswordRobust = (pass: string) => pass.length >= 8 && /[A-Z]/.test(pass) && /[0-9]/.test(pass);
 
-  const validate = () => {
+  // Validation chirurgicale par étape pour bloquer l'utilisateur si les infos sont incomplètes
+  const validateStep = (currentStep: Step) => {
     const e: Record<string, string> = {};
-    if (!form.firstName.trim()) e.firstName = 'Prénom requis';
-    if (!form.lastName.trim()) e.lastName = 'Nom requis';
-    if (!validateEmail(form.email)) e.email = 'Adresse e-mail invalide';
-    if (!isPasswordRobust(form.password)) e.password = 'Mot de passe trop faible';
-    if (accountType === 'professionnel' && !form.businessName.trim()) e.businessName = "Nom d'entreprise requis";
+    
+    if (currentStep === 'identity') {
+      if (!form.firstName.trim()) e.firstName = 'Prénom requis';
+      if (!form.lastName.trim()) e.lastName = 'Nom requis';
+      if (accountType === 'professionnel' && !form.businessName.trim()) e.businessName = "Nom d'entreprise requis";
+    }
+    
+    if (currentStep === 'credentials') {
+      if (!validateEmail(form.email)) e.email = 'Adresse e-mail invalide';
+      if (!isPasswordRobust(form.password)) e.password = 'Mot de passe trop faible';
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
+  const handleNextStep = () => {
+    if (validateStep(step)) {
+      if (step === 'identity') setStep('credentials');
+    }
+  };
+
+  const handlePrevStep = () => {
+    if (step === 'identity') setStep('choose');
+    if (step === 'credentials') setStep('identity');
+  };
+
+  // ── 🍏 CONFORMITÉ SOCIAL SIGN-ON (GOOGLE / APPLE) ──
+  const handleSocialSignup = async (provider: 'google' | 'apple') => {
+    setIsLoading(true);
+    try {
+      const supabase = getSupabase();
+      
+      // Initialisation préventive de l'enclave matérielle avant redirection OAuth
+      const ecdhKeyPair = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]);
+      const ecdsaKeyPair = await window.crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+      
+      await saveKeysToEnclave('kauri_client', { ecdhPriv: ecdhKeyPair.privateKey, ecdsaPriv: ecdsaKeyPair.privateKey });
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/kauri/normal-dashboard`,
+          queryParams: { account_type: accountType }
+        }
+      });
+      if (error) throw error;
+    } catch (e: any) {
+      toast.error(`Erreur d'authentification sociale: ${e.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleRegister = async () => {
-    if (!validate()) return;
+    if (!validateStep('credentials')) return;
     setIsLoading(true);
 
     try {
       const supabase = getSupabase();
 
-      // 🎯 1. ARCHITECTURE HYBRIDE ECC (P-256) : Génération des deux couples de clés indépendants
+      // 🎯 1. ARCHITECTURE HYBRIDE ECC (P-256)
       const ecdhKeyPair = await window.crypto.subtle.generateKey(
         { name: "ECDH", namedCurve: "P-256" },
         true,
@@ -99,25 +145,22 @@ export function AccountTypeSelectionScreen() {
         ["sign", "verify"]
       );
 
-      // 🎯 2. SCELLAGE CHIRURGICAL DANS L'ENCLAVE LOCALE NON-EXTRACTIBLE
+      // 🎯 2. SCELLAGE DANS L'ENCLAVE LOCALE NON-EXTRACTIBLE
       await saveKeysToEnclave('kauri_client', {
         ecdhPriv: ecdhKeyPair.privateKey,
         ecdsaPriv: ecdsaKeyPair.privateKey
       });
 
-      // 🎯 3. EXPORTATION SPKI POUR LE REGISTRE PUBLIC DES ADMINISTRATEURS
+      // 🎯 3. EXPORTATION SPKI POUR LE REGISTRE PUBLIC
       const ecdhPubBuf = await window.crypto.subtle.exportKey("spki", ecdhKeyPair.publicKey);
       const ecdsaPubBuf = await window.crypto.subtle.exportKey("spki", ecdsaKeyPair.publicKey);
 
       const ecdhPubPem = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`;
       const ecdsaPubPem = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`;
 
-      const publicKeysJSON = JSON.stringify({
-        ecdh: ecdhPubPem,
-        ecdsa: ecdsaPubPem
-      });
+      const publicKeysJSON = JSON.stringify({ ecdh: ecdhPubPem, ecdsa: ecdsaPubPem });
 
-      // 🎯 4. INSCRIPTION UNIQUE ET SÉCURISÉE AVEC TRANSMISSION MATRICIELLE
+      // 🎯 4. INSCRIPTION UNIQUE SUPABASE WITH METADATA
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: form.email.trim(),
         password: form.password,
@@ -129,7 +172,7 @@ export function AccountTypeSelectionScreen() {
             phone: form.phone.trim() || null,
             account_type: accountType,
             business_name: accountType === 'professionnel' ? form.businessName.trim() : null,
-            user_public_key: publicKeysJSON // Correction du commentaire SQL défaillant ici
+            user_public_key: publicKeysJSON
           },
         },
       });
@@ -137,7 +180,7 @@ export function AccountTypeSelectionScreen() {
       if (signUpError) {
         const msg = signUpError.message;
         if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('registered')) {
-          toast.error('Cette adresse e-mail est déjà associée à un compte. Connectez-vous !', { duration: 6000 });
+          toast.error('Cette adresse e-mail est déjà associée à un compte.', { duration: 6000 });
           navigate('/kauri/login');
           return;
         }
@@ -150,7 +193,7 @@ export function AccountTypeSelectionScreen() {
         return;
       }
 
-      // Initialisation des serveurs de portefeuille
+      // Initialisation des backends asynchrones
       const accessToken = signUpData.session?.access_token ?? publicAnonKey;
       
       await fetch(`${SERVER_URL}/wallet/init`, {
@@ -200,94 +243,149 @@ export function AccountTypeSelectionScreen() {
     );
   };
 
-  if (step === 'register') {
+  // ── RENDER ÉTAPE 2 OU ÉTAPE 3 (FORMULAIRES) ──────────────────────────────────
+  if (step === 'identity' || step === 'credentials') {
     return (
       <div className="min-h-screen" style={{ background: 'linear-gradient(165deg, #006D77 0%, #003A42 100%)' }}>
-        <div className="px-6 pt-12 pb-4">
-          <button onClick={() => setStep('choose')} className="flex items-center gap-1 text-white/80 mb-4 cursor-pointer bg-transparent border-none">
+        <div className="px-6 pt-12 pb-2 flex items-center justify-between">
+          <button onClick={handlePrevStep} className="flex items-center gap-1 text-white/80 cursor-pointer bg-transparent border-none">
             <ChevronLeft className="w-4 h-4" />
             <span className="text-sm font-medium">Retour</span>
           </button>
+          
+          {/* Indicateur de Progression Épuré en Haut à Droite */}
+          <div className="flex gap-1.5">
+            <span className="w-2 h-2 rounded-full transition-all" style={{ backgroundColor: step === 'identity' ? '#D4AF37' : 'rgba(255,255,255,0.3)' }} />
+            <span className="w-2 h-2 rounded-full transition-all" style={{ backgroundColor: step === 'credentials' ? '#D4AF37' : 'rgba(255,255,255,0.3)' }} />
+          </div>
+        </div>
+
+        <div className="px-6 pb-4">
           <h1 className="text-white text-2xl font-bold mb-1">Créer votre compte</h1>
           <p className="text-white/70 text-xs">
-            {accountType === 'professionnel' ? 'Espace Professionnel KAURI (Levées de fonds)' : 'Espace Particulier KAURI (Épargne & Tontines)'}
+            {step === 'identity' ? 'Étape 1 : Votre Identité' : 'Étape 2 : Vos Identifiants Connexion'}
           </p>
         </div>
 
         <div className="mx-4 mb-6 bg-white rounded-3xl p-6 shadow-2xl">
-          <div className="space-y-4">
+          {step === 'identity' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {field('firstName', 'Prénom', 'Marie', 'text', User)}
+                {field('lastName', 'Nom', 'Dupont', 'text', User)}
+              </div>
+              {accountType === 'professionnel' && field('businessName', "Nom de l'entreprise", 'Kauri Enterprise Ltd', 'text', Briefcase)}
+              
+              <button
+                onClick={handleNextStep}
+                className="w-full py-4 rounded-2xl mt-4 flex items-center justify-center gap-2 text-white text-xs font-bold shadow-lg cursor-pointer border-none"
+                style={{ background: 'linear-gradient(135deg, #006D77, #0D9488)' }}
+              >
+                Continuer l'inscription <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {step === 'credentials' && (
+            <div className="space-y-4">
+              {field('email', 'Adresse e-mail active', 'marie.dupont@gmail.com', 'email', Mail)}
+
+              <div>
+                <label className="text-xs font-semibold mb-1.5 block text-gray-500">Numéro de téléphone (Optionnel)</label>
+                <div className="flex items-center gap-2 rounded-xl border-2 px-4 py-3 bg-white" style={{ borderColor: errors.phone ? '#B05B3B' : '#E2E8F0' }}>
+                  <span className="text-xs shrink-0 text-gray-600 font-bold">🇫🇷 +33</span>
+                  <div className="w-px h-5 bg-gray-200" />
+                  <input
+                    type="tel"
+                    placeholder="6 12 34 56 78"
+                    value={form.phone}
+                    onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                    className="flex-1 outline-none bg-transparent text-xs text-[#0F172A]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold mb-1.5 block text-gray-500">Mot de passe sécurisé</label>
+                <div className="flex items-center gap-2 rounded-xl border-2 px-4 py-3 bg-white" style={{ borderColor: errors.password ? '#B05B3B' : '#E2E8F0' }}>
+                  <Lock className="w-4 h-4 text-gray-400 shrink-0" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={e => { setForm(f => ({ ...f, password: e.target.value })); setErrors(er => ({ ...er, password: '' })); }}
+                    className="flex-1 outline-none bg-transparent text-xs text-[#0F172A]"
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-gray-400 bg-transparent border-none cursor-pointer">
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {form.password.length > 0 && !isPasswordRobust(form.password) && (
+                  <p className="text-[10px] text-red-500 mt-1 font-medium">
+                    Exigence : Au moins 8 caractères, 1 Majuscule et 1 Chiffre.
+                  </p>
+                )}
+                {errors.password && <p className="text-[10px] font-medium mt-1 text-[#B05B3B]">{errors.password}</p>}
+              </div>
+
+              <button
+                onClick={handleRegister}
+                disabled={isLoading}
+                className="w-full py-4 rounded-2xl mt-6 flex items-center justify-center gap-2 text-white text-xs font-bold shadow-lg cursor-pointer border-none"
+                style={{ background: 'linear-gradient(135deg, #006D77, #0D9488)', opacity: isLoading ? 0.8 : 1 }}
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    Génération des clés ECC (P-256)…
+                  </>
+                ) : 'Finaliser mon inscription Kauri →'}
+              </button>
+            </div>
+          )}
+
+          {/* ── 🍎 DOCK DE RALLIEMENT SOCIAL DES APPAREILS APART (GOOGLE & APPLE) ── */}
+          <div className="mt-5">
+            <div className="flex items-center my-4 text-gray-400 gap-3">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-[10px] uppercase font-bold tracking-wider">Ou s'inscrire via</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
-              {field('firstName', 'Prénom', 'Marie', 'text', User)}
-              {field('lastName', 'Nom', 'Dupont', 'text', User)}
-            </div>
-            
-            {accountType === 'professionnel' && field('businessName', "Nom de l'entreprise", 'Kauri Enterprise SDK', 'text', Briefcase)}
-            
-            {field('email', 'Adresse e-mail active', 'marie.dupont@gmail.com', 'email', Mail)}
+              <button
+                type="button"
+                onClick={() => handleSocialSignup('google')}
+                className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-gray-200 bg-white text-xs font-bold text-gray-700 cursor-pointer transition-transform active:scale-95"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path fill="#EA4335" d="M12.2 10.2v3.3h6.3c-.3 1.6-1.7 4.7-6.3 4.7-4 0-7.3-3.3-7.3-7.3s3.3-7.3 7.3-7.3c2.3 0 3.8 1 4.7 1.9l2.6-2.6C17.7 1.3 15.2 0 12.2 0 5.5 0 0 5.5 0 12.2s5.5 12.2 12.2 12.2c7 0 11.7-4.9 11.7-11.9 0-.8-.1-1.4-.2-2.3H12.2z"/>
+                </svg>
+                Google
+              </button>
 
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block text-gray-500">Numéro de téléphone (Optionnel)</label>
-              <div className="flex items-center gap-2 rounded-xl border-2 px-4 py-3 bg-white" style={{ borderColor: errors.phone ? '#B05B3B' : '#E2E8F0' }}>
-                <span className="text-xs shrink-0 text-gray-600 font-bold">🇫🇷 +33</span>
-                <div className="w-px h-5 bg-gray-200" />
-                <input
-                  type="tel"
-                  placeholder="6 12 34 56 78"
-                  value={form.phone}
-                  onChange={e => { setForm(f => ({ ...f, phone: e.target.value })); setErrors(er => ({ ...er, phone: '' })); }}
-                  className="flex-1 outline-none bg-transparent text-xs text-[#0F172A]"
-                />
-              </div>
-              {errors.phone && <p className="text-[10px] font-medium mt-1 text-[#B05B3B]">{errors.phone}</p>}
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block text-gray-500">Mot de passe sécurisé</label>
-              <div className="flex items-center gap-2 rounded-xl border-2 px-4 py-3 bg-white" style={{ borderColor: errors.password ? '#B05B3B' : '#E2E8F0' }}>
-                <Lock className="w-4 h-4 text-gray-400 shrink-0" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={e => { setForm(f => ({ ...f, password: e.target.value })); setErrors(er => ({ ...er, password: '' })); }}
-                  className="flex-1 outline-none bg-transparent text-xs text-[#0F172A]"
-                />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-gray-400 bg-transparent border-none cursor-pointer">
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {form.password.length > 0 && !isPasswordRobust(form.password) && (
-                <p className="text-[10px] text-red-500 mt-1 font-medium leading-relaxed">
-                  Exigence : Au moins 8 caractères, 1 Majuscule et 1 Chiffre.
-                </p>
-              )}
-              {errors.password && <p className="text-[10px] font-medium mt-1 text-[#B05B3B]">{errors.password}</p>}
+              <button
+                type="button"
+                onClick={() => handleSocialSignup('apple')}
+                className="flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-gray-200 bg-white text-xs font-bold text-gray-700 cursor-pointer transition-transform active:scale-95"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.07 2.47.3 3.64 2.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42.14-1.38.83zM15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.21.67-2.93 1.49-.62.69-1.16 1.84-1.01 2.96 1.12.09 2.27-.56 2.95-1.39z"/>
+                </svg>
+                Apple
+              </button>
             </div>
           </div>
-
-          <button
-            onClick={handleRegister}
-            disabled={isLoading}
-            className="w-full py-4 rounded-2xl mt-6 flex items-center justify-center gap-2 transition-all active:scale-[0.95] text-white text-xs font-bold shadow-lg cursor-pointer border-none"
-            style={{ background: 'linear-gradient(135deg, #006D77, #0D9488)', opacity: isLoading ? 0.8 : 1 }}
-          >
-            {isLoading ? (
-              <>
-                <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                Génération des enclaves ECC (P-256)…
-              </>
-            ) : 'Créer mon compte Kauri →'}
-          </button>
 
           <p className="text-center text-[10px] mt-4 text-gray-400">
             En continuant, vous acceptez nos CGU et notre Politique de Confidentialité
           </p>
         </div>
-        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
+  // ── RENDER ÉTAPE 1 : CHOIX DU TYPE DE COMPTE ────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#006D77] to-[#0A5C7A] px-6 py-12 flex flex-col">
       <div className="text-center mb-12">
