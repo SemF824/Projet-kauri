@@ -136,7 +136,7 @@ export function AccountTypeSelectionScreen() {
     else if (step === 'documents') setStep('phone');
   };
 
-  const handleSocialSignup = async (provider: 'google' | 'apple') => {
+  const handleSocialSignup = async (provider: 'google' | 'apple' | 'facebook') => {
     setIsLoading(true);
     try {
       const supabase = getSupabase();
@@ -146,11 +146,16 @@ export function AccountTypeSelectionScreen() {
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}/kauri/normal-dashboard`, queryParams: { account_type: accountType } }
+        options: { 
+          redirectTo: `${window.location.origin}/kauri/normal-dashboard`, 
+          queryParams: { account_type: accountType },
+          // Le scope email est indispensable pour la création automatique du compte via Meta
+          scopes: provider === 'facebook' ? 'email' : undefined 
+        }
       });
       if (error) throw error;
     } catch (e: any) {
-      toast.error(`Connexion ${provider} impossible. Activez le Provider sur votre dashboard Supabase.`);
+      toast.error(`Connexion ${provider} impossible. Vérifiez la configuration de votre Provider.`);
     } finally {
       setIsLoading(false);
     }
@@ -528,9 +533,11 @@ export function AccountTypeSelectionScreen() {
             {step === 'email' && (
               <div className="pt-4 border-t border-slate-200">
                 <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Ou continuer avec</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button onClick={() => handleSocialSignup('google')} className="py-3 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm">Google</button>
-                  <button onClick={() => handleSocialSignup('apple')} className="py-3 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm">Apple</button>
+                {/* ── CORRECTION : GRILLE 3 COLONNES POUR FACEBOOK ── */}
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => handleSocialSignup('google')} className="py-3 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">Google</button>
+                  <button onClick={() => handleSocialSignup('apple')} className="py-3 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">Apple</button>
+                  <button onClick={() => handleSocialSignup('facebook')} className="py-3 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">Facebook</button>
                 </div>
               </div>
             )}
