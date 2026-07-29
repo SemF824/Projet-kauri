@@ -40,6 +40,13 @@ export function NormalDashboardScreen() {
   const isKycVerified = currentKycStatus === 'verified' || profile?.kyc_completed === true || profile?.kycCompleted === true;
   const isKycRejected = currentKycStatus === 'rejected';
 
+  // ── 🎯 EXTRACTION DYNAMIQUE DE LA PHOTO DE PROFIL OAUTH (GOOGLE / FACEBOOK / APPLE) ──
+  const avatarUrl = 
+    profile?.avatar_url || 
+    profile?.avatarUrl || 
+    user?.user_metadata?.avatar_url || 
+    user?.user_metadata?.picture;
+
   const initials = profile?.firstName && profile?.lastName 
     ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase() 
     : (profile?.first_name && profile?.last_name ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase() : 'KA');
@@ -105,9 +112,24 @@ export function NormalDashboardScreen() {
         <div className={`px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl ${isDarkMode ? 'bg-gradient-to-br from-[#1E293B] to-[#334155]' : 'bg-gradient-to-br from-[#006D77] to-[#0D9488]'}`}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center border-2 border-white shadow-xl">
-                <span className="text-white text-lg font-bold">{initials}</span>
+              
+              {/* ── 🖼️ AVATAR PROFIL OAUTH / INITIALES ── */}
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center border-2 border-white shadow-xl overflow-hidden shrink-0">
+                {avatarUrl ? (
+                  <img 
+                    src={avatarUrl} 
+                    alt={firstName} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback visuel si l'URL distante expire
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <span className="text-white text-lg font-bold">{initials}</span>
+                )}
               </div>
+
               <div>
                 <h2 className="text-white text-lg font-semibold">Bonjour, {firstName}</h2>
                 <p className="text-[#E0F2FE] text-sm">Bon retour sur KAURI</p>
