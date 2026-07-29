@@ -11,7 +11,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErBf4GgqGXvYZGn7qZQlGZ0ogz9d4
 vsrPLUye3cZWTtALPQ9WxSSqwJMmPbp0U04+PdgAqICBBLg4OfuXrvMpCw==
 -----END PUBLIC KEY-----`;
 
-// ── 🛡️ UTILITAIRES WEBCRYPTO & INDEXED-DB ──
+// ── 🛡️ UTILITAIRES WEBCRYPTO & INDEXED-DB SANS DESTRUCTION ──
 const DB_NAME = "KauriSecureEnclave";
 const STORE_NAME = "client_keys";
 
@@ -20,15 +20,23 @@ function getDB(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, 2);
     req.onupgradeneeded = (e: any) => {
       const db = e.target.result;
+      // FIX : On crée le magasin s'il n'existe pas, mais ON NE LE SUPPRIME JAMAIS s'il existe
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      } else {
-        db.deleteObjectStore(STORE_NAME);
         db.createObjectStore(STORE_NAME);
       }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveKeysToEnclave(id: string, keys: { ecdhPriv: CryptoKey; ecdsaPriv: CryptoKey }) {
+  const db = await getDB();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(keys, id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
   });
 }
 
@@ -40,6 +48,15 @@ async function getKeysFromEnclave(id: string): Promise<{ ecdhPriv: CryptoKey; ec
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
+}
+
+function arrayBufferToBase64(blob: ArrayBuffer): string {
+  const bytes = new Uint8Array(blob);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
 }
 
 function pemToArrayBuffer(pem: string): ArrayBuffer {
@@ -140,11 +157,10 @@ export function KYCVerificationScreen() {
     };
   }, []);
 
-  // Capture discrète pour le moteur d'Optical Flow
   const captureKeyframe = () => {
     if (!videoRef.current) return;
     const canvas = document.createElement("canvas");
-    canvas.width = 100; // Résolution basse pour calcul matriciel instantané
+    canvas.width = 100;
     canvas.height = 100;
     const ctx = canvas.getContext("2d");
     if (ctx) {
@@ -153,7 +169,6 @@ export function KYCVerificationScreen() {
     }
   };
 
-  // Le moteur anti-fraude statique
   const evaluateMotionVariance = () => {
     const frames = keyframesRef.current;
     if (frames.length < 3) return false;
@@ -164,13 +179,11 @@ export function KYCVerificationScreen() {
       const next = frames[i+1].data;
       let frameDiff = 0;
       for (let j = 0; j < curr.length; j += 4) {
-        // Variation des canaux RGB
         frameDiff += Math.abs(curr[j] - next[j]) + Math.abs(curr[j+1] - next[j+1]) + Math.abs(curr[j+2] - next[j+2]);
       }
       totalDiff += frameDiff / (curr.length / 4);
     }
     
-    // Si la moyenne de déplacement des pixels est inférieure à 15, c'est une image statique (fraude).
     return totalDiff > 15; 
   };
 
@@ -204,7 +217,6 @@ export function KYCVerificationScreen() {
       await handleUploadAndEncrypt("selfie", file);
     };
 
-    // Le Séquençage Chronométré (6 Secondes)
     recorder.start();
     setRecordingState('front');
     captureKeyframe();
@@ -324,8 +336,27 @@ export function KYCVerificationScreen() {
     const toastId = toast.loading(`Scellage asymétrique (ECC P-256) du module ${type}...`);
 
     try {
-      const enclaveKeys = await getKeysFromEnclave('kauri_client');
-      if (!enclaveKeys) throw new Error("Enclave non armée pour la cryptographie ECC.");
+      let enclaveKeys = await getKeysFromEnclave('kauri_client');
+      
+      // ── 🛡️ AUTO-HEALING : RÉGÉNÉRATION DE SECOURS SI LA CLÉ EST ABSENTE ──
+      if (!enclaveKeys) {
+        console.warn("[Enclave] Clé locale introuvable. Régénération dynamique de secours...");
+        const ecdhKeyPair = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]);
+        const ecdsaKeyPair = await window.crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+        
+        enclaveKeys = { ecdhPriv: ecdhKeyPair.privateKey, ecdsaPriv: ecdsaKeyPair.privateKey };
+        await saveKeysToEnclave('kauri_client', enclaveKeys);
+
+        const ecdhPubBuf = await window.crypto.subtle.exportKey("spki", ecdhKeyPair.publicKey);
+        const ecdsaPubBuf = await window.crypto.subtle.exportKey("spki", ecdsaKeyPair.publicKey);
+
+        const publicKeysJSON = JSON.stringify({
+          ecdh: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`,
+          ecdsa: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`
+        });
+
+        await supabase.from('profiles').update({ user_public_key: publicKeysJSON }).eq('id', profile?.id);
+      }
 
       const { data: dbProfile, error: profileFetchError } = await supabase.from('profiles').select('user_public_key').eq('id', profile?.id).single();
       if (profileFetchError || !dbProfile?.user_public_key) throw new Error("Trousseau public manquant sur le serveur.");
@@ -352,7 +383,7 @@ export function KYCVerificationScreen() {
       const userWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: userPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
       const userEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, userWrapKey, exportedFek);
 
-      // Signature (Preuve d'origine)
+      // Signature
       const dataToSign = new Uint8Array(ephPubRaw.byteLength + fileIV.byteLength + encryptedFileContent.byteLength);
       dataToSign.set(new Uint8Array(ephPubRaw), 0);
       dataToSign.set(fileIV, ephPubRaw.byteLength);
@@ -392,7 +423,8 @@ export function KYCVerificationScreen() {
       setHasFileChanges(true);
       toast.success("Package vidéo chiffré et transmis !", { id: toastId });
     } catch (err: any) {
-      toast.error("Échec de l'opération cryptographique.", { id: toastId });
+      console.error("[Crypto Error]:", err);
+      toast.error(`Échec cryptographique: ${err.message || String(err)}`, { id: toastId });
     } finally {
       setIsActionLoading(false);
     }
@@ -420,7 +452,6 @@ export function KYCVerificationScreen() {
   const isFormComplete = isAddressValid && isFilesValid;
 
   const handleMainAction = async () => {
-    // ── 🛡️ BLOCAGE STRICT SI INCOMPLET ──
     if (!isFormComplete) {
       if (!isFilesValid) {
         toast.warning("Dossier Incomplet", {
@@ -431,21 +462,18 @@ export function KYCVerificationScreen() {
           description: "Veuillez renseigner intégralement votre attestation de domicile avec des informations valides."
         });
       }
-      return; // Stop ici
+      return;
     }
 
-    // ── Si complet mais pas de mutation, on passe simplement à la suite ──
     if (!hasAnyMutation) {
       navigate(`/kauri/biometric-setup?type=${accountType}`);
       return;
     }
 
-    // ── Si complet ET mutations, on sauvegarde et on soumet ──
     setIsActionLoading(true);
     const toastId = toast.loading("Actualisation globale de votre dossier de conformité...");
     
     try {
-      // Préparation des données d'update
       const updateData: any = {
         first_name: address.firstName.trim(),
         last_name: address.lastName.trim(),
@@ -454,11 +482,9 @@ export function KYCVerificationScreen() {
         zip: address.zip.trim(),
       };
 
-      // Si l'utilisateur n'est pas déjà vérifié, ou s'il remodifie des pièces,
-      // on repasse le statut en 'pending' pour revue et on reset le score.
       if (profile?.kyc_status !== 'verified' || hasFileChanges) {
           updateData.kyc_status = 'pending';
-          updateData.trust_score = 40; // Score initial de soumission
+          updateData.trust_score = 40;
       }
 
       const { error } = await supabase
@@ -616,7 +642,7 @@ export function KYCVerificationScreen() {
               </div>
             </div>
 
-            {/* ── 🎯 BOUTON D'ACTION MODIFIÉ POUR BLOCAGE STICT ── */}
+            {/* BOUTON D'ACTION PRINCIPAL */}
             <button 
               onClick={handleMainAction} 
               disabled={isActionLoading || (!isFormComplete && !isActionLoading)} 
@@ -644,7 +670,7 @@ export function KYCVerificationScreen() {
         )}
       </div>
 
-      {/* 🎥 MODALE DE SÉQUENCE VIDÉO (STYLE YOTI + INSTRUCTIONS TEMPORELLES) */}
+      {/* 🎥 MODALE DE SÉQUENCE VIDÉO */}
       {showCamera && (
         <div className="fixed inset-0 z-50 bg-[#F4F4F5] flex flex-col items-center justify-center p-4 md:p-8">
           
