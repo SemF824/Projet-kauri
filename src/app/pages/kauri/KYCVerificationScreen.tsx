@@ -1,4 +1,4 @@
-import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, X, Video, AlertTriangle, ShieldCheck, Edit3 } from "lucide-react";
+import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, X, Video, AlertTriangle, ShieldCheck, Edit3, ArrowRight } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -325,10 +325,8 @@ export function KYCVerificationScreen() {
     loadAndDecryptKycHub();
   }, [profile]);
 
-  // ── 🧠 INITIALISATION ET SYNCHRONISATION DU FORMULAIRE D'ADRESSE ──
   useEffect(() => {
     if (profile?.id) {
-      // 1. Récupération des données enregistrées en base
       const serverAddress = {
         firstName: profile.first_name && profile.first_name !== 'Prénom' ? profile.first_name : "",
         lastName: profile.last_name && profile.last_name !== 'Nom' ? profile.last_name : "",
@@ -338,7 +336,6 @@ export function KYCVerificationScreen() {
         country: "France",
       };
 
-      // 2. Vérification s'il existe une saisie brouillon locale en attente dans le localStorage
       const savedDraft = localStorage.getItem(`kauri_address_draft_${profile.id}`);
       if (savedDraft) {
         try {
@@ -355,7 +352,6 @@ export function KYCVerificationScreen() {
     }
   }, [profile]);
 
-  // Modificateur de champ avec persistance automatique en brouillon local
   const updateAddressField = (field: keyof typeof address, value: string) => {
     setAddress(prev => {
       const updated = { ...prev, [field]: value };
@@ -510,6 +506,7 @@ export function KYCVerificationScreen() {
   const isFilesValid = hasIdentity && hasSelfie;
   const isFormComplete = isAddressValid && isFilesValid;
 
+  // ── 🎯 ACTION PRINCIPALE : NAVIGATION AUTORISÉE ET SAUVEGARDE DYNAMIQUE ──
   const handleMainAction = async () => {
     if (!isFormComplete) {
       if (!isFilesValid) {
@@ -524,11 +521,13 @@ export function KYCVerificationScreen() {
       return;
     }
 
+    // Si aucune modification n'a été apportée aux champs ou fichiers, on autorise directement la sortie vers la suite
     if (!hasAnyMutation) {
       navigate(`/kauri/biometric-setup?type=${accountType}`);
       return;
     }
 
+    // Sinon, on sauvegarde les changements sur Supabase avant de sortir
     setIsActionLoading(true);
     const toastId = toast.loading("Mise à jour de votre attestation de résidence...");
     
@@ -553,14 +552,13 @@ export function KYCVerificationScreen() {
 
       if (error) throw error;
       
-      // Nettoyage du brouillon local après enregistrement effectif
       if (profile?.id) {
         localStorage.removeItem(`kauri_address_draft_${profile.id}`);
       }
 
       await refreshProfile();
       
-      toast.success("Informations modifiées et enregistrées !", { id: toastId });
+      toast.success("Informations enregistrées !", { id: toastId });
       navigate(`/kauri/biometric-setup?type=${accountType}`);
     } catch (err) {
       toast.error("Erreur de synchronisation réseau.", { id: toastId });
@@ -680,7 +678,7 @@ export function KYCVerificationScreen() {
               </div>
             </div>
 
-            {/* ── 🎯 FORMULAIRE DE RÉSIDENCE MODIFIABLE EN PERMANENCE ── */}
+            {/* FORMULAIRE DE RÉSIDENCE */}
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Attestation de Résidence</h3>
@@ -748,28 +746,28 @@ export function KYCVerificationScreen() {
               </div>
             </div>
 
-            {/* BOUTON D'ACTION PRINCIPAL */}
+            {/* ── 🚀 BOUTON D'ACTION PRINCIPAL ACTIF ET FLUIDE ── */}
             <button 
               onClick={handleMainAction} 
               disabled={isActionLoading || (!isFormComplete && !isActionLoading)} 
-              className={`w-full py-4 rounded-2xl mt-4 shadow-lg font-bold text-sm tracking-wide transition-all active:scale-[0.99] border-none flex items-center justify-center gap-2 
+              className={`w-full py-4 rounded-2xl mt-4 shadow-lg font-bold text-sm tracking-wide transition-all active:scale-[0.99] border-none flex items-center justify-center gap-2 cursor-pointer
                 ${!isFormComplete ? "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none" : 
-                  hasAnyMutation ? "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20 cursor-pointer" : 
-                  "bg-slate-800 hover:bg-slate-900 text-white shadow-slate-900/10 cursor-pointer"}`}
+                  hasAnyMutation ? "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20" : 
+                  "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20"}`}
             >
               {isActionLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : !isFormComplete ? (
                 <AlertTriangle className="w-4 h-4" />
               ) : (
-                <Check className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4" />
               )}
               
               <span>
                 {isActionLoading ? "Synchronisation..." : 
                  !isFormComplete ? "Dossier incomplet" :
                  hasAnyMutation ? "Enregistrer les modifications" : 
-                 "Continuer vers l'étape suivante"}
+                 "Valider et continuer →"}
               </span>
             </button>
           </>
