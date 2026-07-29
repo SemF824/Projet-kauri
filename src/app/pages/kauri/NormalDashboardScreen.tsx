@@ -40,12 +40,9 @@ export function NormalDashboardScreen() {
   const isKycVerified = currentKycStatus === 'verified' || profile?.kyc_completed === true || profile?.kycCompleted === true;
   const isKycRejected = currentKycStatus === 'rejected';
 
-  // ── 🎯 EXTRACTION DYNAMIQUE DE LA PHOTO DE PROFIL OAUTH (GOOGLE / FACEBOOK / APPLE) ──
-  const avatarUrl = 
-    profile?.avatar_url || 
-    profile?.avatarUrl || 
-    user?.user_metadata?.avatar_url || 
-    user?.user_metadata?.picture;
+  // ── 🎯 EXTRACTION DYNAMIQUE DE LA PHOTO DE PROFIL OAUTH ──
+  const socialAvatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
+  const avatarUrl = profile?.avatar_url || profile?.avatarUrl || socialAvatarUrl;
 
   const initials = profile?.firstName && profile?.lastName 
     ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase() 
@@ -65,13 +62,28 @@ export function NormalDashboardScreen() {
     };
   }, []);
 
+  // ── 🔄 AUTO-SYNCHRONISATION DE L'AVATAR DANS LA TABLE PROFILES EN BDD ──
   useEffect(() => {
     refreshProfile();
-    const fetchCountsAndWealth = async () => {
+    
+    const syncSocialAvatarAndFetch = async () => {
       if (!user) return;
+      const supabase = getSupabase();
+
+      // Si avatar_url est NULL dans la table profiles mais présent dans auth.users -> UPDATE BDD instantané
+      if (profile && !profile.avatar_url && !profile.avatarUrl && socialAvatarUrl) {
+        try {
+          await supabase
+            .from('profiles')
+            .update({ avatar_url: socialAvatarUrl })
+            .eq('id', user.id);
+        } catch (e) {
+          console.error("Échec de synchronisation de l'avatar dans la BDD:", e);
+        }
+      }
+
+      // Synchronisation des compteurs financiers
       try {
-        const supabase = getSupabase();
-        
         const { data: tData, error: tError } = await supabase
           .from('tontine_members')
           .select(`
@@ -101,8 +113,9 @@ export function NormalDashboardScreen() {
         console.error('Erreur synchronisation compteurs dashboard:', err);
       }
     };
-    fetchCountsAndWealth();
-  }, [user]);
+
+    syncSocialAvatarAndFetch();
+  }, [user, profile?.avatar_url]);
 
   return (
     <div className={`min-h-screen pb-24 transition-colors relative ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#F9F9F9]'}`}>
@@ -121,7 +134,6 @@ export function NormalDashboardScreen() {
                     alt={firstName} 
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      // Fallback visuel si l'URL distante expire
                       (e.target as HTMLElement).style.display = 'none';
                     }}
                   />
