@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   ShieldAlert, ShieldCheck, UserCheck, UserX, KeyRound, 
-  FileText, Loader2, RefreshCw, Search, User, ChevronRight, X, ZoomIn, Upload, Video
+  FileText, Loader2, RefreshCw, Search, User, ChevronRight, X, ZoomIn, Upload, Video, Trash2, AlertOctagon
 } from 'lucide-react';
 import { getSupabase } from '../../../../utils/supabase';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -14,7 +14,7 @@ interface KYCRequest {
   email: string;
   phone?: string;
   accountType: string;
-  kycStatus: 'pending' | 'verified' | 'rejected';
+  kycStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
   street?: string;
   city?: string;
   zip?: string;
@@ -92,7 +92,6 @@ function privatePemToArrayBuffer(pem: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-// Détection enrichie pour inclure WebM et MP4
 function detectMimeType(arrayBuffer: ArrayBuffer): string {
   const bytes = new Uint8Array(arrayBuffer).slice(0, 12);
   if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
@@ -123,7 +122,7 @@ export function KYCAdminDashboardScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'unverified' | 'pending' | 'verified' | 'rejected'>('all');
   
   const [isKeyLoaded, setIsKeyActive] = useState(false);
   const [importedCryptoKey, setImportedCryptoKey] = useState<CryptoKey | null>(null);
@@ -171,7 +170,7 @@ export function KYCAdminDashboardScreen() {
         email: p.email || 'Inconnu',
         phone: p.phone_number || 'Non communiqué',
         accountType: p.account_type || 'particulier',
-        kycStatus: p.kyc_status || 'pending',
+        kycStatus: p.kyc_status || 'unverified',
         street: p.street || 'Non renseigné',
         city: p.city || 'Non renseigné',
         zip: p.zip || 'Non renseigné',
@@ -259,9 +258,17 @@ export function KYCAdminDashboardScreen() {
     const ciphertext = packedBytes.slice(offset);
 
     if (!userKeysJSON) {
-      throw new Error("Le client n'a pas de trousseau public ECC enregistré.");
+      throw new Error("Trousseau public ECC manquant (Compte incomplet ou OAuth sans synchronisation).");
     }
-    const userKeys = JSON.parse(userKeysJSON);
+    
+    let userKeys;
+    try {
+      userKeys = JSON.parse(userKeysJSON);
+    } catch (e) {
+      throw new Error("Corruption du trousseau de clés : format JSON invalide sur le profil.");
+    }
+
+    if (!userKeys.ecdsa) throw new Error("Clé ECDSA manquante dans le trousseau public.");
 
     const verifyKey = await window.crypto.subtle.importKey(
       "spki",
@@ -444,6 +451,53 @@ export function KYCAdminDashboardScreen() {
     }
   };
 
+  // ── 🎯 ACTION DESTRUCTIVE DE PURGE MATÉRIELLE (RGPD & RESET) ──
+  const handlePurgeDossier = async () => {
+    if (!selectedRequest) return;
+    const confirmPurge = window.confirm(
+      "Êtes-vous sûr de vouloir PURGER intégralement ce dossier KYC ? " +
+      "Les fichiers chiffrés seront définitivement supprimés du serveur et le profil repassera en 'Non vérifié'."
+    );
+
+    if (!confirmPurge) return;
+
+    setIsActionLoading(true);
+    const toastId = toast.loading("Purge matérielle du dossier en cours...");
+
+    try {
+      // 1. Destruction physique des fichiers sur le Storage
+      const filesToDelete = [
+        `${selectedRequest.id}/identity.enc`,
+        `${selectedRequest.id}/selfie.enc`,
+        `${selectedRequest.id}/identity`,
+        `${selectedRequest.id}/selfie`
+      ];
+      
+      await supabase.storage.from('secure-kyc').remove(filesToDelete);
+
+      // 2. Remise à zéro stricte en base de données
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .update({ 
+          kyc_status: 'unverified',
+          trust_score: 10,
+          kyc_completed: false
+        })
+        .eq('id', selectedRequest.id);
+
+      if (dbError) throw dbError;
+
+      toast.success("Dossier intégralement détruit et réinitialisé.", { id: toastId });
+      setSelectedRequest(null);
+      fetchAllProfiles();
+    } catch (err: any) {
+      console.error('[Purge Crash]:', err);
+      toast.error("Erreur critique lors de la purge des documents.", { id: toastId });
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
   const filteredRequests = requests.filter(r => {
     const matchesSearch = r.fullName.toLowerCase().includes(searchQuery.toLowerCase()) || r.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || r.kycStatus === statusFilter;
@@ -488,7 +542,7 @@ export function KYCAdminDashboardScreen() {
           </div>
 
           <div className="flex border-b border-slate-800 text-xs font-bold gap-2">
-            {(['all', 'pending', 'verified', 'rejected'] as const).map((status) => (
+            {(['all', 'unverified', 'pending', 'verified', 'rejected'] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
@@ -496,7 +550,7 @@ export function KYCAdminDashboardScreen() {
                   statusFilter === status ? 'border-b-2 border-amber-500 text-amber-500 font-black' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                {status === 'all' ? 'Tous les profils' : status === 'pending' ? 'Non vérifiés' : status === 'verified' ? 'Vérifiés' : 'Rejetés'}
+                {status === 'all' ? 'Tous les profils' : status === 'unverified' ? 'Non fournis' : status === 'pending' ? 'À valider' : status === 'verified' ? 'Vérifiés' : 'Rejetés'}
               </button>
             ))}
           </div>
@@ -537,9 +591,10 @@ export function KYCAdminDashboardScreen() {
                         <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
                           req.kycStatus === 'verified' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
                           req.kycStatus === 'rejected' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 
+                          req.kycStatus === 'unverified' ? 'bg-slate-500/10 text-slate-400 border border-slate-500/20' : 
                           'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                         }`}>
-                          {req.kycStatus === 'pending' ? 'Non vérifié' : req.kycStatus === 'verified' ? 'Vérifié' : 'Rejeté'}
+                          {req.kycStatus === 'pending' ? 'À valider' : req.kycStatus === 'verified' ? 'Vérifié' : req.kycStatus === 'unverified' ? 'Non fourni' : 'Rejeté'}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-right">
@@ -664,7 +719,7 @@ export function KYCAdminDashboardScreen() {
                         <div className="text-center space-y-2">
                           <FileText className="w-8 h-8 text-slate-600 mx-auto" />
                           <p className="text-xs font-bold text-slate-400">identity.enc</p>
-                          <span className="text-[10px] text-amber-500 font-bold block">VERROU SÉCURISÉ</span>
+                          <span className="text-[10px] text-amber-500 font-bold block">ABSENT OU VERROUILLÉ</span>
                         </div>
                       )}
                     </div>
@@ -704,7 +759,7 @@ export function KYCAdminDashboardScreen() {
                         <div className="text-center space-y-2">
                           <User className="w-8 h-8 text-slate-600 mx-auto" />
                           <p className="text-xs font-bold text-slate-400">selfie.enc</p>
-                          <span className="text-[10px] text-amber-500 font-bold block">VERROU SÉCURISÉ</span>
+                          <span className="text-[10px] text-amber-500 font-bold block">ABSENT OU VERROUILLÉ</span>
                         </div>
                       )}
                     </div>
@@ -714,20 +769,29 @@ export function KYCAdminDashboardScreen() {
               </div>
 
               {/* ACTION SÉCURISÉE COMPLÈTE */}
-              <div className="flex gap-3 pt-4 border-t border-slate-800">
+              <div className="flex flex-col gap-3 pt-4 border-t border-slate-800">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleUpdateStatus('rejected')}
+                    disabled={isActionLoading || isDecrypting || !isKeyLoaded}
+                    className="flex-1 py-4 border border-red-500/30 hover:border-red-500 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed border-none cursor-pointer"
+                  >
+                    <UserX className="w-4 h-4" /> Rejeter
+                  </button>
+                  <button
+                    onClick={() => handleUpdateStatus('verified')}
+                    disabled={isActionLoading || isDecrypting || !isKeyLoaded}
+                    className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed border-none cursor-pointer"
+                  >
+                    <UserCheck className="w-4 h-4" /> Confirmer
+                  </button>
+                </div>
                 <button
-                  onClick={() => handleUpdateStatus('rejected')}
-                  disabled={isActionLoading || isDecrypting || !isKeyLoaded}
-                  className="flex-1 py-4 border border-red-500/30 hover:border-red-500 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed border-none cursor-pointer"
+                  onClick={handlePurgeDossier}
+                  disabled={isActionLoading || isDecrypting}
+                  className="w-full py-3 border border-slate-600 hover:border-red-500 bg-transparent hover:bg-red-500/10 text-slate-400 hover:text-red-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed border-none cursor-pointer"
                 >
-                  <UserX className="w-4 h-4" /> Rejeter le dossier
-                </button>
-                <button
-                  onClick={() => handleUpdateStatus('verified')}
-                  disabled={isActionLoading || isDecrypting || !isKeyLoaded}
-                  className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed border-none cursor-pointer"
-                >
-                  <UserCheck className="w-4 h-4" /> Confirmer et valider
+                  <Trash2 className="w-4 h-4" /> Purger les fichiers & Réinitialiser le compte
                 </button>
               </div>
             </div>
@@ -741,7 +805,7 @@ export function KYCAdminDashboardScreen() {
         </div>
       </div>
 
-      {/* LIGHTBOX DE L'ADMINISTRATEUR (CORRIGÉE POUR LES VIDÉOS) */}
+      {/* LIGHTBOX DE L'ADMINISTRATEUR */}
       {lightbox && (
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <button 
