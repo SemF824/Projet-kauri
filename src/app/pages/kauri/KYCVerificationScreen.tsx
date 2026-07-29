@@ -325,11 +325,20 @@ export function KYCVerificationScreen() {
     loadAndDecryptKycHub();
   }, [profile]);
 
+  // ── 🧠 INITIALISATION INTELLECTUELLE : DÉDUCTION DES NOMS SOCIAUX (GOOGLE/FACEBOOK) ──
   useEffect(() => {
     if (profile?.id) {
+      const extractedFirstName = profile.first_name && profile.first_name !== 'Prénom' 
+        ? profile.first_name 
+        : (profile.full_name ? profile.full_name.split(' ')[0] : "");
+
+      const extractedLastName = profile.last_name && profile.last_name !== 'Nom' 
+        ? profile.last_name 
+        : (profile.full_name ? profile.full_name.split(' ').slice(1).join(' ') : "");
+
       const serverAddress = {
-        firstName: profile.first_name && profile.first_name !== 'Prénom' ? profile.first_name : "",
-        lastName: profile.last_name && profile.last_name !== 'Nom' ? profile.last_name : "",
+        firstName: extractedFirstName,
+        lastName: extractedLastName,
         street: profile.street || "",
         zip: profile.zip || "",
         city: profile.city || "",
@@ -352,9 +361,13 @@ export function KYCVerificationScreen() {
     }
   }, [profile]);
 
+  // Modificateur de champ avec persistance dynamique + RÈGLE CHIFFRES UNIQUES SUR CODE POSTAL
   const updateAddressField = (field: keyof typeof address, value: string) => {
+    // 🛡️ REJET STRICT DES LETTRES SUR LE CODE POSTAL
+    const sanitizedValue = field === 'zip' ? value.replace(/\D/g, '') : value;
+
     setAddress(prev => {
-      const updated = { ...prev, [field]: value };
+      const updated = { ...prev, [field]: sanitizedValue };
       if (profile?.id) {
         localStorage.setItem(`kauri_address_draft_${profile.id}`, JSON.stringify(updated));
       }
@@ -521,13 +534,11 @@ export function KYCVerificationScreen() {
       return;
     }
 
-    // Si aucune modification n'a été apportée aux champs ou fichiers, on autorise directement la sortie vers la suite
     if (!hasAnyMutation) {
       navigate(`/kauri/biometric-setup?type=${accountType}`);
       return;
     }
 
-    // Sinon, on sauvegarde les changements sur Supabase avant de sortir
     setIsActionLoading(true);
     const toastId = toast.loading("Mise à jour de votre attestation de résidence...");
     
@@ -556,6 +567,7 @@ export function KYCVerificationScreen() {
         localStorage.removeItem(`kauri_address_draft_${profile.id}`);
       }
 
+      setInitialAddress({ ...address }); // Réalignement synchrone instantané
       await refreshProfile();
       
       toast.success("Informations enregistrées !", { id: toastId });
@@ -678,7 +690,7 @@ export function KYCVerificationScreen() {
               </div>
             </div>
 
-            {/* FORMULAIRE DE RÉSIDENCE */}
+            {/* ── 🎯 FORMULAIRE DE RÉSIDENCE AVEC VERROU NUMÉRIQUE SUR CODE POSTAL ── */}
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Attestation de Résidence</h3>
@@ -726,6 +738,8 @@ export function KYCVerificationScreen() {
                     <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Code postal</label>
                     <input 
                       type="text" 
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={address.zip} 
                       onChange={(e) => updateAddressField('zip', e.target.value)} 
                       placeholder="75001" 
