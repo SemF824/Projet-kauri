@@ -1,4 +1,4 @@
-import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, X, Video, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, X, Video, AlertTriangle, ShieldCheck } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -96,6 +96,10 @@ export function KYCVerificationScreen() {
   const [selfiePreviewUrl, setSelfiePreviewUrl] = useState<string | null>(null);
   const [identityType, setIdentityFileType] = useState<'image' | 'pdf' | 'video'>('image');
   const [selfieType, setSelfieFileType] = useState<'image' | 'pdf' | 'video'>('image');
+
+  // ── 🎯 ÉTATS DE PRÉSENCE PERSISTANTE SUR LE SERVEUR ──
+  const [hasExistingIdentity, setHasExistingIdentity] = useState(false);
+  const [hasExistingSelfie, setHasExistingSelfie] = useState(false);
 
   const [hasFileChanges, setHasFileChanges] = useState(false);
   const [address, setAddress] = useState({
@@ -267,43 +271,56 @@ export function KYCVerificationScreen() {
     };
   };
 
+  // ── 🎯 LECTURE ET DÉTECTION PERSISTANTE DES DOCUMENTS SUR SUPABASE STORAGE ──
   useEffect(() => {
     const loadAndDecryptKycHub = async () => {
       if (!profile?.id) return;
       setIsLoadingDocuments(true);
 
       try {
-        const enclaveKeys = await getKeysFromEnclave('kauri_client');
-        if (!enclaveKeys) { setIsLoadingDocuments(false); return; }
-
         const { data: files, error } = await supabase.storage.from('secure-kyc').list(profile.id);
 
-        if (!error && files) {
+        if (!error && files && files.length > 0) {
           const idFile = files.find(f => f.name.startsWith('identity'));
           const sfFile = files.find(f => f.name.startsWith('selfie'));
 
-          if (idFile) {
-            const { data: blob } = await supabase.storage.from('secure-kyc').download(`${profile.id}/${idFile.name}`);
-            if (blob) {
-              const arrayBuf = await blob.arrayBuffer();
-              const dec = await decryptUserFile(arrayBuf, enclaveKeys.ecdhPriv);
-              setIdentityFileType(dec.type);
-              setIdentityPreviewUrl(dec.url);
-            }
-          }
+          // Marquage immédiat de l'existence sur le serveur
+          if (idFile) setHasExistingIdentity(true);
+          if (sfFile) setHasExistingSelfie(true);
 
-          if (sfFile) {
-            const { data: blob } = await supabase.storage.from('secure-kyc').download(`${profile.id}/${sfFile.name}`);
-            if (blob) {
-              const arrayBuf = await blob.arrayBuffer();
-              const dec = await decryptUserFile(arrayBuf, enclaveKeys.ecdhPriv);
-              setSelfieFileType(dec.type);
-              setSelfiePreviewUrl(dec.url);
+          const enclaveKeys = await getKeysFromEnclave('kauri_client');
+          if (enclaveKeys) {
+            if (idFile) {
+              try {
+                const { data: blob } = await supabase.storage.from('secure-kyc').download(`${profile.id}/${idFile.name}`);
+                if (blob) {
+                  const arrayBuf = await blob.arrayBuffer();
+                  const dec = await decryptUserFile(arrayBuf, enclaveKeys.ecdhPriv);
+                  setIdentityFileType(dec.type);
+                  setIdentityPreviewUrl(dec.url);
+                }
+              } catch (decErr) {
+                console.warn("Déchiffrement aperçu identité impossible:", decErr);
+              }
+            }
+
+            if (sfFile) {
+              try {
+                const { data: blob } = await supabase.storage.from('secure-kyc').download(`${profile.id}/${sfFile.name}`);
+                if (blob) {
+                  const arrayBuf = await blob.arrayBuffer();
+                  const dec = await decryptUserFile(arrayBuf, enclaveKeys.ecdhPriv);
+                  setSelfieFileType(dec.type);
+                  setSelfiePreviewUrl(dec.url);
+                }
+              } catch (decErr) {
+                console.warn("Déchiffrement aperçu selfie impossible:", decErr);
+              }
             }
           }
         }
       } catch (err) {
-        console.error("Déchiffrement local échoué:", err);
+        console.error("Erreur de synchronisation du Hub KYC:", err);
       } finally {
         setIsLoadingDocuments(false);
       }
@@ -336,7 +353,6 @@ export function KYCVerificationScreen() {
     try {
       let enclaveKeys = await getKeysFromEnclave('kauri_client');
       
-      // ── 🛡️ AUTO-HEALING : RÉGÉNÉRATION LOCALE S'IL N'Y A PAS DE CLÉ LOCALE ──
       if (!enclaveKeys) {
         const ecdhKeyPair = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]);
         const ecdsaKeyPair = await window.crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
@@ -355,10 +371,8 @@ export function KYCVerificationScreen() {
         await supabase.from('profiles').update({ user_public_key: publicKeysJSON }).eq('id', profile?.id);
       }
 
-      // ── 🎯 RESOLUTION CHIRURGICALE DU CAS OAUTH (GOOGLE / FACEBOOK / APPLE) ──
       let { data: dbProfile } = await supabase.from('profiles').select('user_public_key').eq('id', profile?.id).single();
 
-      // Si le trousseau public n'existe pas sur le serveur (Compte OAuth récent), on le pousse immédiatement !
       if (!dbProfile?.user_public_key) {
         const ecdhKeyPair = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]);
         const ecdsaKeyPair = await window.crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
@@ -434,9 +448,11 @@ export function KYCVerificationScreen() {
       if (type === "identity") {
         setIdentityFileType(file.type === 'application/pdf' ? 'pdf' : 'image');
         setIdentityPreviewUrl(localUrl);
+        setHasExistingIdentity(true);
       } else {
         setSelfieFileType(file.type.startsWith('video') ? 'video' : 'image');
         setSelfiePreviewUrl(localUrl);
+        setHasExistingSelfie(true);
       }
 
       setHasFileChanges(true);
@@ -458,14 +474,18 @@ export function KYCVerificationScreen() {
 
   const hasAnyMutation = isAddressChanged || hasFileChanges;
 
+  // ── 🎯 COMBINAISON DES ÉTATS DE SÉCURITÉ (LOCAL APERÇU + SERVEUR DISTANT) ──
+  const hasIdentity = !!identityPreviewUrl || hasExistingIdentity;
+  const hasSelfie = !!selfiePreviewUrl || hasExistingSelfie;
+
   const isAddressValid = 
     address.firstName.trim().length > 1 && 
     address.lastName.trim().length > 1 && 
-    address.street.trim().length > 5 && 
-    address.zip.trim().length > 3 && 
+    address.street.trim().length > 3 && 
+    address.zip.trim().length > 2 && 
     address.city.trim().length > 1;
 
-  const isFilesValid = !!identityPreviewUrl && !!selfiePreviewUrl;
+  const isFilesValid = hasIdentity && hasSelfie;
   const isFormComplete = isAddressValid && isFilesValid;
 
   const handleMainAction = async () => {
@@ -585,18 +605,24 @@ export function KYCVerificationScreen() {
                   <div className="w-14 h-14 rounded-2xl bg-slate-900 overflow-hidden flex items-center justify-center flex-shrink-0 border border-slate-100">
                     {identityPreviewUrl ? (
                       identityType === 'pdf' ? <FileText className="w-6 h-6 text-red-400" /> : <img src={identityPreviewUrl} alt="Identity Cache" className="w-full h-full object-cover" />
-                    ) : <FileText className="w-6 h-6 text-slate-600" />}
+                    ) : hasExistingIdentity ? (
+                      <ShieldCheck className="w-6 h-6 text-emerald-400" />
+                    ) : (
+                      <FileText className="w-6 h-6 text-slate-600" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h4 className="text-sm font-bold text-[#0F172A] truncate">Pièce d'identité officielle</h4>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${identityPreviewUrl ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                      <p className="text-[11px] text-slate-500 font-medium">{identityPreviewUrl ? 'Sécurisé ECC' : 'Non communiqué'}</p>
+                      <span className={`w-1.5 h-1.5 rounded-full ${hasIdentity ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        {identityPreviewUrl ? 'Sécurisé ECC (Aperçu local)' : hasExistingIdentity ? 'Transmis & Scellé sur le serveur' : 'Non communiqué'}
+                      </p>
                     </div>
                   </div>
                 </div>
                 <button onClick={() => identityInputRef.current?.click()} className="px-4 py-2.5 bg-[#006D77]/10 hover:bg-[#006D77]/20 text-[#006D77] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1">
-                  <RotateCw className="w-3.5 h-3.5" /> {identityPreviewUrl ? "Modifier" : "Ajouter"}
+                  <RotateCw className="w-3.5 h-3.5" /> {hasIdentity ? "Modifier" : "Ajouter"}
                 </button>
               </div>
 
@@ -610,6 +636,8 @@ export function KYCVerificationScreen() {
                       ) : (
                         <img src={selfiePreviewUrl} alt="Selfie Cache" className="w-full h-full object-cover" />
                       )
+                    ) : hasExistingSelfie ? (
+                      <ShieldCheck className="w-6 h-6 text-emerald-400" />
                     ) : (
                       <Video className="w-6 h-6 text-slate-600" />
                     )}
@@ -617,13 +645,15 @@ export function KYCVerificationScreen() {
                   <div className="min-w-0 flex-1">
                     <h4 className="text-sm font-bold text-[#0F172A] truncate">Liveness Vidéo 3D</h4>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${selfiePreviewUrl ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                      <p className="text-[11px] text-slate-500 font-medium">{selfiePreviewUrl ? 'Vidéo Enregistrée & Scellée' : 'Preuve de vie requise'}</p>
+                      <span className={`w-1.5 h-1.5 rounded-full ${hasSelfie ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        {selfiePreviewUrl ? 'Vidéo Enregistrée & Scellée' : hasExistingSelfie ? 'Transmis & Scellé sur le serveur' : 'Preuve de vie requise'}
+                      </p>
                     </div>
                   </div>
                 </div>
                 <button onClick={startCamera} className="px-4 py-2.5 bg-gradient-to-br from-[#D4AF37]/10 to-[#FEF3C7]/20 text-[#B8860B] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1">
-                  <Camera className="w-3.5 h-3.5" /> {selfiePreviewUrl ? "Refaire" : "Démarrer"}
+                  <Camera className="w-3.5 h-3.5" /> {hasSelfie ? "Refaire" : "Démarrer"}
                 </button>
               </div>
             </div>
