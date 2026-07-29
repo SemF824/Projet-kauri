@@ -149,7 +149,7 @@ export function AccountTypeSelectionScreen() {
       });
       if (error) throw error;
     } catch (e: any) {
-      toast.error(`Connexion ${provider} impossible. Vérifiez la configuration de votre Provider.`);
+      toast.error(`Connexion ${provider} impossible. Vérifiez la configuration du Provider.`);
     } finally {
       setIsLoading(false);
     }
@@ -199,8 +199,10 @@ export function AccountTypeSelectionScreen() {
 
       if (!signUpData.user?.id) throw new Error("ID d'enclave manquant.");
       setActiveUserId(signUpData.user.id);
+      
+      // Passage explicite au formulaire de téléversement KYC
       setStep('documents');
-      toast.success('Accès initialisé. Veuillez valider les justificatifs.');
+      toast.success('Compte créé ! Veuillez à présent ajouter vos pièces justificatives.');
     } catch (e: any) {
       toast.error(`Incident Infrastructure : ${e.message}`);
     } finally {
@@ -295,7 +297,7 @@ export function AccountTypeSelectionScreen() {
   const handleUploadAndEncrypt = async (type: "identity" | "selfie", fileData?: File | Blob) => {
     if (!fileData || !activeUserId) return;
     setIsLoading(true);
-    const toastId = toast.loading(`Cryptage ECIES asymétrique de l'élément ${type}...`);
+    const toastId = toast.loading(`Chiffrement ECIES asymétrique de l'élément ${type}...`);
 
     try {
       const supabase = getSupabase();
@@ -357,7 +359,7 @@ export function AccountTypeSelectionScreen() {
       } else {
         setSelfiePreviewUrl(localUrl);
       }
-      toast.success("Registre cryptographique validé !", { id: toastId });
+      toast.success("Registre cryptographique scellé avec succès !", { id: toastId });
     } catch (err: any) {
       toast.error(`Incident Enclave : ${err.message}`, { id: toastId });
     } finally {
@@ -367,19 +369,20 @@ export function AccountTypeSelectionScreen() {
 
   const handleFinalize = async () => {
     if (!idPreviewUrl || !selfiePreviewUrl) {
-      toast.error("Renseignez l'intégralité des pièces d'identité requises.");
+      toast.error("Veuillez fournir la pièce d'identité ET effectuer la vidéo Liveness avant de valider.");
       return;
     }
     setIsLoading(true);
     try {
       const supabase = getSupabase();
+      // Passage effectif du statut à 'pending' (en attente de validation) uniquement APRES téléversement
       await supabase.from('profiles').update({ kyc_status: 'pending' }).eq('id', activeUserId);
       
       const accessToken = (await supabase.auth.getSession()).data.session?.access_token ?? publicAnonKey;
       await fetch(`${SERVER_URL}/wallet/init`, { method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}` } }).catch(() => {});
       await fetch(`${SERVER_URL}/seed`, { method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}` } }).catch(() => {});
 
-      toast.success("Dossier validé. Synchronisation du tableau de bord.");
+      toast.success("Dossier validé ! Redirection vers votre tableau de bord.");
       navigate('/kauri/normal-dashboard');
     } catch (e) {
       toast.error("Erreur de routage final.");
@@ -444,10 +447,9 @@ export function AccountTypeSelectionScreen() {
         <div className="flex-1 px-6 py-6 w-full max-w-md mx-auto flex flex-col justify-between">
           <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 space-y-5">
             
-            {/* ── LE BLOC SOCIAL DÉPLACÉ À LA PREMIÈRE ÉTAPE DE FRICTION ── */}
             {step === 'name' && (
-              <div className="mb-6">
-                <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Inscription Express</p>
+              <div className="mb-2">
+                <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Inscription Express via Réseaux</p>
                 <div className="grid grid-cols-3 gap-2">
                   <button onClick={() => handleSocialSignup('google')} className="py-3 rounded-xl border-2 border-slate-100 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">Google</button>
                   <button onClick={() => handleSocialSignup('apple')} className="py-3 rounded-xl border-2 border-slate-100 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">Apple</button>
@@ -460,7 +462,7 @@ export function AccountTypeSelectionScreen() {
                   <div className="flex-1 h-px bg-slate-200" />
                 </div>
                 
-                <div className="space-y-5">
+                <div className="space-y-4">
                   {renderInputField('firstName', 'Prénom légal', 'Marie', User)}
                   {renderInputField('lastName', 'Nom de famille', 'Dupont', User)}
                 </div>
@@ -498,8 +500,10 @@ export function AccountTypeSelectionScreen() {
 
             {step === 'documents' && (
               <div className="space-y-5">
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4">
-                  <p className="text-[11px] text-amber-700/80 font-bold">Compte créé ! Veuillez fournir vos documents réglementaires pour activer les fonctionnalités financières.</p>
+                <div className="bg-teal-500/10 border border-teal-500/20 rounded-2xl p-4">
+                  <p className="text-[11px] text-teal-800 font-bold">
+                    Étape finale : Importez votre pièce d'identité et validez le scan 3D pour soumettre votre dossier.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -534,9 +538,9 @@ export function AccountTypeSelectionScreen() {
           <div className="mt-8 space-y-4">
             <button
               onClick={step === 'documents' ? handleFinalize : handleNext}
-              disabled={isLoading}
-              className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 text-white text-sm font-bold shadow-xl cursor-pointer border-none transition-all active:scale-95"
-              style={{ background: 'linear-gradient(135deg, #006D77, #0D9488)', opacity: isLoading ? 0.8 : 1 }}
+              disabled={isLoading || (step === 'documents' && (!idPreviewUrl || !selfiePreviewUrl))}
+              className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 text-white text-sm font-bold shadow-xl cursor-pointer border-none transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: 'linear-gradient(135deg, #006D77, #0D9488)' }}
             >
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (step === 'documents' ? 'Finaliser l\'inscription ✓' : 'Continuer →')}
             </button>
