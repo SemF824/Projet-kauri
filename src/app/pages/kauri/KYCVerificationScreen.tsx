@@ -1,4 +1,4 @@
-import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, X, Video, AlertTriangle, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, X, Video, AlertTriangle, ShieldCheck, Edit3 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -97,11 +97,12 @@ export function KYCVerificationScreen() {
   const [identityType, setIdentityFileType] = useState<'image' | 'pdf' | 'video'>('image');
   const [selfieType, setSelfieFileType] = useState<'image' | 'pdf' | 'video'>('image');
 
-  // ── 🎯 ÉTATS DE PRÉSENCE PERSISTANTE SUR LE SERVEUR ──
   const [hasExistingIdentity, setHasExistingIdentity] = useState(false);
   const [hasExistingSelfie, setHasExistingSelfie] = useState(false);
 
   const [hasFileChanges, setHasFileChanges] = useState(false);
+
+  // ── 🎯 GESTION DE L'ADRESSE ET SAUVEGARDE LOCALE DYNAMIQUE ──
   const [address, setAddress] = useState({
     firstName: "", lastName: "", street: "", zip: "", city: "", country: "France",
   });
@@ -111,7 +112,6 @@ export function KYCVerificationScreen() {
 
   const identityInputRef = useRef<HTMLInputElement>(null);
 
-  // ── 🎥 ÉTATS DU MOTEUR D'ENREGISTREMENT VIDÉO (LIVENESS SEQUENCE) ──
   const [showCamera, setShowCamera] = useState(false);
   const [recordingState, setRecordingState] = useState<'idle' | 'front' | 'left' | 'right' | 'processing'>('idle');
   
@@ -239,7 +239,6 @@ export function KYCVerificationScreen() {
     }, 6000);
   };
 
-  // ── 🧠 CHIFFREMENT & DECHIFFREMENT ECC ──
   const decryptUserFile = async (packedBuffer: ArrayBuffer, ecdhPriv: CryptoKey): Promise<{ url: string; type: 'image' | 'pdf' | 'video' }> => {
     const packedBytes = new Uint8Array(packedBuffer);
     const view = new DataView(packedBytes.buffer);
@@ -271,7 +270,6 @@ export function KYCVerificationScreen() {
     };
   };
 
-  // ── 🎯 LECTURE ET DÉTECTION PERSISTANTE DES DOCUMENTS SUR SUPABASE STORAGE ──
   useEffect(() => {
     const loadAndDecryptKycHub = async () => {
       if (!profile?.id) return;
@@ -284,7 +282,6 @@ export function KYCVerificationScreen() {
           const idFile = files.find(f => f.name.startsWith('identity'));
           const sfFile = files.find(f => f.name.startsWith('selfie'));
 
-          // Marquage immédiat de l'existence sur le serveur
           if (idFile) setHasExistingIdentity(true);
           if (sfFile) setHasExistingSelfie(true);
 
@@ -328,9 +325,11 @@ export function KYCVerificationScreen() {
     loadAndDecryptKycHub();
   }, [profile]);
 
+  // ── 🧠 INITIALISATION ET SYNCHRONISATION DU FORMULAIRE D'ADRESSE ──
   useEffect(() => {
-    if (profile) {
-      const extractedAddress = {
+    if (profile?.id) {
+      // 1. Récupération des données enregistrées en base
+      const serverAddress = {
         firstName: profile.first_name && profile.first_name !== 'Prénom' ? profile.first_name : "",
         lastName: profile.last_name && profile.last_name !== 'Nom' ? profile.last_name : "",
         street: profile.street || "",
@@ -338,10 +337,34 @@ export function KYCVerificationScreen() {
         city: profile.city || "",
         country: "France",
       };
-      setAddress(extractedAddress);
-      setInitialAddress(extractedAddress);
+
+      // 2. Vérification s'il existe une saisie brouillon locale en attente dans le localStorage
+      const savedDraft = localStorage.getItem(`kauri_address_draft_${profile.id}`);
+      if (savedDraft) {
+        try {
+          const parsedDraft = JSON.parse(savedDraft);
+          setAddress(parsedDraft);
+        } catch (e) {
+          setAddress(serverAddress);
+        }
+      } else {
+        setAddress(serverAddress);
+      }
+
+      setInitialAddress(serverAddress);
     }
   }, [profile]);
+
+  // Modificateur de champ avec persistance automatique en brouillon local
+  const updateAddressField = (field: keyof typeof address, value: string) => {
+    setAddress(prev => {
+      const updated = { ...prev, [field]: value };
+      if (profile?.id) {
+        localStorage.setItem(`kauri_address_draft_${profile.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
 
   const handleUploadAndEncrypt = async (type: "identity" | "selfie", fileFromParam?: File) => {
     const file = fileFromParam;
@@ -474,7 +497,6 @@ export function KYCVerificationScreen() {
 
   const hasAnyMutation = isAddressChanged || hasFileChanges;
 
-  // ── 🎯 COMBINAISON DES ÉTATS DE SÉCURITÉ (LOCAL APERÇU + SERVEUR DISTANT) ──
   const hasIdentity = !!identityPreviewUrl || hasExistingIdentity;
   const hasSelfie = !!selfiePreviewUrl || hasExistingSelfie;
 
@@ -496,7 +518,7 @@ export function KYCVerificationScreen() {
         });
       } else if (!isAddressValid) {
         toast.warning("Champs Manquants", {
-          description: "Veuillez renseigner intégralement votre attestation de domicile avec des informations valides."
+          description: "Veuillez renseigner intégralement votre attestation de domicile."
         });
       }
       return;
@@ -508,7 +530,7 @@ export function KYCVerificationScreen() {
     }
 
     setIsActionLoading(true);
-    const toastId = toast.loading("Actualisation globale de votre dossier de conformité...");
+    const toastId = toast.loading("Mise à jour de votre attestation de résidence...");
     
     try {
       const updateData: any = {
@@ -520,8 +542,8 @@ export function KYCVerificationScreen() {
       };
 
       if (profile?.kyc_status !== 'verified' || hasFileChanges) {
-          updateData.kyc_status = 'pending';
-          updateData.trust_score = 40;
+        updateData.kyc_status = 'pending';
+        updateData.trust_score = 40;
       }
 
       const { error } = await supabase
@@ -531,14 +553,14 @@ export function KYCVerificationScreen() {
 
       if (error) throw error;
       
-      await refreshProfile();
-      
-      if (hasFileChanges) {
-          toast.success("Dossier mis à jour et re-soumis pour analyse !", { id: toastId });
-      } else {
-          toast.success("Informations personnelles mises à jour.", { id: toastId });
+      // Nettoyage du brouillon local après enregistrement effectif
+      if (profile?.id) {
+        localStorage.removeItem(`kauri_address_draft_${profile.id}`);
       }
 
+      await refreshProfile();
+      
+      toast.success("Informations modifiées et enregistrées !", { id: toastId });
       navigate(`/kauri/biometric-setup?type=${accountType}`);
     } catch (err) {
       toast.error("Erreur de synchronisation réseau.", { id: toastId });
@@ -658,32 +680,69 @@ export function KYCVerificationScreen() {
               </div>
             </div>
 
-            {/* FORMULAIRE DE RÉSIDENCE */}
+            {/* ── 🎯 FORMULAIRE DE RÉSIDENCE MODIFIABLE EN PERMANENCE ── */}
             <div className="space-y-4">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Attestation de Résidence</h3>
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Attestation de Résidence</h3>
+                {isAddressChanged && (
+                  <span className="text-[10px] bg-amber-500/10 text-amber-600 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Edit3 className="w-3 h-3" /> Modification en cours
+                  </span>
+                )}
+              </div>
               <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Prénom légal</label>
-                    <input type="text" value={address.firstName} onChange={(e) => setAddress({ ...address, firstName: e.target.value })} placeholder="Marie" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
+                    <input 
+                      type="text" 
+                      value={address.firstName} 
+                      onChange={(e) => updateAddressField('firstName', e.target.value)} 
+                      placeholder="Marie" 
+                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
+                    />
                   </div>
                   <div>
                     <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Nom de famille</label>
-                    <input type="text" value={address.lastName} onChange={(e) => setAddress({ ...address, lastName: e.target.value })} placeholder="Dupont" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
+                    <input 
+                      type="text" 
+                      value={address.lastName} 
+                      onChange={(e) => updateAddressField('lastName', e.target.value)} 
+                      placeholder="Dupont" 
+                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
+                    />
                   </div>
                 </div>
                 <div>
                   <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Numéro et libellé de voie</label>
-                  <input type="text" value={address.street} onChange={(e) => setAddress({ ...address, street: e.target.value })} placeholder="1 Rue de la Solidarité" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
+                  <input 
+                    type="text" 
+                    value={address.street} 
+                    onChange={(e) => updateAddressField('street', e.target.value)} 
+                    placeholder="1 Rue de la Solidarité" 
+                    className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Code postal</label>
-                    <input type="text" value={address.zip} onChange={(e) => setAddress({ ...address, zip: e.target.value })} placeholder="75001" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
+                    <input 
+                      type="text" 
+                      value={address.zip} 
+                      onChange={(e) => updateAddressField('zip', e.target.value)} 
+                      placeholder="75001" 
+                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
+                    />
                   </div>
                   <div>
                     <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Ville de résidence</label>
-                    <input type="text" value={address.city} onChange={(e) => setAddress({ ...address, city: e.target.value })} placeholder="Paris" className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" />
+                    <input 
+                      type="text" 
+                      value={address.city} 
+                      onChange={(e) => updateAddressField('city', e.target.value)} 
+                      placeholder="Paris" 
+                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
+                    />
                   </div>
                 </div>
               </div>
@@ -709,7 +768,7 @@ export function KYCVerificationScreen() {
               <span>
                 {isActionLoading ? "Synchronisation..." : 
                  !isFormComplete ? "Dossier incomplet" :
-                 hasAnyMutation ? "Soumettre mon dossier pour analyse" : 
+                 hasAnyMutation ? "Enregistrer les modifications" : 
                  "Continuer vers l'étape suivante"}
               </span>
             </button>
