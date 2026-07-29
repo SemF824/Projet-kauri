@@ -131,6 +131,7 @@ export function AccountTypeSelectionScreen() {
     else if (step === 'documents') setStep('phone');
   };
 
+  // ── 🎯 CORRECTION MAJEURE : REDIRECTION OAUTH VERS LA PAGE KYC ──
   const handleSocialSignup = async (provider: 'google' | 'apple' | 'facebook') => {
     setIsLoading(true);
     try {
@@ -142,7 +143,8 @@ export function AccountTypeSelectionScreen() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: { 
-          redirectTo: `${window.location.origin}/kauri/normal-dashboard`, 
+          // Redirection explicite vers le lien de vérification KYC
+          redirectTo: `${window.location.origin}/kauri/kyc-verification?type=${accountType}`, 
           queryParams: { account_type: accountType },
           scopes: provider === 'facebook' ? 'email,public_profile' : undefined 
         }
@@ -200,7 +202,6 @@ export function AccountTypeSelectionScreen() {
       if (!signUpData.user?.id) throw new Error("ID d'enclave manquant.");
       setActiveUserId(signUpData.user.id);
       
-      // Passage explicite au formulaire de téléversement KYC
       setStep('documents');
       toast.success('Compte créé ! Veuillez à présent ajouter vos pièces justificatives.');
     } catch (e: any) {
@@ -375,7 +376,6 @@ export function AccountTypeSelectionScreen() {
     setIsLoading(true);
     try {
       const supabase = getSupabase();
-      // Passage effectif du statut à 'pending' (en attente de validation) uniquement APRES téléversement
       await supabase.from('profiles').update({ kyc_status: 'pending' }).eq('id', activeUserId);
       
       const accessToken = (await supabase.auth.getSession()).data.session?.access_token ?? publicAnonKey;
