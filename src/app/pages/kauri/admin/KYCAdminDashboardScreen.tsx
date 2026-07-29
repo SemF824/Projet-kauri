@@ -234,7 +234,6 @@ export function KYCAdminDashboardScreen() {
     toast.info("Enclave administrative purgée.");
   };
 
-  // 🎯 DÉCHIFFREMENT ECIES ET VÉRIFICATION DE LA SIGNATURE NUMÉRIQUE (ECDSA)
   const decryptPayload = async (packedArrayBuffer: ArrayBuffer, adminEcdhPriv: CryptoKey, userKeysJSON: string): Promise<{ url: string; type: 'image' | 'pdf' | 'video' }> => {
     const packedBytes = new Uint8Array(packedArrayBuffer);
     const view = new DataView(packedBytes.buffer);
@@ -258,17 +257,17 @@ export function KYCAdminDashboardScreen() {
     const ciphertext = packedBytes.slice(offset);
 
     if (!userKeysJSON) {
-      throw new Error("Trousseau public ECC manquant (Compte incomplet ou OAuth sans synchronisation).");
+      throw new Error("Trousseau public ECC manquant sur le profil.");
     }
     
     let userKeys;
     try {
       userKeys = JSON.parse(userKeysJSON);
     } catch (e) {
-      throw new Error("Corruption du trousseau de clés : format JSON invalide sur le profil.");
+      throw new Error("Corruption du trousseau de clés JSON.");
     }
 
-    if (!userKeys.ecdsa) throw new Error("Clé ECDSA manquante dans le trousseau public.");
+    if (!userKeys.ecdsa) throw new Error("Clé ECDSA manquante.");
 
     const verifyKey = await window.crypto.subtle.importKey(
       "spki",
@@ -291,7 +290,7 @@ export function KYCAdminDashboardScreen() {
     );
 
     if (!isAuthentic) {
-      throw new Error("VIOLATION DE SÉCURITÉ : La signature ECDSA du document ne correspond pas au titulaire.");
+      throw new Error("VIOLATION DE SÉCURITÉ : La signature ECDSA ne correspond pas.");
     }
 
     const ephPubKey = await window.crypto.subtle.importKey(
@@ -359,7 +358,6 @@ export function KYCAdminDashboardScreen() {
       const identityFile = files?.find(f => f.name.startsWith('identity'));
       const selfieFile = files?.find(f => f.name.startsWith('selfie'));
 
-      // DÉCODAGE PIÈCE D'IDENTITÉ
       if (identityFile) {
         const isEnc = identityFile.name.endsWith('.enc');
         setIsIdentityEncrypted(isEnc);
@@ -381,11 +379,8 @@ export function KYCAdminDashboardScreen() {
             setDecryptedIdentityUrl(URL.createObjectURL(blob));
           }
         }
-      } else {
-        setDecryptedIdentityUrl("https://images.unsplash.com/photo-1554774853-aae0a22c8aa4?auto=format&fit=crop&w=400&q=80");
       }
 
-      // DÉCODAGE SELFIE / LIVENESS VIDÉO
       if (selfieFile) {
         const isEnc = selfieFile.name.endsWith('.enc');
         setIsSelfieEncrypted(isEnc);
@@ -407,12 +402,10 @@ export function KYCAdminDashboardScreen() {
             setDecryptedSelfieUrl(URL.createObjectURL(blob));
           }
         }
-      } else {
-        setDecryptedSelfieUrl("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80");
       }
 
     } catch (err: any) {
-      console.error('[Decryption Master Stack Crash]:', err);
+      console.error('[Decryption Crash]:', err);
       toast.error(err.message || "Erreur de décodage du package cryptographique.");
     } finally {
       setIsDecrypting(false);
@@ -423,7 +416,7 @@ export function KYCAdminDashboardScreen() {
     if (!selectedRequest) return;
 
     if (!isKeyLoaded || !importedCryptoKey) {
-      toast.error("Action administrative révoquée. Vous devez détenir la clé privée administrative décryptant le dossier pour statuer.");
+      toast.error("Vous devez charger la clé privée administrative pour statuer sur un dossier.");
       return;
     }
 
@@ -440,59 +433,80 @@ export function KYCAdminDashboardScreen() {
 
       if (error) throw error;
 
-      toast.success(`Décision de conformité enregistrée : ${status.toUpperCase()}`);
+      toast.success(`Statut mis à jour : ${status.toUpperCase()}`);
       setSelectedRequest(null);
       fetchAllProfiles();
     } catch (err: any) {
-      console.error('[Status DB Write Error]:', err);
-      toast.error("Impossible d'appliquer la décision sur le profil.");
+      console.error('[Status DB Error]:', err);
+      toast.error("Erreur lors de la mise à jour du profil.");
     } finally {
       setIsActionLoading(false);
     }
   };
 
-  // ── 🎯 ACTION DESTRUCTIVE DE PURGE MATÉRIELLE (RGPD & RESET) ──
+  // ── 🎯 ACTION DESTRUCTIVE DE PURGE TOTALE ET IRREVERSIBLE ──
   const handlePurgeDossier = async () => {
     if (!selectedRequest) return;
+    
     const confirmPurge = window.confirm(
-      "Êtes-vous sûr de vouloir PURGER intégralement ce dossier KYC ? " +
-      "Les fichiers chiffrés seront définitivement supprimés du serveur et le profil repassera en 'Non vérifié'."
+      `⚠️ ATTENTION : ACTION IRREVOCABLE !\n\n` +
+      `Voulez-vous supprimer définitivement les fichiers chiffrés du compte de ${selectedRequest.fullName} ?\n` +
+      `Les fichiers seront effacés du Storage Supabase et le compte repassera en 'unverified'.`
     );
 
     if (!confirmPurge) return;
 
     setIsActionLoading(true);
-    const toastId = toast.loading("Purge matérielle du dossier en cours...");
+    const toastId = toast.loading("Destruction physique des fichiers sur Supabase...");
 
     try {
-      // 1. Destruction physique des fichiers sur le Storage
-      const filesToDelete = [
-        `${selectedRequest.id}/identity.enc`,
-        `${selectedRequest.id}/selfie.enc`,
-        `${selectedRequest.id}/identity`,
-        `${selectedRequest.id}/selfie`
-      ];
-      
-      await supabase.storage.from('secure-kyc').remove(filesToDelete);
+      // 1. Lister tous les fichiers présents dans le dossier de l'utilisateur
+      const { data: userFiles, error: listError } = await supabase.storage
+        .from('secure-kyc')
+        .list(selectedRequest.id);
 
-      // 2. Remise à zéro stricte en base de données
+      if (listError) console.warn("Erreur listing Storage:", listError);
+
+      // 2. Construction de la liste exacte des chemins à supprimer
+      if (userFiles && userFiles.length > 0) {
+        const filePaths = userFiles.map(f => `${selectedRequest.id}/${f.name}`);
+        const { error: deleteStorageErr } = await supabase.storage
+          .from('secure-kyc')
+          .remove(filePaths);
+
+        if (deleteStorageErr) {
+          console.error("Storage Delete Error:", deleteStorageErr);
+          toast.error("Erreur RLS Storage : Vérifiez vos permissions de suppression dans Supabase.");
+        }
+      }
+
+      // 3. Remise à zéro stricte du profil en BDD (y compris les adresses pour obliger à une re-saisie propre)
       const { error: dbError } = await supabase
         .from('profiles')
         .update({ 
           kyc_status: 'unverified',
           trust_score: 10,
-          kyc_completed: false
+          kyc_completed: false,
+          street: null,
+          zip: null,
+          city: null
         })
         .eq('id', selectedRequest.id);
 
       if (dbError) throw dbError;
 
       toast.success("Dossier intégralement détruit et réinitialisé.", { id: toastId });
+      
+      // 4. Nettoyage de l'interface
+      setDecryptedIdentityUrl(null);
+      setDecryptedSelfieUrl(null);
       setSelectedRequest(null);
-      fetchAllProfiles();
+      
+      // 5. Rafraîchissement synchrone du tableau
+      await fetchAllProfiles();
     } catch (err: any) {
       console.error('[Purge Crash]:', err);
-      toast.error("Erreur critique lors de la purge des documents.", { id: toastId });
+      toast.error(`Erreur de purge : ${err.message || String(err)}`, { id: toastId });
     } finally {
       setIsActionLoading(false);
     }
@@ -719,7 +733,7 @@ export function KYCAdminDashboardScreen() {
                         <div className="text-center space-y-2">
                           <FileText className="w-8 h-8 text-slate-600 mx-auto" />
                           <p className="text-xs font-bold text-slate-400">identity.enc</p>
-                          <span className="text-[10px] text-amber-500 font-bold block">ABSENT OU VERROUILLÉ</span>
+                          <span className="text-[10px] text-amber-500 font-bold block">NON TRANSMIS</span>
                         </div>
                       )}
                     </div>
@@ -759,7 +773,7 @@ export function KYCAdminDashboardScreen() {
                         <div className="text-center space-y-2">
                           <User className="w-8 h-8 text-slate-600 mx-auto" />
                           <p className="text-xs font-bold text-slate-400">selfie.enc</p>
-                          <span className="text-[10px] text-amber-500 font-bold block">ABSENT OU VERROUILLÉ</span>
+                          <span className="text-[10px] text-amber-500 font-bold block">NON TRANSMIS</span>
                         </div>
                       )}
                     </div>
@@ -789,7 +803,7 @@ export function KYCAdminDashboardScreen() {
                 <button
                   onClick={handlePurgeDossier}
                   disabled={isActionLoading || isDecrypting}
-                  className="w-full py-3 border border-slate-600 hover:border-red-500 bg-transparent hover:bg-red-500/10 text-slate-400 hover:text-red-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed border-none cursor-pointer"
+                  className="w-full py-3.5 border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" /> Purger les fichiers & Réinitialiser le compte
                 </button>
