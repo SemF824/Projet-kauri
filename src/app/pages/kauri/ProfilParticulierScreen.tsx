@@ -27,7 +27,8 @@ import { useNavigate } from "react-router";
 import { useState, useEffect } from "react";
 import { useDarkMode } from "../../contexts/DarkModeContext";
 import { useAuth } from "../../contexts/AuthContext";
-import { KauriBottomNav } from "../../layouts/MainLayout"; // Importation unifiée
+import { KauriBottomNav } from "../../layouts/MainLayout";
+import { getSupabase } from "../../../utils/supabase";
 import { toast } from "sonner";
 
 const TEAL = "#0A847E";
@@ -52,6 +53,10 @@ export function ProfilParticulierScreen() {
     ? `${profile.firstName ?? profile.first_name ?? ''} ${profile.lastName ?? profile.last_name ?? ''}`.trim()
     : "Utilisateur";
     
+  // ── 🎯 EXTRACTION DYNAMIQUE DE LA PHOTO DE PROFIL OAUTH (GOOGLE / FACEBOOK / APPLE) ──
+  const socialAvatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
+  const avatarUrl = profile?.avatar_url || profile?.avatarUrl || socialAvatarUrl;
+
   const initials =
     profile?.firstName && profile?.lastName
       ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
@@ -70,6 +75,24 @@ export function ProfilParticulierScreen() {
       setIsPasskeyActive(savedBio === "true");
     }
   }, [user]);
+
+  // ── 🔄 AUTO-SYNCHRONISATION SILENCIEUSE DE L'AVATAR DANS LA TABLE PROFILES ──
+  useEffect(() => {
+    const syncAvatarInDatabase = async () => {
+      if (user && profile && !profile.avatar_url && !profile.avatarUrl && socialAvatarUrl) {
+        try {
+          const supabase = getSupabase();
+          await supabase
+            .from("profiles")
+            .update({ avatar_url: socialAvatarUrl })
+            .eq("id", user.id);
+        } catch (e) {
+          console.error("Échec de synchronisation de l'avatar dans profiles:", e);
+        }
+      }
+    };
+    syncAvatarInDatabase();
+  }, [user, profile?.avatar_url, socialAvatarUrl]);
 
   const handleTogglePasskey = async () => {
     if (!user?.email || !user?.id) return;
@@ -209,15 +232,27 @@ export function ProfilParticulierScreen() {
         }}
       >
         <div className="flex items-center gap-4 mb-5">
+          {/* ── 🖼️ AFFICHAGE DE L'AVATAR DYNAMIQUE OU DES INITIALES ── */}
           <div
-            className="w-18 h-18 rounded-full flex items-center justify-center border-4 border-white shadow-xl text-white text-xl font-bold flex-shrink-0"
+            className="w-18 h-18 rounded-full flex items-center justify-center border-4 border-white shadow-xl text-white text-xl font-bold flex-shrink-0 overflow-hidden"
             style={{
               width: 72,
               height: 72,
               background: `linear-gradient(135deg, ${GOLD}, #B8860B)`,
             }}
           >
-            {initials}
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={fullName}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = "none";
+                }}
+              />
+            ) : (
+              initials
+            )}
           </div>
           <div className="flex-1">
             <h1 className="text-white text-xl font-bold">
@@ -515,7 +550,6 @@ export function ProfilParticulierScreen() {
         )}
       </div>
 
-      {/* Remplacement propre de l'ancienne barre locale */}
       <KauriBottomNav />
     </div>
   );
