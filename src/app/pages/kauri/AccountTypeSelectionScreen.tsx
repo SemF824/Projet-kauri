@@ -70,17 +70,14 @@ export function AccountTypeSelectionScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  // ── ÉTATS DU FORMULAIRE ──
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', phone: '', businessName: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  // ── ÉTATS KYC & MÉDIAS ──
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [idPreviewUrl, setIdPreviewUrl] = useState<string | null>(null);
   const [selfiePreviewUrl, setSelfiePreviewUrl] = useState<string | null>(null);
   const identityInputRef = useRef<HTMLInputElement>(null);
 
-  // ── ÉTATS LIVENESS VIDÉO ──
   const [showCamera, setShowCamera] = useState(false);
   const [recordingState, setRecordingState] = useState<'idle' | 'front' | 'left' | 'right' | 'processing'>('idle');
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -89,13 +86,11 @@ export function AccountTypeSelectionScreen() {
   const videoChunksRef = useRef<BlobPart[]>([]);
   const keyframesRef = useRef<ImageData[]>([]);
 
-  // ── INTERACTION D'ENTRÉE : FIX DE LA VARIABLE MANQUANTE ──
   const selectType = (type: 'particulier' | 'professionnel') => {
     setAccountType(type);
     setStep('name');
   };
 
-  // ── NAVIGATION ET VALIDATION MULTI-ÉTAPES ──
   const getStepsSequence = (): Step[] => accountType === 'professionnel' ? ['name', 'business', 'email', 'password', 'phone', 'documents'] : ['name', 'email', 'password', 'phone', 'documents'];
   const stepsSequence = getStepsSequence();
   const currentStepIndex = stepsSequence.indexOf(step);
@@ -149,8 +144,7 @@ export function AccountTypeSelectionScreen() {
         options: { 
           redirectTo: `${window.location.origin}/kauri/normal-dashboard`, 
           queryParams: { account_type: accountType },
-          // Le scope email est indispensable pour la création automatique du compte via Meta
-          scopes: provider === 'facebook' ? 'email' : undefined 
+          scopes: provider === 'facebook' ? 'email,public_profile' : undefined 
         }
       });
       if (error) throw error;
@@ -449,11 +443,28 @@ export function AccountTypeSelectionScreen() {
 
         <div className="flex-1 px-6 py-6 w-full max-w-md mx-auto flex flex-col justify-between">
           <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 space-y-5">
+            
+            {/* ── LE BLOC SOCIAL DÉPLACÉ À LA PREMIÈRE ÉTAPE DE FRICTION ── */}
             {step === 'name' && (
-              <>
-                {renderInputField('firstName', 'Prénom légal', 'Marie', User)}
-                {renderInputField('lastName', 'Nom de famille', 'Dupont', User)}
-              </>
+              <div className="mb-6">
+                <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Inscription Express</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => handleSocialSignup('google')} className="py-3 rounded-xl border-2 border-slate-100 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">Google</button>
+                  <button onClick={() => handleSocialSignup('apple')} className="py-3 rounded-xl border-2 border-slate-100 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">Apple</button>
+                  <button onClick={() => handleSocialSignup('facebook')} className="py-3 rounded-xl border-2 border-slate-100 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">Facebook</button>
+                </div>
+                
+                <div className="flex items-center my-5 text-slate-300 gap-3">
+                  <div className="flex-1 h-px bg-slate-200" />
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Ou inscription manuelle</span>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
+                
+                <div className="space-y-5">
+                  {renderInputField('firstName', 'Prénom légal', 'Marie', User)}
+                  {renderInputField('lastName', 'Nom de famille', 'Dupont', User)}
+                </div>
+              </div>
             )}
             
             {step === 'business' && renderInputField('businessName', "Nom de l'entreprise", 'Kauri Corp', Briefcase)}
@@ -529,18 +540,6 @@ export function AccountTypeSelectionScreen() {
             >
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (step === 'documents' ? 'Finaliser l\'inscription ✓' : 'Continuer →')}
             </button>
-            
-            {step === 'email' && (
-              <div className="pt-4 border-t border-slate-200">
-                <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Ou continuer avec</p>
-                {/* ── CORRECTION : GRILLE 3 COLONNES POUR FACEBOOK ── */}
-                <div className="grid grid-cols-3 gap-2">
-                  <button onClick={() => handleSocialSignup('google')} className="py-3 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">Google</button>
-                  <button onClick={() => handleSocialSignup('apple')} className="py-3 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">Apple</button>
-                  <button onClick={() => handleSocialSignup('facebook')} className="py-3 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors">Facebook</button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
