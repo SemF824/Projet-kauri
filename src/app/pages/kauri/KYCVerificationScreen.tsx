@@ -20,7 +20,6 @@ function getDB(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, 2);
     req.onupgradeneeded = (e: any) => {
       const db = e.target.result;
-      // FIX : On crée le magasin s'il n'existe pas, mais ON NE LE SUPPRIME JAMAIS s'il existe
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
       }
@@ -73,7 +72,6 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-// Support étendu aux vidéos WebM et MP4
 function detectMimeType(arrayBuffer: ArrayBuffer): string {
   const bytes = new Uint8Array(arrayBuffer).slice(0, 12);
   if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) return "application/pdf";
@@ -123,7 +121,7 @@ export function KYCVerificationScreen() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false // KYC silencieux
+        audio: false
       });
       mediaStreamRef.current = stream;
       setShowCamera(true);
@@ -338,9 +336,8 @@ export function KYCVerificationScreen() {
     try {
       let enclaveKeys = await getKeysFromEnclave('kauri_client');
       
-      // ── 🛡️ AUTO-HEALING : RÉGÉNÉRATION DE SECOURS SI LA CLÉ EST ABSENTE ──
+      // ── 🛡️ AUTO-HEALING : RÉGÉNÉRATION LOCALE S'IL N'Y A PAS DE CLÉ LOCALE ──
       if (!enclaveKeys) {
-        console.warn("[Enclave] Clé locale introuvable. Régénération dynamique de secours...");
         const ecdhKeyPair = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]);
         const ecdsaKeyPair = await window.crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
         
@@ -358,8 +355,30 @@ export function KYCVerificationScreen() {
         await supabase.from('profiles').update({ user_public_key: publicKeysJSON }).eq('id', profile?.id);
       }
 
-      const { data: dbProfile, error: profileFetchError } = await supabase.from('profiles').select('user_public_key').eq('id', profile?.id).single();
-      if (profileFetchError || !dbProfile?.user_public_key) throw new Error("Trousseau public manquant sur le serveur.");
+      // ── 🎯 RESOLUTION CHIRURGICALE DU CAS OAUTH (GOOGLE / FACEBOOK / APPLE) ──
+      let { data: dbProfile } = await supabase.from('profiles').select('user_public_key').eq('id', profile?.id).single();
+
+      // Si le trousseau public n'existe pas sur le serveur (Compte OAuth récent), on le pousse immédiatement !
+      if (!dbProfile?.user_public_key) {
+        const ecdhKeyPair = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]);
+        const ecdsaKeyPair = await window.crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+        
+        enclaveKeys = { ecdhPriv: ecdhKeyPair.privateKey, ecdsaPriv: ecdsaKeyPair.privateKey };
+        await saveKeysToEnclave('kauri_client', enclaveKeys);
+
+        const ecdhPubBuf = await window.crypto.subtle.exportKey("spki", ecdhKeyPair.publicKey);
+        const ecdsaPubBuf = await window.crypto.subtle.exportKey("spki", ecdsaKeyPair.publicKey);
+
+        const publicKeysJSON = JSON.stringify({
+          ecdh: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`,
+          ecdsa: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`
+        });
+
+        const { error: updateKeyErr } = await supabase.from('profiles').update({ user_public_key: publicKeysJSON }).eq('id', profile?.id);
+        if (updateKeyErr) throw updateKeyErr;
+
+        dbProfile = { user_public_key: publicKeysJSON };
+      }
 
       const userPublicKeys = JSON.parse(dbProfile.user_public_key);
       const fileBuffer = await file.arrayBuffer();
@@ -439,7 +458,6 @@ export function KYCVerificationScreen() {
 
   const hasAnyMutation = isAddressChanged || hasFileChanges;
 
-  // MÉTRIQUES DE VALIDATION STRICTE
   const isAddressValid = 
     address.firstName.trim().length > 1 && 
     address.lastName.trim().length > 1 && 
@@ -448,7 +466,6 @@ export function KYCVerificationScreen() {
     address.city.trim().length > 1;
 
   const isFilesValid = !!identityPreviewUrl && !!selfiePreviewUrl;
-  
   const isFormComplete = isAddressValid && isFilesValid;
 
   const handleMainAction = async () => {
