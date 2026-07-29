@@ -1,4 +1,4 @@
-import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, X, Video } from "lucide-react";
+import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, X, Video, AlertTriangle } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -407,38 +407,75 @@ export function KYCVerificationScreen() {
 
   const hasAnyMutation = isAddressChanged || hasFileChanges;
 
+  // MÉTRIQUES DE VALIDATION STRICTE
+  const isAddressValid = 
+    address.firstName.trim().length > 1 && 
+    address.lastName.trim().length > 1 && 
+    address.street.trim().length > 5 && 
+    address.zip.trim().length > 3 && 
+    address.city.trim().length > 1;
+
+  const isFilesValid = !!identityPreviewUrl && !!selfiePreviewUrl;
+  
+  const isFormComplete = isAddressValid && isFilesValid;
+
   const handleMainAction = async () => {
+    // ── 🛡️ BLOCAGE STRICT SI INCOMPLET ──
+    if (!isFormComplete) {
+      if (!isFilesValid) {
+        toast.warning("Dossier Incomplet", {
+          description: "Veuillez fournir votre pièce d'identité ET effectuer la vidéo Liveness."
+        });
+      } else if (!isAddressValid) {
+        toast.warning("Champs Manquants", {
+          description: "Veuillez renseigner intégralement votre attestation de domicile avec des informations valides."
+        });
+      }
+      return; // Stop ici
+    }
+
+    // ── Si complet mais pas de mutation, on passe simplement à la suite ──
     if (!hasAnyMutation) {
       navigate(`/kauri/biometric-setup?type=${accountType}`);
       return;
     }
 
-    if (!identityPreviewUrl || !selfiePreviewUrl) {
-      toast.warning("Vos pièces justificatives d'identité et de selfie de présence doivent être complétées.");
-      return;
-    }
-    if (!address.firstName.trim() || !address.lastName.trim() || !address.street.trim() || !address.zip.trim() || !address.city.trim()) {
-      toast.warning("Le formulaire d'attestation de domicile doit être intégralement renseigné.");
-      return;
-    }
-
+    // ── Si complet ET mutations, on sauvegarde et on soumet ──
     setIsActionLoading(true);
     const toastId = toast.loading("Actualisation globale de votre dossier de conformité...");
     
     try {
-      const { error } = await supabase.from('profiles').update({
-          first_name: address.firstName.trim(),
-          last_name: address.lastName.trim(),
-          street: address.street.trim(),
-          city: address.city.trim(),
-          zip: address.zip.trim(),
-          kyc_status: 'pending',
-          trust_score: 40
-        }).eq('id', profile?.id);
+      // Préparation des données d'update
+      const updateData: any = {
+        first_name: address.firstName.trim(),
+        last_name: address.lastName.trim(),
+        street: address.street.trim(),
+        city: address.city.trim(),
+        zip: address.zip.trim(),
+      };
+
+      // Si l'utilisateur n'est pas déjà vérifié, ou s'il remodifie des pièces,
+      // on repasse le statut en 'pending' pour revue et on reset le score.
+      if (profile?.kyc_status !== 'verified' || hasFileChanges) {
+          updateData.kyc_status = 'pending';
+          updateData.trust_score = 40; // Score initial de soumission
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', profile?.id);
 
       if (error) throw error;
+      
       await refreshProfile();
-      toast.success("Registre mis à jour avec un score initial de 40 !", { id: toastId });
+      
+      if (hasFileChanges) {
+          toast.success("Dossier mis à jour et re-soumis pour analyse !", { id: toastId });
+      } else {
+          toast.success("Informations personnelles mises à jour.", { id: toastId });
+      }
+
       navigate(`/kauri/biometric-setup?type=${accountType}`);
     } catch (err) {
       toast.error("Erreur de synchronisation réseau.", { id: toastId });
@@ -579,13 +616,29 @@ export function KYCVerificationScreen() {
               </div>
             </div>
 
+            {/* ── 🎯 BOUTON D'ACTION MODIFIÉ POUR BLOCAGE STICT ── */}
             <button 
               onClick={handleMainAction} 
-              disabled={isActionLoading} 
-              className={`w-full py-4 rounded-2xl mt-4 shadow-lg font-bold text-sm tracking-wide transition-all active:scale-[0.99] border-none cursor-pointer flex items-center justify-center gap-2 ${hasAnyMutation ? "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20" : "bg-slate-800 hover:bg-slate-900 text-white shadow-slate-900/10"}`}
+              disabled={isActionLoading || (!isFormComplete && !isActionLoading)} 
+              className={`w-full py-4 rounded-2xl mt-4 shadow-lg font-bold text-sm tracking-wide transition-all active:scale-[0.99] border-none flex items-center justify-center gap-2 
+                ${!isFormComplete ? "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none" : 
+                  hasAnyMutation ? "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20 cursor-pointer" : 
+                  "bg-slate-800 hover:bg-slate-900 text-white shadow-slate-900/10 cursor-pointer"}`}
             >
-              {isActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              <span>{hasAnyMutation ? "Appliquer les modifications et re-soumettre" : "Passer / Étape suivante"}</span>
+              {isActionLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : !isFormComplete ? (
+                <AlertTriangle className="w-4 h-4" />
+              ) : (
+                <Check className="w-4 h-4" />
+              )}
+              
+              <span>
+                {isActionLoading ? "Synchronisation..." : 
+                 !isFormComplete ? "Dossier incomplet" :
+                 hasAnyMutation ? "Soumettre mon dossier pour analyse" : 
+                 "Continuer vers l'étape suivante"}
+              </span>
             </button>
           </>
         )}
