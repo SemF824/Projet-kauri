@@ -85,3 +85,6 @@ out/
 .vscode/
 .DS_Store
 *.md
+.claude/
+claude/
+./claude/
