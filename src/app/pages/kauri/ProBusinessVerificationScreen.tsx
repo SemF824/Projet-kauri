@@ -12,6 +12,47 @@ const GOLD = '#D4AF37';
 
 type StructureType = 'idea' | 'company' | 'asso' | null;
 
+function Field({ label, required, textP, children }: { label: string; required?: boolean; textP: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-1.5" style={{ color: textP }}>
+        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function DocCard({ label, hint, uploaded, onToggle, card, bdr, textP, textS }: {
+  label: string; hint: string; uploaded: boolean; onToggle: () => void;
+  card: string; bdr: string; textP: string; textS: string;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      className="w-full rounded-2xl p-4 flex items-center gap-4 text-left transition-all"
+      style={{
+        backgroundColor: uploaded ? `${TEAL}12` : card,
+        border: `1.5px solid ${uploaded ? TEAL : bdr}`,
+      }}
+    >
+      <div
+        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ backgroundColor: uploaded ? `${TEAL}20` : `${GOLD}15` }}
+      >
+        {uploaded
+          ? <CheckCircle2 style={{ width: 22, height: 22, color: TEAL }} />
+          : <Upload style={{ width: 20, height: 20, color: GOLD }} />}
+      </div>
+      <div className="flex-1">
+        <p className="text-sm font-medium" style={{ color: textP }}>{label}</p>
+        <p className="text-xs mt-0.5" style={{ color: uploaded ? TEAL : textS }}>{uploaded ? 'Document ajouté ✓' : hint}</p>
+      </div>
+      {!uploaded && <ChevronRight style={{ width: 16, height: 16, color: textS }} />}
+    </button>
+  );
+}
+
 // Step IDs: 'type' → 'details' → 'docs' (company/asso only) → 'done'
 type StepId = 'type' | 'details' | 'docs' | 'done';
 
@@ -88,48 +129,8 @@ export function ProBusinessVerificationScreen() {
 
   function handleDocsNext() { setStep('done'); }
 
-  // ── Input helper ─────────────────────────────────────────────────────────────
-  function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-    return (
-      <div>
-        <label className="block text-sm font-medium mb-1.5" style={{ color: textP }}>
-          {label}{required && <span className="text-red-400 ml-0.5">*</span>}
-        </label>
-        {children}
-      </div>
-    );
-  }
-
   const inputCls = `w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-[${TEAL}] transition-colors`;
   const inputStyle = { backgroundColor: card, borderColor: bdr, color: textP };
-
-  // ── Simulated doc upload button ────────────────────────────────────────────
-  function DocCard({ label, hint, uploaded, onToggle }: { label: string; hint: string; uploaded: boolean; onToggle: () => void }) {
-    return (
-      <button
-        onClick={onToggle}
-        className="w-full rounded-2xl p-4 flex items-center gap-4 text-left transition-all"
-        style={{
-          backgroundColor: uploaded ? `${TEAL}12` : card,
-          border: `1.5px solid ${uploaded ? TEAL : bdr}`,
-        }}
-      >
-        <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: uploaded ? `${TEAL}20` : `${GOLD}15` }}
-        >
-          {uploaded
-            ? <CheckCircle2 style={{ width: 22, height: 22, color: TEAL }} />
-            : <Upload style={{ width: 20, height: 20, color: GOLD }} />}
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-medium" style={{ color: textP }}>{label}</p>
-          <p className="text-xs mt-0.5" style={{ color: uploaded ? TEAL : textS }}>{uploaded ? 'Document ajouté ✓' : hint}</p>
-        </div>
-        {!uploaded && <ChevronRight style={{ width: 16, height: 16, color: textS }} />}
-      </button>
-    );
-  }
 
   return (
     <div className="min-h-screen pb-10 transition-colors" style={{ backgroundColor: bg }}>
@@ -268,7 +269,7 @@ export function ProBusinessVerificationScreen() {
             </div>
 
             <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: card, border: `1.5px solid ${bdr}` }}>
-              <Field label="Nom de votre projet" required>
+              <Field textP={textP} label="Nom de votre projet" required>
                 <input
                   value={projectName}
                   onChange={e => setProjectName(e.target.value)}
@@ -278,7 +279,7 @@ export function ProBusinessVerificationScreen() {
                 />
               </Field>
 
-              <Field label="Secteur d'activité" required>
+              <Field textP={textP} label="Secteur d'activité" required>
                 <select
                   value={sector}
                   onChange={e => setSector(e.target.value)}
@@ -290,7 +291,7 @@ export function ProBusinessVerificationScreen() {
                 </select>
               </Field>
 
-              <Field label="Décrivez votre projet en quelques mots">
+              <Field textP={textP} label="Décrivez votre projet en quelques mots">
                 <textarea
                   value={description}
                   onChange={e => setDescription(e.target.value)}
@@ -327,7 +328,7 @@ export function ProBusinessVerificationScreen() {
             </div>
 
             <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: card, border: `1.5px solid ${bdr}` }}>
-              <Field label={structure === 'asso' ? "Nom de l'association" : "Raison sociale"} required>
+              <Field textP={textP} label={structure === 'asso' ? "Nom de l'association" : "Raison sociale"} required>
                 <input
                   value={companyName}
                   onChange={e => setCompanyName(e.target.value)}
@@ -337,7 +338,7 @@ export function ProBusinessVerificationScreen() {
                 />
               </Field>
 
-              <Field label={structure === 'asso' ? "Numéro RNA / SIREN" : "Numéro SIRET"} required>
+              <Field textP={textP} label={structure === 'asso' ? "Numéro RNA / SIREN" : "Numéro SIRET"} required>
                 <input
                   value={siret}
                   onChange={e => setSiret(e.target.value)}
@@ -352,7 +353,7 @@ export function ProBusinessVerificationScreen() {
                 </p>
               </Field>
 
-              <Field label="Secteur d'activité" required>
+              <Field textP={textP} label="Secteur d'activité" required>
                 <select
                   value={sector}
                   onChange={e => setSector(e.target.value)}
@@ -394,12 +395,14 @@ export function ProBusinessVerificationScreen() {
                 hint="PDF ou photo lisible · Max 10 Mo"
                 uploaded={kbisUploaded}
                 onToggle={() => setKbisUploaded(v => !v)}
+                card={card} bdr={bdr} textP={textP} textS={textS}
               />
               <DocCard
                 label="Statuts de la structure"
                 hint="Version signée en vigueur"
                 uploaded={statutsUploaded}
                 onToggle={() => setStatutsUploaded(v => !v)}
+                card={card} bdr={bdr} textP={textP} textS={textS}
               />
             </div>
 

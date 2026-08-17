@@ -28,11 +28,14 @@ interface AuthContextValue {
   profile: KauriUserProfile | null;
   loading: boolean;
   signIn: (email: string, pass: string) => Promise<void>;
+  resendConfirmation: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+const AuthContext = createContext<AuthContextValue | null>(
+  null,
+);
 
 // Construit un profil de secours si la table de la base de données est en cours de synchronisation
 function profileFromMeta(
@@ -73,7 +76,8 @@ export function AuthProvider({
 }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<KauriUserProfile | null>(null);
+  const [profile, setProfile] =
+    useState<KauriUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (currentUser: User) => {
@@ -135,15 +139,35 @@ export function AuthProvider({
     return () => subscription.unsubscribe();
   }, []);
 
-  // Connexion standardisée par e-mail et mot de passe robuste, sans altération de chaîne
   const signIn = async (email: string, pass: string) => {
     const supabase = getSupabase();
-    
+
     const { error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password: pass,
     });
 
+    if (error) {
+      // Supabase returns "Invalid login credentials" for unconfirmed emails too
+      if (
+        error.message.toLowerCase().includes("invalid login credentials") ||
+        error.message.toLowerCase().includes("email not confirmed")
+      ) {
+        const enriched: any = new Error("EMAIL_NOT_CONFIRMED_OR_WRONG_CREDS");
+        enriched.isAuthError = true;
+        enriched.originalMessage = error.message;
+        throw enriched;
+      }
+      throw error;
+    }
+  };
+
+  const resendConfirmation = async (email: string) => {
+    const supabase = getSupabase();
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim(),
+    });
     if (error) throw error;
   };
 
@@ -169,6 +193,7 @@ export function AuthProvider({
         profile,
         loading,
         signIn,
+        resendConfirmation,
         signOut,
         refreshProfile,
       }}

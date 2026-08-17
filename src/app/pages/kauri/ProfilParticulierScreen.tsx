@@ -37,8 +37,10 @@ const GOLD = "#D4AF37";
 export function ProfilParticulierScreen() {
   const navigate = useNavigate();
   const { isDarkMode, resetDarkMode } = useDarkMode();
-  const [activeSpace, setActiveSpace] = useState<"personnel" | "professionnel">("personnel");
-  
+  const [activeSpace, setActiveSpace] = useState<
+    "personnel" | "professionnel"
+  >("personnel");
+
   const [isPasskeyActive, setIsPasskeyActive] = useState(false);
   const [isActivatingBio, setIsActivatingBio] = useState(false);
 
@@ -47,31 +49,45 @@ export function ProfilParticulierScreen() {
   const trustScore =
     profile?.trustScore !== undefined
       ? Math.round(profile.trustScore)
-      : (profile?.trust_score !== undefined ? Math.round(Number(profile.trust_score)) : 40);
+      : profile?.trust_score !== undefined
+        ? Math.round(Number(profile.trust_score))
+        : 40;
 
   const fullName = profile
-    ? `${profile.firstName ?? profile.first_name ?? ''} ${profile.lastName ?? profile.last_name ?? ''}`.trim()
+    ? `${profile.firstName ?? profile.first_name ?? ""} ${profile.lastName ?? profile.last_name ?? ""}`.trim()
     : "Utilisateur";
-    
+
   // ── 🎯 EXTRACTION DYNAMIQUE DE LA PHOTO DE PROFIL OAUTH (GOOGLE / FACEBOOK / APPLE) ──
-  const socialAvatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
-  const avatarUrl = profile?.avatar_url || profile?.avatarUrl || socialAvatarUrl;
+  const socialAvatarUrl =
+    user?.user_metadata?.avatar_url ||
+    user?.user_metadata?.picture;
+  const avatarUrl =
+    profile?.avatar_url ||
+    profile?.avatarUrl ||
+    socialAvatarUrl;
 
   const initials =
     profile?.firstName && profile?.lastName
       ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
-      : (profile?.first_name && profile?.last_name ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase() : "KA");
+      : profile?.first_name && profile?.last_name
+        ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
+        : "KA";
 
-  const memberSince = profile?.createdAt || profile?.created_at
-    ? new Date(profile.createdAt || profile.created_at).toLocaleDateString("fr-FR", {
-        month: "long",
-        year: "numeric",
-      })
-    : "";
+  const memberSince =
+    profile?.createdAt || profile?.created_at
+      ? new Date(
+          profile.createdAt || profile.created_at,
+        ).toLocaleDateString("fr-FR", {
+          month: "long",
+          year: "numeric",
+        })
+      : "";
 
   useEffect(() => {
     if (user?.email) {
-      const savedBio = localStorage.getItem(`kauri_bio_active_${user.email}`);
+      const savedBio = localStorage.getItem(
+        `kauri_bio_active_${user.email}`,
+      );
       setIsPasskeyActive(savedBio === "true");
     }
   }, [user]);
@@ -79,7 +95,13 @@ export function ProfilParticulierScreen() {
   // ── 🔄 AUTO-SYNCHRONISATION SILENCIEUSE DE L'AVATAR DANS LA TABLE PROFILES ──
   useEffect(() => {
     const syncAvatarInDatabase = async () => {
-      if (user && profile && !profile.avatar_url && !profile.avatarUrl && socialAvatarUrl) {
+      if (
+        user &&
+        profile &&
+        !profile.avatar_url &&
+        !profile.avatarUrl &&
+        socialAvatarUrl
+      ) {
         try {
           const supabase = getSupabase();
           await supabase
@@ -87,7 +109,10 @@ export function ProfilParticulierScreen() {
             .update({ avatar_url: socialAvatarUrl })
             .eq("id", user.id);
         } catch (e) {
-          console.error("Échec de synchronisation de l'avatar dans profiles:", e);
+          console.error(
+            "Échec de synchronisation de l'avatar dans profiles:",
+            e,
+          );
         }
       }
     };
@@ -106,15 +131,22 @@ export function ProfilParticulierScreen() {
     }
 
     if (!window.PublicKeyCredential) {
-      toast.error("Votre appareil ou navigateur ne supporte pas les clés d'accès matérielles.");
+      toast.error(
+        "Votre appareil ou navigateur ne supporte pas les clés d'accès matérielles.",
+      );
       return;
     }
 
     setIsActivatingBio(true);
 
     try {
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-      const userIdBuffer = Uint8Array.from(user.id.slice(0, 16), c => c.charCodeAt(0));
+      const challenge = crypto.getRandomValues(
+        new Uint8Array(32),
+      );
+      const userIdBuffer = Uint8Array.from(
+        user.id.slice(0, 16),
+        (c) => c.charCodeAt(0),
+      );
 
       const options: CredentialCreationOptions = {
         publicKey: {
@@ -127,29 +159,43 @@ export function ProfilParticulierScreen() {
           },
           pubKeyCredParams: [
             { type: "public-key", alg: -7 },
-            { type: "public-key", alg: -257 }
+            { type: "public-key", alg: -257 },
           ],
           authenticatorSelection: {
             authenticatorAttachment: "platform",
             userVerification: "required",
           },
           timeout: 60000,
-        }
+        },
       };
 
-      const credential = await navigator.credentials.create(options);
-      
+      const credential =
+        await navigator.credentials.create(options);
+
       if (!credential) {
-        throw new Error("L'authentification matérielle a été rejetée ou annulée.");
+        throw new Error(
+          "L'authentification matérielle a été rejetée ou annulée.",
+        );
       }
-      
-      localStorage.setItem(`kauri_bio_active_${user.email}`, "true");
-      localStorage.setItem("kauri_rememberED_email", user.email);
+
+      localStorage.setItem(
+        `kauri_bio_active_${user.email}`,
+        "true",
+      );
+      localStorage.setItem(
+        "kauri_rememberED_email",
+        user.email,
+      );
       setIsPasskeyActive(true);
-      toast.success("Félicitations, votre clé d'accès Face ID / Touch ID est active !");
+      toast.success(
+        "Félicitations, votre clé d'accès Face ID / Touch ID est active !",
+      );
     } catch (err: any) {
       console.error("[WebAuthn Registration Error]:", err);
-      toast.error(err.message || "Liaison biométrique annulée par le système.");
+      toast.error(
+        err.message ||
+          "Liaison biométrique annulée par le système.",
+      );
     } finally {
       setIsActivatingBio(false);
     }
@@ -247,7 +293,8 @@ export function ProfilParticulierScreen() {
                 alt={fullName}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  (e.target as HTMLElement).style.display = "none";
+                  (e.target as HTMLElement).style.display =
+                    "none";
                 }}
               />
             ) : (
@@ -259,15 +306,21 @@ export function ProfilParticulierScreen() {
               {fullName}
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
-              {memberSince ? `Membre depuis ${memberSince}` : "Membre KAURI"}
+              {memberSince
+                ? `Membre depuis ${memberSince}`
+                : "Membre KAURI"}
             </p>
           </div>
           <button
             onClick={() => navigate("/kauri/manage-account")}
             className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer relative z-10 border-none outline-none"
-            style={{ backgroundColor: "rgba(255,255,255,0.18)" }}
+            style={{
+              backgroundColor: "rgba(255,255,255,0.18)",
+            }}
           >
-            <Edit style={{ width: 16, height: 16, color: "#fff" }} />
+            <Edit
+              style={{ width: 16, height: 16, color: "#fff" }}
+            />
           </button>
         </div>
 
@@ -282,14 +335,26 @@ export function ProfilParticulierScreen() {
         >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <Shield style={{ width: 15, height: 15, color: GOLD }} />
-              <span className="text-white text-xs font-medium">Trust Score</span>
+              <Shield
+                style={{ width: 15, height: 15, color: GOLD }}
+              />
+              <span className="text-white text-xs font-medium">
+                Trust Score
+              </span>
             </div>
-            <span className="text-xl font-bold" style={{ color: GOLD }}>
+            <span
+              className="text-xl font-bold"
+              style={{ color: GOLD }}
+            >
               {trustScore} / 100
             </span>
           </div>
-          <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>
+          <div
+            className="h-2 rounded-full overflow-hidden"
+            style={{
+              backgroundColor: "rgba(255,255,255,0.15)",
+            }}
+          >
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
@@ -299,7 +364,9 @@ export function ProfilParticulierScreen() {
             />
           </div>
           <p className="text-white/60 text-xs mt-1.5">
-            {trustScore >= 85 ? "Excellent · Membre de confiance" : "Niveau initial · À compléter par vos actions"}
+            {trustScore >= 85
+              ? "Excellent · Membre de confiance"
+              : "Niveau initial · À compléter par vos actions"}
           </p>
         </div>
 
@@ -315,12 +382,36 @@ export function ProfilParticulierScreen() {
             onClick={() => setActiveSpace("personnel")}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full transition-all cursor-pointer border-none"
             style={{
-              backgroundColor: activeSpace === "personnel" ? "#fff" : "transparent",
-              boxShadow: activeSpace === "personnel" ? "0 2px 10px rgba(0,0,0,0.20)" : "none",
+              backgroundColor:
+                activeSpace === "personnel"
+                  ? "#fff"
+                  : "transparent",
+              boxShadow:
+                activeSpace === "personnel"
+                  ? "0 2px 10px rgba(0,0,0,0.20)"
+                  : "none",
             }}
           >
-            <User style={{ width: 15, height: 15, color: activeSpace === "personnel" ? TEAL : "rgba(255,255,255,0.55)", strokeWidth: 2 }} />
-            <span className="text-sm font-semibold" style={{ color: activeSpace === "personnel" ? TEAL : "rgba(255,255,255,0.55)" }}>
+            <User
+              style={{
+                width: 15,
+                height: 15,
+                color:
+                  activeSpace === "personnel"
+                    ? TEAL
+                    : "rgba(255,255,255,0.55)",
+                strokeWidth: 2,
+              }}
+            />
+            <span
+              className="text-sm font-semibold"
+              style={{
+                color:
+                  activeSpace === "personnel"
+                    ? TEAL
+                    : "rgba(255,255,255,0.55)",
+              }}
+            >
               Espace Personnel
             </span>
           </button>
@@ -329,12 +420,36 @@ export function ProfilParticulierScreen() {
             onClick={() => setActiveSpace("professionnel")}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-full transition-all cursor-pointer border-none"
             style={{
-              backgroundColor: activeSpace === "professionnel" ? "#fff" : "transparent",
-              boxShadow: activeSpace === "professionnel" ? "0 2px 10px rgba(0,0,0,0.20)" : "none",
+              backgroundColor:
+                activeSpace === "professionnel"
+                  ? "#fff"
+                  : "transparent",
+              boxShadow:
+                activeSpace === "professionnel"
+                  ? "0 2px 10px rgba(0,0,0,0.20)"
+                  : "none",
             }}
           >
-            <Briefcase style={{ width: 15, height: 15, color: activeSpace === "professionnel" ? TEAL : "rgba(255,255,255,0.55)", strokeWidth: 2 }} />
-            <span className="text-sm font-semibold" style={{ color: activeSpace === "professionnel" ? TEAL : "rgba(255,255,255,0.55)" }}>
+            <Briefcase
+              style={{
+                width: 15,
+                height: 15,
+                color:
+                  activeSpace === "professionnel"
+                    ? TEAL
+                    : "rgba(255,255,255,0.55)",
+                strokeWidth: 2,
+              }}
+            />
+            <span
+              className="text-sm font-semibold"
+              style={{
+                color:
+                  activeSpace === "professionnel"
+                    ? TEAL
+                    : "rgba(255,255,255,0.55)",
+              }}
+            >
               Pro
             </span>
           </button>
@@ -347,186 +462,675 @@ export function ProfilParticulierScreen() {
           <>
             <div className="grid grid-cols-3 gap-3">
               {[
-                { icon: Users, color: TEAL, bg: `${TEAL}14`, label: "Tontines", value: "3", path: "/kauri/tontines-actives" },
-                { icon: TrendingUp, color: GOLD, bg: `${GOLD}18`, label: "Investis", value: "2", path: "/kauri/mes-investissements" },
-                { icon: Award, color: "#8B5CF6", bg: "#8B5CF614", label: "Badges", value: "12", path: "/kauri/badges" },
-              ].map(({ icon: Icon, color, bg: ibg, label, value, path }) => (
-                <div key={label} onClick={() => path && navigate(path)} className="rounded-2xl p-4 text-center" style={{ backgroundColor: card, border: `1.5px solid ${border}`, cursor: path ? "pointer" : "default" }}>
-                  <div className="w-10 h-10 mx-auto mb-2 rounded-xl flex items-center justify-center" style={{ backgroundColor: ibg }}>
-                    <Icon style={{ width: 19, height: 19, color }} />
+                {
+                  icon: Users,
+                  color: TEAL,
+                  bg: `${TEAL}14`,
+                  label: "Tontines",
+                  value: "3",
+                  path: "/kauri/tontines-actives",
+                },
+                {
+                  icon: TrendingUp,
+                  color: GOLD,
+                  bg: `${GOLD}18`,
+                  label: "Investis",
+                  value: "2",
+                  path: "/kauri/mes-investissements",
+                },
+                {
+                  icon: Award,
+                  color: "#8B5CF6",
+                  bg: "#8B5CF614",
+                  label: "Badges",
+                  value: "12",
+                  path: "/kauri/badges",
+                },
+              ].map(
+                ({
+                  icon: Icon,
+                  color,
+                  bg: ibg,
+                  label,
+                  value,
+                  path,
+                }) => (
+                  <div
+                    key={label}
+                    onClick={() => path && navigate(path)}
+                    className="rounded-2xl p-4 text-center"
+                    style={{
+                      backgroundColor: card,
+                      border: `1.5px solid ${border}`,
+                      cursor: path ? "pointer" : "default",
+                    }}
+                  >
+                    <div
+                      className="w-10 h-10 mx-auto mb-2 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: ibg }}
+                    >
+                      <Icon
+                        style={{ width: 19, height: 19, color }}
+                      />
+                    </div>
+                    <p
+                      className="text-lg font-bold"
+                      style={{ color: textP }}
+                    >
+                      {value}
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: textS }}
+                    >
+                      {label}
+                    </p>
                   </div>
-                  <p className="text-lg font-bold" style={{ color: textP }}>{value}</p>
-                  <p className="text-xs" style={{ color: textS }}>{label}</p>
-                </div>
-              ))}
+                ),
+              )}
             </div>
 
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: textS }}>Mes informations</p>
+              <p
+                className="text-xs font-bold uppercase tracking-wider mb-3"
+                style={{ color: textS }}
+              >
+                Mes informations
+              </p>
               <div className="space-y-2.5">
                 {[
-                  { icon: Mail, color: TEAL, ibg: `${TEAL}12`, label: "Email", sub: user?.email || "Non renseigné" },
-                  { icon: Phone, color: "#3B82F6", ibg: "#3B82F612", label: "Téléphone", sub: profile?.phone || "Non renseigné" },
-                  { icon: MapPin, color: "#8B5CF6", ibg: "#8B5CF612", label: "Adresse", sub: "Paris, France" },
-                ].map(({ icon: Icon, color, ibg, label, sub }) => (
-                  <button key={label} onClick={() => navigate("/kauri/manage-account")} className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none" style={{ backgroundColor: card, border: `1.5px solid ${border}` }}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: ibg }}>
-                        <Icon style={{ width: 18, height: 18, color }} />
+                  {
+                    icon: Mail,
+                    color: TEAL,
+                    ibg: `${TEAL}12`,
+                    label: "Email",
+                    sub: user?.email || "Non renseigné",
+                  },
+                  {
+                    icon: Phone,
+                    color: "#3B82F6",
+                    ibg: "#3B82F612",
+                    label: "Téléphone",
+                    sub: profile?.phone || "Non renseigné",
+                  },
+                  {
+                    icon: MapPin,
+                    color: "#8B5CF6",
+                    ibg: "#8B5CF612",
+                    label: "Adresse",
+                    sub: "Paris, France",
+                  },
+                ].map(
+                  ({ icon: Icon, color, ibg, label, sub }) => (
+                    <button
+                      key={label}
+                      onClick={() =>
+                        navigate("/kauri/manage-account")
+                      }
+                      className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none"
+                      style={{
+                        backgroundColor: card,
+                        border: `1.5px solid ${border}`,
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center"
+                          style={{ backgroundColor: ibg }}
+                        >
+                          <Icon
+                            style={{
+                              width: 18,
+                              height: 18,
+                              color,
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <p
+                            className="text-xs"
+                            style={{ color: textS }}
+                          >
+                            {label}
+                          </p>
+                          <p
+                            className="text-sm font-medium"
+                            style={{ color: textP }}
+                          >
+                            {sub}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs" style={{ color: textS }}>{label}</p>
-                        <p className="text-sm font-medium" style={{ color: textP }}>{sub}</p>
-                      </div>
-                    </div>
-                    <ChevronRight style={{ width: 16, height: 16, color: inactive }} />
-                  </button>
-                ))}
+                      <ChevronRight
+                        style={{
+                          width: 16,
+                          height: 16,
+                          color: inactive,
+                        }}
+                      />
+                    </button>
+                  ),
+                )}
               </div>
             </div>
 
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: textS }}>Sécurité</p>
+              <p
+                className="text-xs font-bold uppercase tracking-wider mb-3"
+                style={{ color: textS }}
+              >
+                Sécurité
+              </p>
               <div className="space-y-2.5">
-                <SettingRow icon={Lock} color="#0A847E" bg={`${TEAL}12`} label="Mot de passe" sub="Modifier votre mot de passe" onClick={() => navigate("/kauri/biometric-setup")} />
-                
+                <SettingRow
+                  icon={Lock}
+                  color="#0A847E"
+                  bg={`${TEAL}12`}
+                  label="Mot de passe"
+                  sub="Modifier votre mot de passe"
+                  onClick={() =>
+                    navigate("/kauri/biometric-setup")
+                  }
+                />
+
                 <button
                   onClick={handleTogglePasskey}
                   disabled={isActivatingBio}
                   className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none transition-all active:scale-[0.99]"
-                  style={{ backgroundColor: card, border: `1.5px solid ${border}` }}
+                  style={{
+                    backgroundColor: card,
+                    border: `1.5px solid ${border}`,
+                  }}
                 >
                   <div className="flex items-center gap-3">
                     <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
-                      style={{ backgroundColor: isPasskeyActive ? `${GOLD}18` : (isDarkMode ? '#334155' : '#E2E8F0') }}
+                      style={{
+                        backgroundColor: isPasskeyActive
+                          ? `${GOLD}18`
+                          : isDarkMode
+                            ? "#334155"
+                            : "#E2E8F0",
+                      }}
                     >
                       {isActivatingBio ? (
                         <div className="w-4 h-4 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
                       ) : (
-                        <Smartphone style={{ width: 19, height: 19, color: isPasskeyActive ? GOLD : (isDarkMode ? '#94A3B8' : '#64748B') }} />
+                        <Smartphone
+                          style={{
+                            width: 19,
+                            height: 19,
+                            color: isPasskeyActive
+                              ? GOLD
+                              : isDarkMode
+                                ? "#94A3B8"
+                                : "#64748B",
+                          }}
+                        />
                       )}
                     </div>
                     <div>
-                      <p className="text-sm font-medium" style={{ color: textP }}>Clé d'accès biométrique</p>
-                      <p className="text-xs" style={{ color: isPasskeyActive ? '#10B981' : textS, fontWeight: isPasskeyActive ? 600 : 400 }}>
-                        {isPasskeyActive ? "Face ID / Touch ID activé" : "Enregistrer la clé de cet appareil"}
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: textP }}
+                      >
+                        Clé d'accès biométrique
+                      </p>
+                      <p
+                        className="text-xs"
+                        style={{
+                          color: isPasskeyActive
+                            ? "#10B981"
+                            : textS,
+                          fontWeight: isPasskeyActive
+                            ? 600
+                            : 400,
+                        }}
+                      >
+                        {isPasskeyActive
+                          ? "Face ID / Touch ID activé"
+                          : "Enregistrer la clé de cet appareil"}
                       </p>
                     </div>
                   </div>
-                  <ChevronRight style={{ width: 16, height: 16, color: inactive }} />
+                  <ChevronRight
+                    style={{
+                      width: 16,
+                      height: 16,
+                      color: inactive,
+                    }}
+                  />
                 </button>
 
-                <SettingRow icon={Shield} color="#0D9488" bg="#0D948812" label="Authentification 2FA" sub="Désactivé" onClick={() => navigate("/kauri/setup-2fa")} />
+                <SettingRow
+                  icon={Shield}
+                  color="#0D9488"
+                  bg="#0D948812"
+                  label="Authentification 2FA"
+                  sub="Désactivé"
+                  onClick={() => navigate("/kauri/setup-2fa")}
+                />
               </div>
             </div>
 
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: textS }}>Paramètres de la carte</p>
+              <p
+                className="text-xs font-bold uppercase tracking-wider mb-3"
+                style={{ color: textS }}
+              >
+                Paramètres de la carte
+              </p>
               <div className="space-y-2.5">
                 {[
-                  { type: "Virtuelle", number: "**** 8762", expires: "12/27" },
-                  { type: "Physique", number: "**** 3421", expires: "08/28" },
+                  {
+                    type: "Virtuelle",
+                    number: "**** 8762",
+                    expires: "12/27",
+                  },
+                  {
+                    type: "Physique",
+                    number: "**** 3421",
+                    expires: "08/28",
+                  },
                 ].map((card_) => (
-                  <button key={card_.number} onClick={() => navigate("/kauri/portefeuille")} className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none" style={{ backgroundColor: card, border: `1.5px solid ${border}` }}>
+                  <button
+                    key={card_.number}
+                    onClick={() =>
+                      navigate("/kauri/portefeuille")
+                    }
+                    className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none"
+                    style={{
+                      backgroundColor: card,
+                      border: `1.5px solid ${border}`,
+                    }}
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${TEAL}, #0D9488)` }}>
-                        <CreditCard style={{ width: 18, height: 18, color: "#fff" }} />
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center"
+                        style={{
+                          background: `linear-gradient(135deg, ${TEAL}, #0D9488)`,
+                        }}
+                      >
+                        <CreditCard
+                          style={{
+                            width: 18,
+                            height: 18,
+                            color: "#fff",
+                          }}
+                        />
                       </div>
                       <div>
-                        <p className="text-sm font-medium" style={{ color: textP }}>Carte {card_.type}</p>
-                        <p className="text-xs" style={{ color: textS }}>{card_.number} · Expire {card_.expires}</p>
+                        <p
+                          className="text-sm font-medium"
+                          style={{ color: textP }}
+                        >
+                          Carte {card_.type}
+                        </p>
+                        <p
+                          className="text-xs"
+                          style={{ color: textS }}
+                        >
+                          {card_.number} · Expire{" "}
+                          {card_.expires}
+                        </p>
                       </div>
                     </div>
-                    <ChevronRight style={{ width: 16, height: 16, color: inactive }} />
+                    <ChevronRight
+                      style={{
+                        width: 16,
+                        height: 16,
+                        color: inactive,
+                      }}
+                    />
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: textS }}>Préférences</p>
+              <p
+                className="text-xs font-bold uppercase tracking-wider mb-3"
+                style={{ color: textS }}
+              >
+                Préférences
+              </p>
               <div className="space-y-2.5">
-                <SettingRow icon={Bell} color="#F59E0B" bg="#F59E0B14" label="Notifications" sub="Gérer les alertes" onClick={() => navigate("/kauri/notifications")} />
-                <SettingRow icon={Eye} color="#B05B3B" bg="#B05B3B14" label="Confidentialité" sub="Contrôler vos données" onClick={() => navigate("/kauri/preferences-contenu")} />
+                <SettingRow
+                  icon={Bell}
+                  color="#F59E0B"
+                  bg="#F59E0B14"
+                  label="Notifications"
+                  sub="Gérer les alertes"
+                  onClick={() =>
+                    navigate("/kauri/notifications")
+                  }
+                />
+                <SettingRow
+                  icon={Eye}
+                  color="#B05B3B"
+                  bg="#B05B3B14"
+                  label="Confidentialité"
+                  sub="Contrôler vos données"
+                  onClick={() =>
+                    navigate("/kauri/preferences-contenu")
+                  }
+                />
 
-                <button onClick={() => navigate("/kauri/coffre-numerique")} className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none" style={{ backgroundColor: card, border: `1.5px solid ${border}` }}>
+                <button
+                  onClick={() =>
+                    navigate("/kauri/coffre-numerique")
+                  }
+                  className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none"
+                  style={{
+                    backgroundColor: card,
+                    border: `1.5px solid ${border}`,
+                  }}
+                >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center relative" style={{ background: `linear-gradient(135deg, ${TEAL}, #0D9488)` }}>
-                      <FolderOpen style={{ width: 18, height: 18, color: "#fff" }} />
-                      <span style={{ position: "absolute", top: -3, right: -3, width: 9, height: 9, borderRadius: "50%", backgroundColor: "#A78BFA", border: "2px solid", borderColor: card, boxShadow: "0 0 6px #A78BFA" }} />
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center relative"
+                      style={{
+                        background: `linear-gradient(135deg, ${TEAL}, #0D9488)`,
+                      }}
+                    >
+                      <FolderOpen
+                        style={{
+                          width: 18,
+                          height: 18,
+                          color: "#fff",
+                        }}
+                      />
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: -3,
+                          right: -3,
+                          width: 9,
+                          height: 9,
+                          borderRadius: "50%",
+                          backgroundColor: "#A78BFA",
+                          border: "2px solid",
+                          borderColor: card,
+                          boxShadow: "0 0 6px #A78BFA",
+                        }}
+                      />
                     </div>
                     <div>
-                      <p className="text-sm font-medium" style={{ color: textP }}>Accès à mes documents</p>
-                      <p className="text-xs" style={{ color: textS }}>Contrats signés · Coffre-fort numérique</p>
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: textP }}
+                      >
+                        Accès à mes documents
+                      </p>
+                      <p
+                        className="text-xs"
+                        style={{ color: textS }}
+                      >
+                        Contrats signés · Coffre-fort numérique
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${TEAL}15`, color: TEAL }}>4</span>
-                    <ChevronRight style={{ width: 16, height: 16, color: inactive }} />
+                    <span
+                      className="text-xs font-bold px-2 py-0.5 rounded-full"
+                      style={{
+                        backgroundColor: `${TEAL}15`,
+                        color: TEAL,
+                      }}
+                    >
+                      4
+                    </span>
+                    <ChevronRight
+                      style={{
+                        width: 16,
+                        height: 16,
+                        color: inactive,
+                      }}
+                    />
                   </div>
                 </button>
               </div>
             </div>
 
-            <div onClick={() => navigate("/kauri/premium-paywall")} className="rounded-3xl p-6 relative overflow-hidden cursor-pointer" style={{ background: "linear-gradient(135deg, #D4AF37 0%, #B8860B 60%, #D4AF37 100%)", boxShadow: "0 8px 28px rgba(212,175,55,0.40)" }}>
-              <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.10)", pointerEvents: "none" }} />
-              <div style={{ position: "absolute", bottom: -30, left: -20, width: 100, height: 100, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
+            <div
+              onClick={() => navigate("/kauri/premium-paywall")}
+              className="rounded-3xl p-6 relative overflow-hidden cursor-pointer"
+              style={{
+                background:
+                  "linear-gradient(135deg, #D4AF37 0%, #B8860B 60%, #D4AF37 100%)",
+                boxShadow: "0 8px 28px rgba(212,175,55,0.40)",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: -20,
+                  right: -20,
+                  width: 120,
+                  height: 120,
+                  borderRadius: "50%",
+                  backgroundColor: "rgba(255,255,255,0.10)",
+                  pointerEvents: "none",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: -30,
+                  left: -20,
+                  width: 100,
+                  height: 100,
+                  borderRadius: "50%",
+                  backgroundColor: "rgba(255,255,255,0.06)",
+                  pointerEvents: "none",
+                }}
+              />
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "rgba(255,255,255,0.22)" }}>
-                    <Crown style={{ width: 26, height: 26, color: "#fff" }} />
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                    style={{
+                      backgroundColor: "rgba(255,255,255,0.22)",
+                    }}
+                  >
+                    <Crown
+                      style={{
+                        width: 26,
+                        height: 26,
+                        color: "#fff",
+                      }}
+                    />
                   </div>
                   <div>
-                    <p className="text-white font-bold text-lg leading-tight">KAURI Premium</p>
-                    <p className="text-white/80 text-xs">Débloquez tous les avantages</p>
+                    <p className="text-white font-bold text-lg leading-tight">
+                      KAURI Premium
+                    </p>
+                    <p className="text-white/80 text-xs">
+                      Débloquez tous les avantages
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-1.5 mb-4">
-                  {[{ icon: Zap, text: "SWAPs illimités gratuits" }, { icon: CheckCircle2, text: "Carte physique offerte" }, { icon: TrendingUp, text: "Frais réduits de 50%" }].map(({ icon: Icon, text }) => (
-                    <div key={text} className="flex items-center gap-2">
-                      <Icon style={{ width: 15, height: 15, color: "#fff", flexShrink: 0 }} />
-                      <span className="text-white text-sm">{text}</span>
+                  {[
+                    {
+                      icon: Zap,
+                      text: "SWAPs illimités gratuits",
+                    },
+                    {
+                      icon: CheckCircle2,
+                      text: "Carte physique offerte",
+                    },
+                    {
+                      icon: TrendingUp,
+                      text: "Frais réduits de 50%",
+                    },
+                  ].map(({ icon: Icon, text }) => (
+                    <div
+                      key={text}
+                      className="flex items-center gap-2"
+                    >
+                      <Icon
+                        style={{
+                          width: 15,
+                          height: 15,
+                          color: "#fff",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span className="text-white text-sm">
+                        {text}
+                      </span>
                     </div>
                   ))}
                 </div>
-                <div className="flex items-center justify-between rounded-2xl p-3" style={{ backgroundColor: "rgba(255,255,255,0.18)" }}>
+                <div
+                  className="flex items-center justify-between rounded-2xl p-3"
+                  style={{
+                    backgroundColor: "rgba(255,255,255,0.18)",
+                  }}
+                >
                   <div>
-                    <p className="text-white/70 text-xs">À partir de</p>
-                    <p className="text-white font-bold text-lg">4,99€ / mois</p>
+                    <p className="text-white/70 text-xs">
+                      À partir de
+                    </p>
+                    <p className="text-white font-bold text-lg">
+                      4,99€ / mois
+                    </p>
                   </div>
-                  <button className="px-4 py-2 rounded-xl text-sm font-bold cursor-pointer border-none" style={{ backgroundColor: "#fff", color: "#B8860B" }}>Découvrir</button>
+                  <button
+                    className="px-4 py-2 rounded-xl text-sm font-bold cursor-pointer border-none"
+                    style={{
+                      backgroundColor: "#fff",
+                      color: "#B8860B",
+                    }}
+                  >
+                    Découvrir
+                  </button>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-3xl p-5 relative overflow-hidden" style={{ background: isDarkMode ? "linear-gradient(135deg, #1A1200 0%, #2A1E00 100%)" : "linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)", border: `2px solid ${GOLD}55`, boxShadow: `0 6px 28px ${GOLD}22` }}>
-              <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle, ${GOLD}25 0%, transparent 70%)`, pointerEvents: "none" }} />
+            <div
+              className="rounded-3xl p-5 relative overflow-hidden"
+              style={{
+                background: isDarkMode
+                  ? "linear-gradient(135deg, #1A1200 0%, #2A1E00 100%)"
+                  : "linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)",
+                border: `2px solid ${GOLD}55`,
+                boxShadow: `0 6px 28px ${GOLD}22`,
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: -30,
+                  right: -30,
+                  width: 120,
+                  height: 120,
+                  borderRadius: "50%",
+                  background: `radial-gradient(circle, ${GOLD}25 0%, transparent 70%)`,
+                  pointerEvents: "none",
+                }}
+              />
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: `linear-gradient(135deg, ${GOLD}, #B8860B)`, boxShadow: `0 4px 14px ${GOLD}55` }}>
-                  <Rocket style={{ width: 22, height: 22, color: "#fff" }} />
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: `linear-gradient(135deg, ${GOLD}, #B8860B)`,
+                    boxShadow: `0 4px 14px ${GOLD}55`,
+                  }}
+                >
+                  <Rocket
+                    style={{
+                      width: 22,
+                      height: 22,
+                      color: "#fff",
+                    }}
+                  />
                 </div>
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest" style={{ color: GOLD }}>Espace Professionnel</p>
-                  <p className="text-sm font-bold" style={{ color: isDarkMode ? "#fff" : "#1A1000" }}>Propulsez votre projet</p>
+                  <p
+                    className="text-xs font-bold uppercase tracking-widest"
+                    style={{ color: GOLD }}
+                  >
+                    Espace Professionnel
+                  </p>
+                  <p
+                    className="text-sm font-bold"
+                    style={{
+                      color: isDarkMode ? "#fff" : "#1A1000",
+                    }}
+                  >
+                    Propulsez votre projet
+                  </p>
                 </div>
               </div>
-              <p className="text-sm leading-relaxed mb-5" style={{ color: isDarkMode ? "rgba(255,255,255,0.70)" : "#78450A" }}>
-                Propulsez votre propre projet. Débloquez les outils de financement participatif pour <span style={{ fontWeight: 700, color: isDarkMode ? GOLD : "#92400E" }}>collecter des dons</span> ou des investissements.
+              <p
+                className="text-sm leading-relaxed mb-5"
+                style={{
+                  color: isDarkMode
+                    ? "rgba(255,255,255,0.70)"
+                    : "#78450A",
+                }}
+              >
+                Propulsez votre propre projet. Débloquez les
+                outils de financement participatif pour{" "}
+                <span
+                  style={{
+                    fontWeight: 700,
+                    color: isDarkMode ? GOLD : "#92400E",
+                  }}
+                >
+                  collecter des dons
+                </span>{" "}
+                ou des investissements.
               </p>
               <div className="flex flex-wrap gap-2 mb-5">
-                {["Crowdfunding", "Tokens RWA", "Tableau de bord Pro"].map((tag) => (
-                  <span key={tag} className="text-xs font-semibold px-3 py-1 rounded-full" style={{ backgroundColor: `${GOLD}22`, color: isDarkMode ? GOLD : "#92400E", border: `1px solid ${GOLD}44` }}>{tag}</span>
+                {[
+                  "Crowdfunding",
+                  "Tokens RWA",
+                  "Tableau de bord Pro",
+                ].map((tag) => (
+                  <span
+                    key={tag}
+                    className="text-xs font-semibold px-3 py-1 rounded-full"
+                    style={{
+                      backgroundColor: `${GOLD}22`,
+                      color: isDarkMode ? GOLD : "#92400E",
+                      border: `1px solid ${GOLD}44`,
+                    }}
+                  >
+                    {tag}
+                  </span>
                 ))}
               </div>
-              <button onClick={() => navigate("/kauri/pro-verification")} className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl text-sm font-bold transition-all active:scale-[0.98] cursor-pointer border-none" style={{ background: `linear-gradient(135deg, ${GOLD}, #B8860B)`, color: "#fff", boxShadow: `0 4px 16px ${GOLD}55` }}>
+              <button
+                onClick={() =>
+                  navigate("/kauri/pro-verification")
+                }
+                className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl text-sm font-bold transition-all active:scale-[0.98] cursor-pointer border-none"
+                style={{
+                  background: `linear-gradient(135deg, ${GOLD}, #B8860B)`,
+                  color: "#fff",
+                  boxShadow: `0 4px 16px ${GOLD}55`,
+                }}
+              >
                 <Zap style={{ width: 16, height: 16 }} />
                 Activer le profil Professionnel
                 <ArrowRight style={{ width: 16, height: 16 }} />
               </button>
             </div>
 
-            <button onClick={handleLogout} className="w-full rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer border-none" style={{ background: "linear-gradient(135deg, #B05B3B, #DC2626)", color: "#fff", boxShadow: "0 3px 12px rgba(220,38,38,0.35)" }}>
+            <button
+              onClick={handleLogout}
+              className="w-full rounded-2xl p-4 flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer border-none"
+              style={{
+                background:
+                  "linear-gradient(135deg, #B05B3B, #DC2626)",
+                color: "#fff",
+                boxShadow: "0 3px 12px rgba(220,38,38,0.35)",
+              }}
+            >
               <LogOut style={{ width: 17, height: 17 }} />
               Déconnexion
             </button>
@@ -535,14 +1139,46 @@ export function ProfilParticulierScreen() {
 
         {activeSpace === "professionnel" && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5 mx-auto" style={{ background: `linear-gradient(135deg, ${GOLD}, #B8860B)`, boxShadow: `0 6px 20px ${GOLD}44` }}>
-              <Briefcase style={{ width: 36, height: 36, color: "#fff" }} />
+            <div
+              className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5 mx-auto"
+              style={{
+                background: `linear-gradient(135deg, ${GOLD}, #B8860B)`,
+                boxShadow: `0 6px 20px ${GOLD}44`,
+              }}
+            >
+              <Briefcase
+                style={{ width: 36, height: 36, color: "#fff" }}
+              />
             </div>
-            <h2 className="text-xl font-bold mb-2" style={{ color: textP }}>Espace Professionnel</h2>
-            <p className="text-sm leading-relaxed mb-6" style={{ color: textS, maxWidth: 280, margin: "0 auto 24px" }}>
-              Activez votre profil Pro pour accéder aux outils de financement participatif et piloter vos projets.
+            <h2
+              className="text-xl font-bold mb-2"
+              style={{ color: textP }}
+            >
+              Espace Professionnel
+            </h2>
+            <p
+              className="text-sm leading-relaxed mb-6"
+              style={{
+                color: textS,
+                maxWidth: 280,
+                margin: "0 auto 24px",
+              }}
+            >
+              Activez votre profil Pro pour accéder aux outils
+              de financement participatif et piloter vos
+              projets.
             </p>
-            <button onClick={() => navigate("/kauri/pro-verification")} className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-sm font-bold cursor-pointer border-none" style={{ background: `linear-gradient(135deg, ${GOLD}, #B8860B)`, color: "#fff", boxShadow: `0 4px 16px ${GOLD}44` }}>
+            <button
+              onClick={() =>
+                navigate("/kauri/pro-verification")
+              }
+              className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-sm font-bold cursor-pointer border-none"
+              style={{
+                background: `linear-gradient(135deg, ${GOLD}, #B8860B)`,
+                color: "#fff",
+                boxShadow: `0 4px 16px ${GOLD}44`,
+              }}
+            >
               <Rocket style={{ width: 16, height: 16 }} />
               Activer le profil Professionnel
             </button>

@@ -22,7 +22,7 @@ export interface ProProjet {
   }[];
 }
 
-const KEY = 'kauri_pro_store';
+const KEY = 'kauri_pro_projects_v2';
 
 const BASE: ProProjet[] = [
   {

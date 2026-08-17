@@ -128,9 +128,12 @@ export function ProDataProvider({ children }: { children: ReactNode }) {
     return INITIAL_PROJETS;
   });
 
-  // Persist on every change
+  // Persist on every change and notify other consumers
   useEffect(() => {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(projets)); } catch { /* ignore */ }
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(projets));
+      window.dispatchEvent(new CustomEvent('kauri_pro_update'));
+    } catch { /* ignore */ }
   }, [projets]);
 
   const addProjet = (p: ProProjet) =>

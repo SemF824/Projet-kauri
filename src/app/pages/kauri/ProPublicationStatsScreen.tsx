@@ -132,26 +132,36 @@ const PUBLICATIONS_LEGACY = [
 
 // ── Mini sparkline SVG ───────────────────────────────────────────────────────
 function Sparkline({ data, color }: { data: number[]; color: string }) {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
+  const safeData = Array.isArray(data) ? data : [];
+  if (safeData.length < 2) {
+    return (
+      <svg width={80} height={28} viewBox="0 0 80 28" className="overflow-visible">
+        <line x1="0" y1="14" x2="80" y2="14" stroke={color} strokeWidth="1.5" strokeDasharray="4 3" strokeOpacity="0.3" />
+      </svg>
+    );
+  }
   const W = 80, H = 28;
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * W;
-    const y = H - ((v - min) / range) * H;
-    return `${x},${y}`;
-  });
+  const max = Math.max(...safeData);
+  const min = Math.min(...safeData);
+  const range = max - min || 1;
+  const coords = safeData.map((v, i) => ({
+    x: (i / (safeData.length - 1)) * W,
+    y: H - ((v - min) / range) * H,
+  }));
+  const points = coords.map(p => `${p.x},${p.y}`).join(' ');
+  const lastX = coords[coords.length - 1].x;
+  const lastY = coords[coords.length - 1].y;
   return (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="overflow-visible">
-      <polyline points={pts.join(' ')} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={pts[pts.length - 1].split(',')[0]} cy={pts[pts.length - 1].split(',')[1]} r="3" fill={color} />
+      <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={lastX} cy={lastY} r="3" fill={color} />
     </svg>
   );
 }
 
 // ── Barre de progression horizontale ────────────────────────────────────────
 function Bar({ value, max, color }: { value: number; max: number; color: string }) {
-  const pct = Math.round((value / max) * 100);
+  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
     <div className="h-1.5 bg-white/10 rounded-full overflow-hidden w-full">
       <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
@@ -211,9 +221,10 @@ export function ProPublicationStatsScreen() {
   // ── VUE DÉTAIL ──────────────────────────────────────────────────────────────
   if (selected) {
     const s = selected.stats;
-    const cta = CTA_LABEL[selected.ctaType];
+    const cta = CTA_LABEL[selected.ctaType] ?? CTA_LABEL['decouvrir'];
     const CtaIcon = cta.icon;
-    const maxVues = Math.max(...selected.timeline.map(t => t.vues));
+    const timelineVues = selected.timeline.map(t => t.vues);
+    const maxVues = timelineVues.length > 0 ? Math.max(...timelineVues) : 1;
 
     return (
       <div className={`min-h-screen pb-24 ${bg}`}>
@@ -600,7 +611,7 @@ export function ProPublicationStatsScreen() {
         )}
 
         {publications.map(pub => {
-          const cta = CTA_LABEL[pub.ctaType];
+          const cta = CTA_LABEL[pub.ctaType] ?? CTA_LABEL['decouvrir'];
           const CtaIcon = cta.icon;
           const sparkData = pub.timeline.map(t => t.vues);
 

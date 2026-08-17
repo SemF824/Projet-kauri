@@ -19,9 +19,7 @@ import { toast } from "sonner";
 const TEAL = "#006D77";
 
 type Frequence =
-  | "mensuelle"
-  | "hebdomadaire"
-  | "bihebdomadaire";
+  "mensuelle" | "hebdomadaire" | "bihebdomadaire";
 type OrdrePassage = "aleatoire" | "fixe";
 type ModeInvitation = "lien" | "qr" | "les_deux";
 type Duree = "3" | "6" | "9" | "12" | "18" | "24";
@@ -116,8 +114,7 @@ function ToggleGroup<T extends string>({
           style={{
             backgroundColor:
               value === opt.value ? color : "transparent",
-            color:
-              value === opt.value ? "#fff" : textSecondary,
+            color: value === opt.value ? "#fff" : textSecondary,
             boxShadow:
               value === opt.value
                 ? `0 2px 8px ${color}44`
@@ -145,15 +142,17 @@ export function CreerTontinePriveeScreen() {
   const [cotisation, setCotisation] = useState("");
   const [maxMembres, setMaxMembres] = useState("");
   const [dateDebut, setDateDebut] = useState("");
-  const [frequence, setFrequence] = useState<Frequence>("mensuelle");
+  const [frequence, setFrequence] =
+    useState<Frequence>("mensuelle");
   const [ordre, setOrdre] = useState<OrdrePassage>("aleatoire");
-  const [invitation, setInvitation] = useState<ModeInvitation>("lien");
+  const [invitation, setInvitation] =
+    useState<ModeInvitation>("lien");
   const [duree, setDuree] = useState<Duree | "">("");
   const [showFrequence, setShowFrequence] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const bg = isDarkMode ? "#0F172A" : "#F8FAFC";
-  const cardBg = isDarkMode ? '#1E293B' : '#ffffff';
+  const cardBg = isDarkMode ? "#1E293B" : "#ffffff";
   const border = isDarkMode ? "#334155" : "#E8EDF2";
   const textPrimary = isDarkMode ? "#ffffff" : "#0F172A";
   const textSecondary = "#94A3B8";
@@ -233,7 +232,8 @@ export function CreerTontinePriveeScreen() {
     } catch (err: any) {
       console.error(err);
       toast.error(
-        err.message || "Erreur lors de la communication avec Supabase",
+        err.message ||
+          "Erreur lors de la communication avec Supabase",
       );
     } finally {
       setIsSubmitting(false);
@@ -294,7 +294,11 @@ export function CreerTontinePriveeScreen() {
             Informations générales
           </p>
 
-          <Field label="Nom de la tontine" icon={Lock} textSecondary={textSecondary}>
+          <Field
+            label="Nom de la tontine"
+            icon={Lock}
+            textSecondary={textSecondary}
+          >
             <Input
               value={nom}
               onChange={setNom}
@@ -305,7 +309,11 @@ export function CreerTontinePriveeScreen() {
             />
           </Field>
 
-          <Field label="Description (optionnel)" icon={Lock} textSecondary={textSecondary}>
+          <Field
+            label="Description (optionnel)"
+            icon={Lock}
+            textSecondary={textSecondary}
+          >
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -337,7 +345,11 @@ export function CreerTontinePriveeScreen() {
           </p>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Cotisation (€)" icon={Euro} textSecondary={textSecondary}>
+            <Field
+              label="Cotisation (€)"
+              icon={Euro}
+              textSecondary={textSecondary}
+            >
               <Input
                 value={cotisation}
                 onChange={setCotisation}
@@ -348,7 +360,11 @@ export function CreerTontinePriveeScreen() {
                 textPrimary={textPrimary}
               />
             </Field>
-            <Field label="Membres max" icon={Users} textSecondary={textSecondary}>
+            <Field
+              label="Membres max"
+              icon={Users}
+              textSecondary={textSecondary}
+            >
               <Input
                 value={maxMembres}
                 onChange={setMaxMembres}
@@ -361,7 +377,11 @@ export function CreerTontinePriveeScreen() {
             </Field>
           </div>
 
-          <Field label="Durée de la tontine" icon={Calendar} textSecondary={textSecondary}>
+          <Field
+            label="Durée de la tontine"
+            icon={Calendar}
+            textSecondary={textSecondary}
+          >
             <div className="grid grid-cols-3 gap-2">
               {(
                 ["3", "6", "9", "12", "18", "24"] as Duree[]
@@ -451,7 +471,11 @@ export function CreerTontinePriveeScreen() {
             )}
           </Field>
 
-          <Field label="Date de début" icon={Calendar} textSecondary={textSecondary}>
+          <Field
+            label="Date de début"
+            icon={Calendar}
+            textSecondary={textSecondary}
+          >
             <Input
               value={dateDebut}
               onChange={setDateDebut}
@@ -516,7 +540,11 @@ export function CreerTontinePriveeScreen() {
           </p>
 
           <div className="w-full block">
-            <Field label="Ordre de passage" icon={Shuffle} textSecondary={textSecondary}>
+            <Field
+              label="Ordre de passage"
+              icon={Shuffle}
+              textSecondary={textSecondary}
+            >
               <ToggleGroup
                 value={ordre}
                 onChange={setOrdre}
@@ -536,7 +564,11 @@ export function CreerTontinePriveeScreen() {
           </div>
 
           <div className="w-full block">
-            <Field label="Mode d'invitation" icon={Link2} textSecondary={textSecondary}>
+            <Field
+              label="Mode d'invitation"
+              icon={Link2}
+              textSecondary={textSecondary}
+            >
               <ToggleGroup
                 value={invitation}
                 onChange={setInvitation}
@@ -545,7 +577,11 @@ export function CreerTontinePriveeScreen() {
                 textSecondary={textSecondary}
                 options={[
                   { value: "lien", label: "Lien", icon: Link2 },
-                  { value: "qr", label: "QR Code", icon: QrCode },
+                  {
+                    value: "qr",
+                    label: "QR Code",
+                    icon: QrCode,
+                  },
                   {
                     value: "les_deux",
                     label: "Les deux",
@@ -586,7 +622,8 @@ export function CreerTontinePriveeScreen() {
           className="text-center text-xs pb-4"
           style={{ color: textSecondary }}
         >
-          Un lien d'invitation sera généré automatiquement après création.
+          Un lien d'invitation sera généré automatiquement après
+          création.
         </p>
       </div>
     </div>

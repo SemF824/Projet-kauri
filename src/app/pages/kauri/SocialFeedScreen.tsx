@@ -1,7 +1,50 @@
-import { Heart, MessageCircle, Share2, Bookmark, Play, Grid, ChevronLeft, TrendingUp, Gift, Info, BadgeCheck, X } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Bookmark, Play, Pause, Grid, TrendingUp, Gift, Info, BadgeCheck, X, Music } from 'lucide-react';
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { addComment, getComments, setFollowPro } from '../../../utils/supabase';
+
+// ── Lecteur 30s pour la barre musicale ────────────────────────────────────────
+function PostMusicBar({ music }: { music: { title: string; artist: string; artwork: string; previewUrl?: string } }) {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const toggle = () => {
+    if (!music.previewUrl) return;
+    if (playing) {
+      audioRef.current?.pause();
+      setPlaying(false);
+    } else {
+      if (!audioRef.current) {
+        audioRef.current = new Audio(music.previewUrl);
+        audioRef.current.onended = () => setPlaying(false);
+      }
+      audioRef.current.play();
+      setPlaying(true);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5 w-fit max-w-full overflow-hidden">
+      <img src={music.artwork} alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+      <Music className="w-2.5 h-2.5 text-[#D4AF37] flex-shrink-0 animate-pulse" />
+      <div className="flex-1 min-w-0">
+        <p className="text-white/80 text-[10px] font-medium truncate leading-none">{music.title}</p>
+        <p className="text-white/40 text-[9px] truncate leading-none mt-0.5">{music.artist}</p>
+      </div>
+      {music.previewUrl && (
+        <button
+          onClick={toggle}
+          className="flex-shrink-0 w-5 h-5 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center"
+        >
+          {playing
+            ? <Pause className="w-2.5 h-2.5 text-[#D4AF37]" />
+            : <Play className="w-2.5 h-2.5 text-[#D4AF37] ml-0.5" />
+          }
+        </button>
+      )}
+    </div>
+  );
+}
 
 // ── Publications simulées des comptes pro ─────────────────────────────────────
 const PRO_PUBLICATIONS = [
@@ -9,25 +52,26 @@ const PRO_PUBLICATIONS = [
     id: '1',
     pro: { name: 'Lolo Moderne', initials: 'LM', verified: true, category: 'Restauration', followers: 284 },
     type: 'image',
-    media: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&q=80',
-    caption: 'Ouverture de notre restaurant en Martinique ! 🎉 Grâce à la tontine KAURI et à nos 87 investisseurs, le rêve devient réalité. Venez nous découvrir !',
-    hashtags: ['#diaspora', '#martinique', '#investissement', '#kauri'],
+    media: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&q=80',
+    caption: "Notre Lolo Moderne ouvre ses portes à Fort-de-France ! 🎉 87 investisseurs KAURI ont cru en nous. Ce restaurant, c'est votre restaurant. Venez goûter la cuisine créole d'excellence qu'on a mise 3 ans à perfectionner.",
+    hashtags: ['#diaspora', '#martinique', '#kauri', '#restauration'],
     category: 'Restauration',
     cta: { type: 'investir' as const, label: 'Investir maintenant', color: '#006D77', bg: 'bg-[#006D77]' },
     project: { name: 'Lolo Moderne', raised: 45000, goal: 100000 },
     stats: { likes: 342, comments: 28, shares: 14, saved: false, liked: false, isFollowing: false },
     timeAgo: '2h',
+    music: { title: 'Sere Kole', artist: 'Kassav', artwork: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=60&q=80' },
   },
   {
     id: '2',
     pro: { name: 'Coopérative Manioc', initials: 'CM', verified: true, category: 'Agriculture', followers: 156 },
     type: 'image',
     media: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80',
-    caption: 'Première récolte de notre coopérative manioc ! 🌾 50 familles accompagnées. On cherche encore des partenaires pour doubler la capacité de production.',
-    hashtags: ['#agriculture', '#Guadeloupe', '#coopérative', '#terroir'],
+    caption: "Première récolte historique 🌾 50 familles de Guadeloupe nourries grâce à notre coopérative. On part de zéro — une parcelle, une tontine, une communauté. Aujourd'hui, on cherche des partenaires pour doubler notre surface cultivable.",
+    hashtags: ['#agriculture', '#guadeloupe', '#coopérative', '#terroir', '#souveraineté'],
     category: 'Agriculture',
     cta: { type: 'don' as const, label: 'Faire un don', color: '#B05B3B', bg: 'bg-[#B05B3B]' },
-    project: { name: 'Coopérative Agricole', raised: 32000, goal: 50000 },
+    project: { name: 'Coopérative Manioc', raised: 32000, goal: 50000 },
     stats: { likes: 215, comments: 19, shares: 8, saved: false, liked: false, isFollowing: false },
     timeAgo: '5h',
   },
@@ -35,27 +79,42 @@ const PRO_PUBLICATIONS = [
     id: '3',
     pro: { name: 'TechAfrika Hub', initials: 'TA', verified: true, category: 'Tech', followers: 512 },
     type: 'video',
-    media: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600&q=80',
-    caption: 'Notre incubateur tech à Dakar forme 200 jeunes développeurs par an. Investissez dans la prochaine Silicon Valley africaine. 🚀',
-    hashtags: ['#tech', '#afrique', '#dakar', '#startup'],
+    media: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&q=80',
+    caption: "200 jeunes développeurs formés cette année à Dakar 🚀 Notre incubateur est le seul en Afrique de l'Ouest 100% financé par la diaspora via KAURI. On ne cherche pas des philanthropes — on cherche des associés qui croient que la prochaine révolution tech vient d'Afrique.",
+    hashtags: ['#tech', '#afrique', '#dakar', '#startup', '#ia'],
     category: 'Tech',
     cta: { type: 'investir' as const, label: 'Investir maintenant', color: '#006D77', bg: 'bg-[#006D77]' },
     project: { name: 'TechAfrika Hub', raised: 78000, goal: 150000 },
     stats: { likes: 891, comments: 63, shares: 42, saved: false, liked: false, isFollowing: false },
     timeAgo: '1j',
+    music: { title: 'Ye', artist: 'Burna Boy', artwork: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=60&q=80' },
   },
   {
     id: '4',
     pro: { name: 'Maison Créole', initials: 'MC', verified: false, category: 'Immobilier', followers: 98 },
     type: 'image',
-    media: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&q=80',
-    caption: "Programme de logements abordables pour la diaspora en Haïti. 30 appartements livrés. 70 en cours. Rejoignez l'aventure !",
-    hashtags: ['#immobilier', '#haiti', '#logement', '#diaspora'],
+    media: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80',
+    caption: "30 appartements livrés. 70 en construction. 🏠 Notre programme de logements abordables pour la diaspora haïtienne avance malgré tout. Chaque investisseur KAURI est propriétaire d'une part de ce projet. Rejoignez les 140 familles qui font confiance à Maison Créole.",
+    hashtags: ['#immobilier', '#haiti', '#logement', '#diaspora', '#patrimoine'],
     category: 'Immobilier',
     cta: { type: 'decouvrir' as const, label: 'En savoir plus', color: '#D4AF37', bg: 'bg-[#D4AF37]' },
     project: { name: 'Maison Créole', raised: 120000, goal: 300000 },
     stats: { likes: 127, comments: 11, shares: 5, saved: false, liked: false, isFollowing: false },
     timeAgo: '2j',
+  },
+  {
+    id: '5',
+    pro: { name: 'Bijoux Kréyol', initials: 'BK', verified: true, category: 'Artisanat', followers: 203 },
+    type: 'image',
+    media: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80',
+    caption: "L'artisanat créole rencontre le commerce digital 🧡 Nos bijoux en or antillais font maintenant le tour du monde grâce à KAURI et à notre boutique en ligne. 12 artisans de Martinique et Guadeloupe impliqués. Investissez dans leur savoir-faire.",
+    hashtags: ['#artisanat', '#bijoux', '#créole', '#antilles', '#madeincaraïbes'],
+    category: 'Artisanat',
+    cta: { type: 'investir' as const, label: 'Investir maintenant', color: '#006D77', bg: 'bg-[#006D77]' },
+    project: { name: 'Bijoux Kréyol', raised: 18500, goal: 40000 },
+    stats: { likes: 456, comments: 37, shares: 22, saved: false, liked: false, isFollowing: false },
+    timeAgo: '3j',
+    music: { title: 'Zouk is the best remedy', artist: 'Kassav', artwork: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=60&q=80' },
   },
 ];
 
@@ -262,6 +321,11 @@ export function SocialFeedScreen() {
                 {/* Caption */}
                 <p className="text-white/85 text-sm leading-relaxed">{post.caption}</p>
                 <p className="text-[#D4AF37] text-xs">{post.hashtags.join(' ')}</p>
+
+                {/* Barre musicale */}
+                {'music' in post && post.music && (
+                  <PostMusicBar music={post.music as { title: string; artist: string; artwork: string; previewUrl?: string }} />
+                )}
 
                 {/* Barre d'interactions */}
                 <div className="flex items-center gap-5 py-1">

@@ -1,4 +1,20 @@
-import { ArrowLeft, Camera, User, FileText, Loader2, CheckCircle2, RotateCw, Check, Clock, X, Video, AlertTriangle, ShieldCheck, Edit3, ArrowRight } from "lucide-react";
+import {
+  ArrowLeft,
+  Camera,
+  User,
+  FileText,
+  Loader2,
+  CheckCircle2,
+  RotateCw,
+  Check,
+  Clock,
+  X,
+  Video,
+  AlertTriangle,
+  ShieldCheck,
+  Edit3,
+  ArrowRight,
+} from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -29,7 +45,10 @@ function getDB(): Promise<IDBDatabase> {
   });
 }
 
-async function saveKeysToEnclave(id: string, keys: { ecdhPriv: CryptoKey; ecdsaPriv: CryptoKey }) {
+async function saveKeysToEnclave(
+  id: string,
+  keys: { ecdhPriv: CryptoKey; ecdsaPriv: CryptoKey },
+) {
   const db = await getDB();
   return new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
@@ -39,7 +58,11 @@ async function saveKeysToEnclave(id: string, keys: { ecdhPriv: CryptoKey; ecdsaP
   });
 }
 
-async function getKeysFromEnclave(id: string): Promise<{ ecdhPriv: CryptoKey; ecdsaPriv: CryptoKey } | undefined> {
+async function getKeysFromEnclave(
+  id: string,
+): Promise<
+  { ecdhPriv: CryptoKey; ecdsaPriv: CryptoKey } | undefined
+> {
   const db = await getDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
@@ -51,7 +74,7 @@ async function getKeysFromEnclave(id: string): Promise<{ ecdhPriv: CryptoKey; ec
 
 function arrayBufferToBase64(blob: ArrayBuffer): string {
   const bytes = new Uint8Array(blob);
-  let binary = '';
+  let binary = "";
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
@@ -74,10 +97,34 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
 
 function detectMimeType(arrayBuffer: ArrayBuffer): string {
   const bytes = new Uint8Array(arrayBuffer).slice(0, 12);
-  if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) return "application/pdf";
-  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return "image/png";
-  if (bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) return "video/webm";
-  if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) return "video/mp4";
+  if (
+    bytes[0] === 0x25 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x44 &&
+    bytes[3] === 0x46
+  )
+    return "application/pdf";
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  )
+    return "image/png";
+  if (
+    bytes[0] === 0x1a &&
+    bytes[1] === 0x45 &&
+    bytes[2] === 0xdf &&
+    bytes[3] === 0xa3
+  )
+    return "video/webm";
+  if (
+    bytes[4] === 0x66 &&
+    bytes[5] === 0x74 &&
+    bytes[6] === 0x79 &&
+    bytes[7] === 0x70
+  )
+    return "video/mp4";
   return "image/jpeg";
 }
 
@@ -89,32 +136,55 @@ export function KYCVerificationScreen() {
 
   const supabase = getSupabase();
 
-  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [isLoadingDocuments, setIsLoadingDocuments] =
+    useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
 
-  const [identityPreviewUrl, setIdentityPreviewUrl] = useState<string | null>(null);
-  const [selfiePreviewUrl, setSelfiePreviewUrl] = useState<string | null>(null);
-  const [identityType, setIdentityFileType] = useState<'image' | 'pdf' | 'video'>('image');
-  const [selfieType, setSelfieFileType] = useState<'image' | 'pdf' | 'video'>('image');
+  const [identityPreviewUrl, setIdentityPreviewUrl] = useState<
+    string | null
+  >(null);
+  const [selfiePreviewUrl, setSelfiePreviewUrl] = useState<
+    string | null
+  >(null);
+  const [identityType, setIdentityFileType] = useState<
+    "image" | "pdf" | "video"
+  >("image");
+  const [selfieType, setSelfieFileType] = useState<
+    "image" | "pdf" | "video"
+  >("image");
 
-  const [hasExistingIdentity, setHasExistingIdentity] = useState(false);
-  const [hasExistingSelfie, setHasExistingSelfie] = useState(false);
+  const [hasExistingIdentity, setHasExistingIdentity] =
+    useState(false);
+  const [hasExistingSelfie, setHasExistingSelfie] =
+    useState(false);
 
   const [hasFileChanges, setHasFileChanges] = useState(false);
 
   // ── 🎯 GESTION DE L'ADRESSE ET SAUVEGARDE LOCALE DYNAMIQUE ──
   const [address, setAddress] = useState({
-    firstName: "", lastName: "", street: "", zip: "", city: "", country: "France",
+    firstName: "",
+    lastName: "",
+    street: "",
+    zip: "",
+    city: "",
+    country: "France",
   });
   const [initialAddress, setInitialAddress] = useState({
-    firstName: "", lastName: "", street: "", zip: "", city: "", country: "France",
+    firstName: "",
+    lastName: "",
+    street: "",
+    zip: "",
+    city: "",
+    country: "France",
   });
 
   const identityInputRef = useRef<HTMLInputElement>(null);
 
   const [showCamera, setShowCamera] = useState(false);
-  const [recordingState, setRecordingState] = useState<'idle' | 'front' | 'left' | 'right' | 'processing'>('idle');
-  
+  const [recordingState, setRecordingState] = useState<
+    "idle" | "front" | "left" | "right" | "processing"
+  >("idle");
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -123,38 +193,54 @@ export function KYCVerificationScreen() {
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
       });
       mediaStreamRef.current = stream;
       setShowCamera(true);
-      setRecordingState('idle');
+      setRecordingState("idle");
     } catch (err) {
-      toast.error("Accès caméra refusé. Vérifiez vos permissions.");
+      toast.error(
+        "Accès caméra refusé. Vérifiez vos permissions.",
+      );
     }
   };
 
   useEffect(() => {
-    if (showCamera && videoRef.current && mediaStreamRef.current) {
+    if (
+      showCamera &&
+      videoRef.current &&
+      mediaStreamRef.current
+    ) {
       videoRef.current.srcObject = mediaStreamRef.current;
-      videoRef.current.play().catch(e => console.error("Erreur de flux:", e));
+      videoRef.current
+        .play()
+        .catch((e) => console.error("Erreur de flux:", e));
     }
   }, [showCamera]);
 
   const stopCamera = () => {
     if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(t => t.stop());
+      mediaStreamRef.current
+        .getTracks()
+        .forEach((t) => t.stop());
     }
     mediaStreamRef.current = null;
     setShowCamera(false);
-    setRecordingState('idle');
+    setRecordingState("idle");
   };
 
   useEffect(() => {
     return () => {
       if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(t => t.stop());
+        mediaStreamRef.current
+          .getTracks()
+          .forEach((t) => t.stop());
       }
     };
   }, []);
@@ -167,7 +253,9 @@ export function KYCVerificationScreen() {
     const ctx = canvas.getContext("2d");
     if (ctx) {
       ctx.drawImage(videoRef.current, 0, 0, 100, 100);
-      keyframesRef.current.push(ctx.getImageData(0, 0, 100, 100));
+      keyframesRef.current.push(
+        ctx.getImageData(0, 0, 100, 100),
+      );
     }
   };
 
@@ -178,23 +266,26 @@ export function KYCVerificationScreen() {
     let totalDiff = 0;
     for (let i = 0; i < frames.length - 1; i++) {
       const curr = frames[i].data;
-      const next = frames[i+1].data;
+      const next = frames[i + 1].data;
       let frameDiff = 0;
       for (let j = 0; j < curr.length; j += 4) {
-        frameDiff += Math.abs(curr[j] - next[j]) + Math.abs(curr[j+1] - next[j+1]) + Math.abs(curr[j+2] - next[j+2]);
+        frameDiff +=
+          Math.abs(curr[j] - next[j]) +
+          Math.abs(curr[j + 1] - next[j + 1]) +
+          Math.abs(curr[j + 2] - next[j + 2]);
       }
       totalDiff += frameDiff / (curr.length / 4);
     }
-    
-    return totalDiff > 15; 
+
+    return totalDiff > 15;
   };
 
   const startVideoLivenessSequence = () => {
     if (!mediaStreamRef.current) return;
-    
+
     videoChunksRef.current = [];
     keyframesRef.current = [];
-    
+
     const recorder = new MediaRecorder(mediaStreamRef.current);
     mediaRecorderRef.current = recorder;
 
@@ -203,33 +294,41 @@ export function KYCVerificationScreen() {
     };
 
     recorder.onstop = async () => {
-      setRecordingState('processing');
-      const videoBlob = new Blob(videoChunksRef.current, { type: recorder.mimeType || 'video/mp4' });
+      setRecordingState("processing");
+      const videoBlob = new Blob(videoChunksRef.current, {
+        type: recorder.mimeType || "video/mp4",
+      });
       videoChunksRef.current = [];
 
       const isLive = evaluateMotionVariance();
       if (!isLive) {
-        toast.error("Échec Anti-Fraude : Aucun mouvement facial détecté. Veuillez suivre les instructions.");
-        setRecordingState('idle');
+        toast.error(
+          "Échec Anti-Fraude : Aucun mouvement facial détecté. Veuillez suivre les instructions.",
+        );
+        setRecordingState("idle");
         return;
       }
 
-      const file = new File([videoBlob], "liveness_record.webm", { type: videoBlob.type });
+      const file = new File(
+        [videoBlob],
+        "liveness_record.webm",
+        { type: videoBlob.type },
+      );
       stopCamera();
       await handleUploadAndEncrypt("selfie", file);
     };
 
     recorder.start();
-    setRecordingState('front');
+    setRecordingState("front");
     captureKeyframe();
 
     setTimeout(() => {
-      setRecordingState('left');
+      setRecordingState("left");
       captureKeyframe();
     }, 2000);
 
     setTimeout(() => {
-      setRecordingState('right');
+      setRecordingState("right");
       captureKeyframe();
     }, 4000);
 
@@ -239,34 +338,76 @@ export function KYCVerificationScreen() {
     }, 6000);
   };
 
-  const decryptUserFile = async (packedBuffer: ArrayBuffer, ecdhPriv: CryptoKey): Promise<{ url: string; type: 'image' | 'pdf' | 'video' }> => {
+  const decryptUserFile = async (
+    packedBuffer: ArrayBuffer,
+    ecdhPriv: CryptoKey,
+  ): Promise<{
+    url: string;
+    type: "image" | "pdf" | "video";
+  }> => {
     const packedBytes = new Uint8Array(packedBuffer);
     const view = new DataView(packedBytes.buffer);
-    
+
     const adminFekLen = view.getUint32(0, false);
     const userFekLen = view.getUint32(4, false);
     const sigLen = view.getUint32(8, false);
-    
+
     const ephPubRaw = packedBytes.slice(12, 77);
     const wrapIV = packedBytes.slice(77, 89);
     const fileIV = packedBytes.slice(89, 101);
-    
+
     const userFekStart = 101 + adminFekLen;
-    const encryptedAesKeyUser = packedBytes.slice(userFekStart, userFekStart + userFekLen);
-    
+    const encryptedAesKeyUser = packedBytes.slice(
+      userFekStart,
+      userFekStart + userFekLen,
+    );
+
     const cipherStart = 101 + adminFekLen + userFekLen + sigLen;
     const ciphertext = packedBytes.slice(cipherStart);
 
-    const ephPubKey = await window.crypto.subtle.importKey("raw", ephPubRaw, { name: "ECDH", namedCurve: "P-256" }, false, []);
-    const userWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: ephPubKey }, ecdhPriv, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
-    const decryptedFekRaw = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: wrapIV }, userWrapKey, encryptedAesKeyUser);
-    const fek = await window.crypto.subtle.importKey("raw", decryptedFekRaw, { name: "AES-GCM" }, false, ["decrypt"]);
-    const decryptedFileBuffer = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: fileIV }, fek, ciphertext);
+    const ephPubKey = await window.crypto.subtle.importKey(
+      "raw",
+      ephPubRaw,
+      { name: "ECDH", namedCurve: "P-256" },
+      false,
+      [],
+    );
+    const userWrapKey = await window.crypto.subtle.deriveKey(
+      { name: "ECDH", public: ephPubKey },
+      ecdhPriv,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["decrypt"],
+    );
+    const decryptedFekRaw = await window.crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: wrapIV },
+      userWrapKey,
+      encryptedAesKeyUser,
+    );
+    const fek = await window.crypto.subtle.importKey(
+      "raw",
+      decryptedFekRaw,
+      { name: "AES-GCM" },
+      false,
+      ["decrypt"],
+    );
+    const decryptedFileBuffer =
+      await window.crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: fileIV },
+        fek,
+        ciphertext,
+      );
 
     const mime = detectMimeType(decryptedFileBuffer);
     return {
-      url: URL.createObjectURL(new Blob([decryptedFileBuffer], { type: mime })),
-      type: mime.startsWith('video') ? 'video' : mime === "application/pdf" ? 'pdf' : 'image'
+      url: URL.createObjectURL(
+        new Blob([decryptedFileBuffer], { type: mime }),
+      ),
+      type: mime.startsWith("video")
+        ? "video"
+        : mime === "application/pdf"
+          ? "pdf"
+          : "image",
     };
   };
 
@@ -276,48 +417,74 @@ export function KYCVerificationScreen() {
       setIsLoadingDocuments(true);
 
       try {
-        const { data: files, error } = await supabase.storage.from('secure-kyc').list(profile.id);
+        const { data: files, error } = await supabase.storage
+          .from("secure-kyc")
+          .list(profile.id);
 
         if (!error && files && files.length > 0) {
-          const idFile = files.find(f => f.name.startsWith('identity'));
-          const sfFile = files.find(f => f.name.startsWith('selfie'));
+          const idFile = files.find((f) =>
+            f.name.startsWith("identity"),
+          );
+          const sfFile = files.find((f) =>
+            f.name.startsWith("selfie"),
+          );
 
           if (idFile) setHasExistingIdentity(true);
           if (sfFile) setHasExistingSelfie(true);
 
-          const enclaveKeys = await getKeysFromEnclave('kauri_client');
+          const enclaveKeys =
+            await getKeysFromEnclave("kauri_client");
           if (enclaveKeys) {
             if (idFile) {
               try {
-                const { data: blob } = await supabase.storage.from('secure-kyc').download(`${profile.id}/${idFile.name}`);
+                const { data: blob } = await supabase.storage
+                  .from("secure-kyc")
+                  .download(`${profile.id}/${idFile.name}`);
                 if (blob) {
                   const arrayBuf = await blob.arrayBuffer();
-                  const dec = await decryptUserFile(arrayBuf, enclaveKeys.ecdhPriv);
+                  const dec = await decryptUserFile(
+                    arrayBuf,
+                    enclaveKeys.ecdhPriv,
+                  );
                   setIdentityFileType(dec.type);
                   setIdentityPreviewUrl(dec.url);
                 }
               } catch (decErr) {
-                console.warn("Déchiffrement aperçu identité impossible:", decErr);
+                console.warn(
+                  "Déchiffrement aperçu identité impossible:",
+                  decErr,
+                );
               }
             }
 
             if (sfFile) {
               try {
-                const { data: blob } = await supabase.storage.from('secure-kyc').download(`${profile.id}/${sfFile.name}`);
+                const { data: blob } = await supabase.storage
+                  .from("secure-kyc")
+                  .download(`${profile.id}/${sfFile.name}`);
                 if (blob) {
                   const arrayBuf = await blob.arrayBuffer();
-                  const dec = await decryptUserFile(arrayBuf, enclaveKeys.ecdhPriv);
+                  const dec = await decryptUserFile(
+                    arrayBuf,
+                    enclaveKeys.ecdhPriv,
+                  );
                   setSelfieFileType(dec.type);
                   setSelfiePreviewUrl(dec.url);
                 }
               } catch (decErr) {
-                console.warn("Déchiffrement aperçu selfie impossible:", decErr);
+                console.warn(
+                  "Déchiffrement aperçu selfie impossible:",
+                  decErr,
+                );
               }
             }
           }
         }
       } catch (err) {
-        console.error("Erreur de synchronisation du Hub KYC:", err);
+        console.error(
+          "Erreur de synchronisation du Hub KYC:",
+          err,
+        );
       } finally {
         setIsLoadingDocuments(false);
       }
@@ -328,13 +495,19 @@ export function KYCVerificationScreen() {
   // ── 🧠 INITIALISATION INTELLECTUELLE : DÉDUCTION DES NOMS SOCIAUX (GOOGLE/FACEBOOK) ──
   useEffect(() => {
     if (profile?.id) {
-      const extractedFirstName = profile.first_name && profile.first_name !== 'Prénom' 
-        ? profile.first_name 
-        : (profile.full_name ? profile.full_name.split(' ')[0] : "");
+      const extractedFirstName =
+        profile.first_name && profile.first_name !== "Prénom"
+          ? profile.first_name
+          : profile.full_name
+            ? profile.full_name.split(" ")[0]
+            : "";
 
-      const extractedLastName = profile.last_name && profile.last_name !== 'Nom' 
-        ? profile.last_name 
-        : (profile.full_name ? profile.full_name.split(' ').slice(1).join(' ') : "");
+      const extractedLastName =
+        profile.last_name && profile.last_name !== "Nom"
+          ? profile.last_name
+          : profile.full_name
+            ? profile.full_name.split(" ").slice(1).join(" ")
+            : "";
 
       const serverAddress = {
         firstName: extractedFirstName,
@@ -345,7 +518,9 @@ export function KYCVerificationScreen() {
         country: "France",
       };
 
-      const savedDraft = localStorage.getItem(`kauri_address_draft_${profile.id}`);
+      const savedDraft = localStorage.getItem(
+        `kauri_address_draft_${profile.id}`,
+      );
       if (savedDraft) {
         try {
           const parsedDraft = JSON.parse(savedDraft);
@@ -362,100 +537,236 @@ export function KYCVerificationScreen() {
   }, [profile]);
 
   // Modificateur de champ avec persistance dynamique + RÈGLE CHIFFRES UNIQUES SUR CODE POSTAL
-  const updateAddressField = (field: keyof typeof address, value: string) => {
+  const updateAddressField = (
+    field: keyof typeof address,
+    value: string,
+  ) => {
     // 🛡️ REJET STRICT DES LETTRES SUR LE CODE POSTAL
-    const sanitizedValue = field === 'zip' ? value.replace(/\D/g, '') : value;
+    const sanitizedValue =
+      field === "zip" ? value.replace(/\D/g, "") : value;
 
-    setAddress(prev => {
+    setAddress((prev) => {
       const updated = { ...prev, [field]: sanitizedValue };
       if (profile?.id) {
-        localStorage.setItem(`kauri_address_draft_${profile.id}`, JSON.stringify(updated));
+        localStorage.setItem(
+          `kauri_address_draft_${profile.id}`,
+          JSON.stringify(updated),
+        );
       }
       return updated;
     });
   };
 
-  const handleUploadAndEncrypt = async (type: "identity" | "selfie", fileFromParam?: File) => {
+  const handleUploadAndEncrypt = async (
+    type: "identity" | "selfie",
+    fileFromParam?: File,
+  ) => {
     const file = fileFromParam;
     if (!file) return;
 
     setIsActionLoading(true);
-    const toastId = toast.loading(`Scellage asymétrique (ECC P-256) du module ${type}...`);
+    const toastId = toast.loading(
+      `Scellage asymétrique (ECC P-256) du module ${type}...`,
+    );
 
     try {
-      let enclaveKeys = await getKeysFromEnclave('kauri_client');
-      
-      if (!enclaveKeys) {
-        const ecdhKeyPair = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]);
-        const ecdsaKeyPair = await window.crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
-        
-        enclaveKeys = { ecdhPriv: ecdhKeyPair.privateKey, ecdsaPriv: ecdsaKeyPair.privateKey };
-        await saveKeysToEnclave('kauri_client', enclaveKeys);
+      let enclaveKeys =
+        await getKeysFromEnclave("kauri_client");
 
-        const ecdhPubBuf = await window.crypto.subtle.exportKey("spki", ecdhKeyPair.publicKey);
-        const ecdsaPubBuf = await window.crypto.subtle.exportKey("spki", ecdsaKeyPair.publicKey);
+      if (!enclaveKeys) {
+        const ecdhKeyPair =
+          await window.crypto.subtle.generateKey(
+            { name: "ECDH", namedCurve: "P-256" },
+            true,
+            ["deriveKey"],
+          );
+        const ecdsaKeyPair =
+          await window.crypto.subtle.generateKey(
+            { name: "ECDSA", namedCurve: "P-256" },
+            true,
+            ["sign", "verify"],
+          );
+
+        enclaveKeys = {
+          ecdhPriv: ecdhKeyPair.privateKey,
+          ecdsaPriv: ecdsaKeyPair.privateKey,
+        };
+        await saveKeysToEnclave("kauri_client", enclaveKeys);
+
+        const ecdhPubBuf = await window.crypto.subtle.exportKey(
+          "spki",
+          ecdhKeyPair.publicKey,
+        );
+        const ecdsaPubBuf =
+          await window.crypto.subtle.exportKey(
+            "spki",
+            ecdsaKeyPair.publicKey,
+          );
 
         const publicKeysJSON = JSON.stringify({
           ecdh: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`,
-          ecdsa: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`
+          ecdsa: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`,
         });
 
-        await supabase.from('profiles').update({ user_public_key: publicKeysJSON }).eq('id', profile?.id);
+        await supabase
+          .from("profiles")
+          .update({ user_public_key: publicKeysJSON })
+          .eq("id", profile?.id);
       }
 
-      let { data: dbProfile } = await supabase.from('profiles').select('user_public_key').eq('id', profile?.id).single();
+      let { data: dbProfile } = await supabase
+        .from("profiles")
+        .select("user_public_key")
+        .eq("id", profile?.id)
+        .single();
 
       if (!dbProfile?.user_public_key) {
-        const ecdhKeyPair = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]);
-        const ecdsaKeyPair = await window.crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
-        
-        enclaveKeys = { ecdhPriv: ecdhKeyPair.privateKey, ecdsaPriv: ecdsaKeyPair.privateKey };
-        await saveKeysToEnclave('kauri_client', enclaveKeys);
+        const ecdhKeyPair =
+          await window.crypto.subtle.generateKey(
+            { name: "ECDH", namedCurve: "P-256" },
+            true,
+            ["deriveKey"],
+          );
+        const ecdsaKeyPair =
+          await window.crypto.subtle.generateKey(
+            { name: "ECDSA", namedCurve: "P-256" },
+            true,
+            ["sign", "verify"],
+          );
 
-        const ecdhPubBuf = await window.crypto.subtle.exportKey("spki", ecdhKeyPair.publicKey);
-        const ecdsaPubBuf = await window.crypto.subtle.exportKey("spki", ecdsaKeyPair.publicKey);
+        enclaveKeys = {
+          ecdhPriv: ecdhKeyPair.privateKey,
+          ecdsaPriv: ecdsaKeyPair.privateKey,
+        };
+        await saveKeysToEnclave("kauri_client", enclaveKeys);
+
+        const ecdhPubBuf = await window.crypto.subtle.exportKey(
+          "spki",
+          ecdhKeyPair.publicKey,
+        );
+        const ecdsaPubBuf =
+          await window.crypto.subtle.exportKey(
+            "spki",
+            ecdsaKeyPair.publicKey,
+          );
 
         const publicKeysJSON = JSON.stringify({
           ecdh: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`,
-          ecdsa: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`
+          ecdsa: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`,
         });
 
-        const { error: updateKeyErr } = await supabase.from('profiles').update({ user_public_key: publicKeysJSON }).eq('id', profile?.id);
+        const { error: updateKeyErr } = await supabase
+          .from("profiles")
+          .update({ user_public_key: publicKeysJSON })
+          .eq("id", profile?.id);
         if (updateKeyErr) throw updateKeyErr;
 
         dbProfile = { user_public_key: publicKeysJSON };
       }
 
-      const userPublicKeys = JSON.parse(dbProfile.user_public_key);
+      const userPublicKeys = JSON.parse(
+        dbProfile.user_public_key,
+      );
       const fileBuffer = await file.arrayBuffer();
 
-      const ephKey = await window.crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveKey"]);
-      const ephPubRaw = await window.crypto.subtle.exportKey("raw", ephKey.publicKey);
+      const ephKey = await window.crypto.subtle.generateKey(
+        { name: "ECDH", namedCurve: "P-256" },
+        true,
+        ["deriveKey"],
+      );
+      const ephPubRaw = await window.crypto.subtle.exportKey(
+        "raw",
+        ephKey.publicKey,
+      );
 
-      const fek = await window.crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt"]);
-      const fileIV = window.crypto.getRandomValues(new Uint8Array(12));
-      const encryptedFileContent = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: fileIV }, fek, fileBuffer);
-      const exportedFek = await window.crypto.subtle.exportKey("raw", fek);
-      const wrapIV = window.crypto.getRandomValues(new Uint8Array(12));
+      const fek = await window.crypto.subtle.generateKey(
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt"],
+      );
+      const fileIV = window.crypto.getRandomValues(
+        new Uint8Array(12),
+      );
+      const encryptedFileContent =
+        await window.crypto.subtle.encrypt(
+          { name: "AES-GCM", iv: fileIV },
+          fek,
+          fileBuffer,
+        );
+      const exportedFek = await window.crypto.subtle.exportKey(
+        "raw",
+        fek,
+      );
+      const wrapIV = window.crypto.getRandomValues(
+        new Uint8Array(12),
+      );
 
       // Admin Enclave
-      const adminPubKey = await window.crypto.subtle.importKey("spki", pemToArrayBuffer(ADMIN_ECDH_PUBLIC_KEY_PEM), { name: "ECDH", namedCurve: "P-256" }, false, []);
-      const adminWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: adminPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
-      const adminEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, adminWrapKey, exportedFek);
+      const adminPubKey = await window.crypto.subtle.importKey(
+        "spki",
+        pemToArrayBuffer(ADMIN_ECDH_PUBLIC_KEY_PEM),
+        { name: "ECDH", namedCurve: "P-256" },
+        false,
+        [],
+      );
+      const adminWrapKey = await window.crypto.subtle.deriveKey(
+        { name: "ECDH", public: adminPubKey },
+        ephKey.privateKey,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt"],
+      );
+      const adminEncFEK = await window.crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: wrapIV },
+        adminWrapKey,
+        exportedFek,
+      );
 
       // Client Enclave
-      const userPubKey = await window.crypto.subtle.importKey("spki", pemToArrayBuffer(userPublicKeys.ecdh), { name: "ECDH", namedCurve: "P-256" }, false, []);
-      const userWrapKey = await window.crypto.subtle.deriveKey({ name: "ECDH", public: userPubKey }, ephKey.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
-      const userEncFEK = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: wrapIV }, userWrapKey, exportedFek);
+      const userPubKey = await window.crypto.subtle.importKey(
+        "spki",
+        pemToArrayBuffer(userPublicKeys.ecdh),
+        { name: "ECDH", namedCurve: "P-256" },
+        false,
+        [],
+      );
+      const userWrapKey = await window.crypto.subtle.deriveKey(
+        { name: "ECDH", public: userPubKey },
+        ephKey.privateKey,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt"],
+      );
+      const userEncFEK = await window.crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: wrapIV },
+        userWrapKey,
+        exportedFek,
+      );
 
       // Signature
-      const dataToSign = new Uint8Array(ephPubRaw.byteLength + fileIV.byteLength + encryptedFileContent.byteLength);
+      const dataToSign = new Uint8Array(
+        ephPubRaw.byteLength +
+          fileIV.byteLength +
+          encryptedFileContent.byteLength,
+      );
       dataToSign.set(new Uint8Array(ephPubRaw), 0);
       dataToSign.set(fileIV, ephPubRaw.byteLength);
-      dataToSign.set(new Uint8Array(encryptedFileContent), ephPubRaw.byteLength + fileIV.byteLength);
-      const signatureBuffer = await window.crypto.subtle.sign({ name: "ECDSA", hash: { name: "SHA-256" } }, enclaveKeys.ecdsaPriv, dataToSign);
+      dataToSign.set(
+        new Uint8Array(encryptedFileContent),
+        ephPubRaw.byteLength + fileIV.byteLength,
+      );
+      const signatureBuffer = await window.crypto.subtle.sign(
+        { name: "ECDSA", hash: { name: "SHA-256" } },
+        enclaveKeys.ecdsaPriv,
+        dataToSign,
+      );
 
-      const totalLength = 101 + adminEncFEK.byteLength + userEncFEK.byteLength + signatureBuffer.byteLength + encryptedFileContent.byteLength;
+      const totalLength =
+        101 +
+        adminEncFEK.byteLength +
+        userEncFEK.byteLength +
+        signatureBuffer.byteLength +
+        encryptedFileContent.byteLength;
       const packedBuffer = new ArrayBuffer(totalLength);
       const view = new DataView(packedBuffer);
       view.setUint32(0, adminEncFEK.byteLength, false);
@@ -468,30 +779,53 @@ export function KYCVerificationScreen() {
       packedBytes.set(fileIV, 89);
 
       let offset = 101;
-      packedBytes.set(new Uint8Array(adminEncFEK), offset); offset += adminEncFEK.byteLength;
-      packedBytes.set(new Uint8Array(userEncFEK), offset); offset += userEncFEK.byteLength;
-      packedBytes.set(new Uint8Array(signatureBuffer), offset); offset += signatureBuffer.byteLength;
-      packedBytes.set(new Uint8Array(encryptedFileContent), offset);
+      packedBytes.set(new Uint8Array(adminEncFEK), offset);
+      offset += adminEncFEK.byteLength;
+      packedBytes.set(new Uint8Array(userEncFEK), offset);
+      offset += userEncFEK.byteLength;
+      packedBytes.set(new Uint8Array(signatureBuffer), offset);
+      offset += signatureBuffer.byteLength;
+      packedBytes.set(
+        new Uint8Array(encryptedFileContent),
+        offset,
+      );
 
-      const { error: uploadError } = await supabase.storage.from('secure-kyc').upload(`${profile?.id}/${type}.enc`, new Blob([packedBytes], { type: "application/octet-stream" }), { cacheControl: '3600', upsert: true });
+      const { error: uploadError } = await supabase.storage
+        .from("secure-kyc")
+        .upload(
+          `${profile?.id}/${type}.enc`,
+          new Blob([packedBytes], {
+            type: "application/octet-stream",
+          }),
+          { cacheControl: "3600", upsert: true },
+        );
       if (uploadError) throw uploadError;
 
       const localUrl = URL.createObjectURL(file);
       if (type === "identity") {
-        setIdentityFileType(file.type === 'application/pdf' ? 'pdf' : 'image');
+        setIdentityFileType(
+          file.type === "application/pdf" ? "pdf" : "image",
+        );
         setIdentityPreviewUrl(localUrl);
         setHasExistingIdentity(true);
       } else {
-        setSelfieFileType(file.type.startsWith('video') ? 'video' : 'image');
+        setSelfieFileType(
+          file.type.startsWith("video") ? "video" : "image",
+        );
         setSelfiePreviewUrl(localUrl);
         setHasExistingSelfie(true);
       }
 
       setHasFileChanges(true);
-      toast.success("Package vidéo chiffré et transmis !", { id: toastId });
+      toast.success("Package vidéo chiffré et transmis !", {
+        id: toastId,
+      });
     } catch (err: any) {
       console.error("[Crypto Error]:", err);
-      toast.error(`Échec cryptographique: ${err.message || String(err)}`, { id: toastId });
+      toast.error(
+        `Échec cryptographique: ${err.message || String(err)}`,
+        { id: toastId },
+      );
     } finally {
       setIsActionLoading(false);
     }
@@ -506,14 +840,15 @@ export function KYCVerificationScreen() {
 
   const hasAnyMutation = isAddressChanged || hasFileChanges;
 
-  const hasIdentity = !!identityPreviewUrl || hasExistingIdentity;
+  const hasIdentity =
+    !!identityPreviewUrl || hasExistingIdentity;
   const hasSelfie = !!selfiePreviewUrl || hasExistingSelfie;
 
-  const isAddressValid = 
-    address.firstName.trim().length > 1 && 
-    address.lastName.trim().length > 1 && 
-    address.street.trim().length > 3 && 
-    address.zip.trim().length > 2 && 
+  const isAddressValid =
+    address.firstName.trim().length > 1 &&
+    address.lastName.trim().length > 1 &&
+    address.street.trim().length > 3 &&
+    address.zip.trim().length > 2 &&
     address.city.trim().length > 1;
 
   const isFilesValid = hasIdentity && hasSelfie;
@@ -524,11 +859,13 @@ export function KYCVerificationScreen() {
     if (!isFormComplete) {
       if (!isFilesValid) {
         toast.warning("Dossier Incomplet", {
-          description: "Veuillez fournir votre pièce d'identité ET effectuer la vidéo Liveness."
+          description:
+            "Veuillez fournir votre pièce d'identité ET effectuer la vidéo Liveness.",
         });
       } else if (!isAddressValid) {
         toast.warning("Champs Manquants", {
-          description: "Veuillez renseigner intégralement votre attestation de domicile."
+          description:
+            "Veuillez renseigner intégralement votre attestation de domicile.",
         });
       }
       return;
@@ -540,8 +877,10 @@ export function KYCVerificationScreen() {
     }
 
     setIsActionLoading(true);
-    const toastId = toast.loading("Mise à jour de votre attestation de résidence...");
-    
+    const toastId = toast.loading(
+      "Mise à jour de votre attestation de résidence...",
+    );
+
     try {
       const updateData: any = {
         first_name: address.firstName.trim(),
@@ -551,29 +890,38 @@ export function KYCVerificationScreen() {
         zip: address.zip.trim(),
       };
 
-      if (profile?.kyc_status !== 'verified' || hasFileChanges) {
-        updateData.kyc_status = 'pending';
+      if (
+        profile?.kyc_status !== "verified" ||
+        hasFileChanges
+      ) {
+        updateData.kyc_status = "pending";
         updateData.trust_score = 40;
       }
 
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update(updateData)
-        .eq('id', profile?.id);
+        .eq("id", profile?.id);
 
       if (error) throw error;
-      
+
       if (profile?.id) {
-        localStorage.removeItem(`kauri_address_draft_${profile.id}`);
+        localStorage.removeItem(
+          `kauri_address_draft_${profile.id}`,
+        );
       }
 
       setInitialAddress({ ...address }); // Réalignement synchrone instantané
       await refreshProfile();
-      
-      toast.success("Informations enregistrées !", { id: toastId });
+
+      toast.success("Informations enregistrées !", {
+        id: toastId,
+      });
       navigate(`/kauri/biometric-setup?type=${accountType}`);
     } catch (err) {
-      toast.error("Erreur de synchronisation réseau.", { id: toastId });
+      toast.error("Erreur de synchronisation réseau.", {
+        id: toastId,
+      });
     } finally {
       setIsActionLoading(false);
     }
@@ -581,42 +929,63 @@ export function KYCVerificationScreen() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-24 font-sans select-none">
-      <input 
-        type="file" 
-        ref={identityInputRef} 
-        onChange={(e) => handleUploadAndEncrypt("identity", e.target.files?.[0])} 
-        accept="image/*,application/pdf" 
-        className="hidden" 
+      <input
+        type="file"
+        ref={identityInputRef}
+        onChange={(e) =>
+          handleUploadAndEncrypt(
+            "identity",
+            e.target.files?.[0],
+          )
+        }
+        accept="image/*,application/pdf"
+        className="hidden"
       />
 
       <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
-        <button onClick={() => navigate(-1)} className="mb-4 text-white flex items-center gap-2 bg-transparent border-none cursor-pointer opacity-90 hover:opacity-100 transition-all">
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-4 text-white flex items-center gap-2 bg-transparent border-none cursor-pointer opacity-90 hover:opacity-100 transition-all"
+        >
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm font-semibold">Retour</span>
         </button>
 
-        <h1 className="text-white text-2xl font-black tracking-tight">Kauri KYC Hub</h1>
-        <p className="text-[#E0F2FE] text-xs opacity-90">Analyse de Liveness Vidéo & ECIES</p>
+        <h1 className="text-white text-2xl font-black tracking-tight">
+          Kauri KYC Hub
+        </h1>
+        <p className="text-[#E0F2FE] text-xs opacity-90">
+          Analyse de Liveness Vidéo & ECIES
+        </p>
       </div>
 
       <div className="px-6 py-6 max-w-md mx-auto w-full space-y-6">
-        
-        {profile?.kyc_status === 'pending' && (
+        {profile?.kyc_status === "pending" && (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-3xl p-4 flex gap-3 items-start">
             <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-xs font-bold text-amber-600">Dossier en cours d'analyse</h4>
-              <p className="text-[11px] text-amber-700/80 font-medium leading-normal mt-0.5">Vos pièces sont en cours d'analyse par le registre central.</p>
+              <h4 className="text-xs font-bold text-amber-600">
+                Dossier en cours d'analyse
+              </h4>
+              <p className="text-[11px] text-amber-700/80 font-medium leading-normal mt-0.5">
+                Vos pièces sont en cours d'analyse par le
+                registre central.
+              </p>
             </div>
           </div>
         )}
 
-        {profile?.kyc_status === 'verified' && (
+        {profile?.kyc_status === "verified" && (
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-4 flex gap-3 items-start">
             <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-xs font-bold text-emerald-600">Identité Certifiée</h4>
-              <p className="text-[11px] text-emerald-700/80 font-medium leading-normal mt-0.5">Votre compte possède le statut vérifié de conformité.</p>
+              <h4 className="text-xs font-bold text-emerald-600">
+                Identité Certifiée
+              </h4>
+              <p className="text-[11px] text-emerald-700/80 font-medium leading-normal mt-0.5">
+                Votre compte possède le statut vérifié de
+                conformité.
+              </p>
             </div>
           </div>
         )}
@@ -624,19 +993,31 @@ export function KYCVerificationScreen() {
         {isLoadingDocuments ? (
           <div className="py-20 flex flex-col items-center justify-center space-y-3 bg-white rounded-3xl border border-slate-100 shadow-md">
             <Loader2 className="w-8 h-8 animate-spin text-[#006D77]" />
-            <p className="text-xs text-slate-500 font-medium">Synchronisation de l'enclave matérielle...</p>
+            <p className="text-xs text-slate-500 font-medium">
+              Synchronisation de l'enclave matérielle...
+            </p>
           </div>
         ) : (
           <>
             <div className="space-y-4">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Justificatifs Matériels</h3>
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">
+                Justificatifs Matériels
+              </h3>
 
               {/* CARD 1 : PIÈCE D'IDENTITÉ */}
               <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-md flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-14 h-14 rounded-2xl bg-slate-900 overflow-hidden flex items-center justify-center flex-shrink-0 border border-slate-100">
                     {identityPreviewUrl ? (
-                      identityType === 'pdf' ? <FileText className="w-6 h-6 text-red-400" /> : <img src={identityPreviewUrl} alt="Identity Cache" className="w-full h-full object-cover" />
+                      identityType === "pdf" ? (
+                        <FileText className="w-6 h-6 text-red-400" />
+                      ) : (
+                        <img
+                          src={identityPreviewUrl}
+                          alt="Identity Cache"
+                          className="w-full h-full object-cover"
+                        />
+                      )
                     ) : hasExistingIdentity ? (
                       <ShieldCheck className="w-6 h-6 text-emerald-400" />
                     ) : (
@@ -644,17 +1025,31 @@ export function KYCVerificationScreen() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-sm font-bold text-[#0F172A] truncate">Pièce d'identité officielle</h4>
+                    <h4 className="text-sm font-bold text-[#0F172A] truncate">
+                      Pièce d'identité officielle
+                    </h4>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${hasIdentity ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${hasIdentity ? "bg-emerald-500" : "bg-amber-500"}`}
+                      />
                       <p className="text-[11px] text-slate-500 font-medium">
-                        {identityPreviewUrl ? 'Sécurisé ECC (Aperçu local)' : hasExistingIdentity ? 'Transmis & Scellé sur le serveur' : 'Non communiqué'}
+                        {identityPreviewUrl
+                          ? "Sécurisé ECC (Aperçu local)"
+                          : hasExistingIdentity
+                            ? "Transmis & Scellé sur le serveur"
+                            : "Non communiqué"}
                       </p>
                     </div>
                   </div>
                 </div>
-                <button onClick={() => identityInputRef.current?.click()} className="px-4 py-2.5 bg-[#006D77]/10 hover:bg-[#006D77]/20 text-[#006D77] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1">
-                  <RotateCw className="w-3.5 h-3.5" /> {hasIdentity ? "Modifier" : "Ajouter"}
+                <button
+                  onClick={() =>
+                    identityInputRef.current?.click()
+                  }
+                  className="px-4 py-2.5 bg-[#006D77]/10 hover:bg-[#006D77]/20 text-[#006D77] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <RotateCw className="w-3.5 h-3.5" />{" "}
+                  {hasIdentity ? "Modifier" : "Ajouter"}
                 </button>
               </div>
 
@@ -663,10 +1058,21 @@ export function KYCVerificationScreen() {
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-14 h-14 rounded-2xl bg-slate-900 overflow-hidden flex items-center justify-center flex-shrink-0 border border-slate-100">
                     {selfiePreviewUrl ? (
-                      selfieType === 'video' ? (
-                        <video src={selfiePreviewUrl} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+                      selfieType === "video" ? (
+                        <video
+                          src={selfiePreviewUrl}
+                          className="w-full h-full object-cover"
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                        />
                       ) : (
-                        <img src={selfiePreviewUrl} alt="Selfie Cache" className="w-full h-full object-cover" />
+                        <img
+                          src={selfiePreviewUrl}
+                          alt="Selfie Cache"
+                          className="w-full h-full object-cover"
+                        />
                       )
                     ) : hasExistingSelfie ? (
                       <ShieldCheck className="w-6 h-6 text-emerald-400" />
@@ -675,17 +1081,29 @@ export function KYCVerificationScreen() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-sm font-bold text-[#0F172A] truncate">Liveness Vidéo 3D</h4>
+                    <h4 className="text-sm font-bold text-[#0F172A] truncate">
+                      Liveness Vidéo 3D
+                    </h4>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className={`w-1.5 h-1.5 rounded-full ${hasSelfie ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${hasSelfie ? "bg-emerald-500" : "bg-amber-500"}`}
+                      />
                       <p className="text-[11px] text-slate-500 font-medium">
-                        {selfiePreviewUrl ? 'Vidéo Enregistrée & Scellée' : hasExistingSelfie ? 'Transmis & Scellé sur le serveur' : 'Preuve de vie requise'}
+                        {selfiePreviewUrl
+                          ? "Vidéo Enregistrée & Scellée"
+                          : hasExistingSelfie
+                            ? "Transmis & Scellé sur le serveur"
+                            : "Preuve de vie requise"}
                       </p>
                     </div>
                   </div>
                 </div>
-                <button onClick={startCamera} className="px-4 py-2.5 bg-gradient-to-br from-[#D4AF37]/10 to-[#FEF3C7]/20 text-[#B8860B] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1">
-                  <Camera className="w-3.5 h-3.5" /> {hasSelfie ? "Refaire" : "Démarrer"}
+                <button
+                  onClick={startCamera}
+                  className="px-4 py-2.5 bg-gradient-to-br from-[#D4AF37]/10 to-[#FEF3C7]/20 text-[#B8860B] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <Camera className="w-3.5 h-3.5" />{" "}
+                  {hasSelfie ? "Refaire" : "Démarrer"}
                 </button>
               </div>
             </div>
@@ -693,67 +1111,105 @@ export function KYCVerificationScreen() {
             {/* ── 🎯 FORMULAIRE DE RÉSIDENCE AVEC VERROU NUMÉRIQUE SUR CODE POSTAL ── */}
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Attestation de Résidence</h3>
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                  Attestation de Résidence
+                </h3>
                 {isAddressChanged && (
                   <span className="text-[10px] bg-amber-500/10 text-amber-600 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <Edit3 className="w-3 h-3" /> Modification en cours
+                    <Edit3 className="w-3 h-3" /> Modification
+                    en cours
                   </span>
                 )}
               </div>
               <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Prénom légal</label>
-                    <input 
-                      type="text" 
-                      value={address.firstName} 
-                      onChange={(e) => updateAddressField('firstName', e.target.value)} 
-                      placeholder="Marie" 
-                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
+                    <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
+                      Prénom légal
+                    </label>
+                    <input
+                      type="text"
+                      value={address.firstName}
+                      onChange={(e) =>
+                        updateAddressField(
+                          "firstName",
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Marie"
+                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
                     />
                   </div>
                   <div>
-                    <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Nom de famille</label>
-                    <input 
-                      type="text" 
-                      value={address.lastName} 
-                      onChange={(e) => updateAddressField('lastName', e.target.value)} 
-                      placeholder="Dupont" 
-                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
+                    <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
+                      Nom de famille
+                    </label>
+                    <input
+                      type="text"
+                      value={address.lastName}
+                      onChange={(e) =>
+                        updateAddressField(
+                          "lastName",
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Dupont"
+                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Numéro et libellé de voie</label>
-                  <input 
-                    type="text" 
-                    value={address.street} 
-                    onChange={(e) => updateAddressField('street', e.target.value)} 
-                    placeholder="1 Rue de la Solidarité" 
-                    className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
+                  <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
+                    Numéro et libellé de voie
+                  </label>
+                  <input
+                    type="text"
+                    value={address.street}
+                    onChange={(e) =>
+                      updateAddressField(
+                        "street",
+                        e.target.value,
+                      )
+                    }
+                    placeholder="1 Rue de la Solidarité"
+                    className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Code postal</label>
-                    <input 
-                      type="text" 
+                    <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
+                      Code postal
+                    </label>
+                    <input
+                      type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      value={address.zip} 
-                      onChange={(e) => updateAddressField('zip', e.target.value)} 
-                      placeholder="75001" 
-                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
+                      value={address.zip}
+                      onChange={(e) =>
+                        updateAddressField(
+                          "zip",
+                          e.target.value,
+                        )
+                      }
+                      placeholder="75001"
+                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
                     />
                   </div>
                   <div>
-                    <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">Ville de résidence</label>
-                    <input 
-                      type="text" 
-                      value={address.city} 
-                      onChange={(e) => updateAddressField('city', e.target.value)} 
-                      placeholder="Paris" 
-                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all" 
+                    <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
+                      Ville de résidence
+                    </label>
+                    <input
+                      type="text"
+                      value={address.city}
+                      onChange={(e) =>
+                        updateAddressField(
+                          "city",
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Paris"
+                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
                     />
                   </div>
                 </div>
@@ -761,13 +1217,20 @@ export function KYCVerificationScreen() {
             </div>
 
             {/* ── 🚀 BOUTON D'ACTION PRINCIPAL ACTIF ET FLUIDE ── */}
-            <button 
-              onClick={handleMainAction} 
-              disabled={isActionLoading || (!isFormComplete && !isActionLoading)} 
+            <button
+              onClick={handleMainAction}
+              disabled={
+                isActionLoading ||
+                (!isFormComplete && !isActionLoading)
+              }
               className={`w-full py-4 rounded-2xl mt-4 shadow-lg font-bold text-sm tracking-wide transition-all active:scale-[0.99] border-none flex items-center justify-center gap-2 cursor-pointer
-                ${!isFormComplete ? "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none" : 
-                  hasAnyMutation ? "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20" : 
-                  "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20"}`}
+                ${
+                  !isFormComplete
+                    ? "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none"
+                    : hasAnyMutation
+                      ? "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20"
+                      : "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20"
+                }`}
             >
               {isActionLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -776,12 +1239,15 @@ export function KYCVerificationScreen() {
               ) : (
                 <ArrowRight className="w-4 h-4" />
               )}
-              
+
               <span>
-                {isActionLoading ? "Synchronisation..." : 
-                 !isFormComplete ? "Dossier incomplet" :
-                 hasAnyMutation ? "Enregistrer les modifications" : 
-                 "Valider et continuer →"}
+                {isActionLoading
+                  ? "Synchronisation..."
+                  : !isFormComplete
+                    ? "Dossier incomplet"
+                    : hasAnyMutation
+                      ? "Enregistrer les modifications"
+                      : "Valider et continuer →"}
               </span>
             </button>
           </>
@@ -791,56 +1257,72 @@ export function KYCVerificationScreen() {
       {/* 🎥 MODALE DE SÉQUENCE VIDÉO */}
       {showCamera && (
         <div className="fixed inset-0 z-50 bg-[#F4F4F5] flex flex-col items-center justify-center p-4 md:p-8">
-          
           <div className="absolute top-6 left-6 z-20">
-            <button onClick={stopCamera} disabled={recordingState !== 'idle'} className="bg-white border border-slate-200 text-[#2B6CB0] px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors disabled:opacity-50">
+            <button
+              onClick={stopCamera}
+              disabled={recordingState !== "idle"}
+              className="bg-white border border-slate-200 text-[#2B6CB0] px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
               <ArrowLeft className="w-4 h-4" /> Annuler
             </button>
           </div>
 
           <div className="bg-white w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl flex flex-col border border-slate-100">
-            
             <div className="p-5 text-center z-10 bg-white shadow-sm relative min-h-[72px] flex items-center justify-center">
               <h2 className="text-[#0F172A] font-extrabold text-[15px] tracking-tight transition-all">
-                {recordingState === 'idle' && "Placez votre visage dans le cadre"}
-                {recordingState === 'front' && "Regardez fixement l'objectif..."}
-                {recordingState === 'left' && "Tournez la tête à GAUCHE..."}
-                {recordingState === 'right' && "Tournez la tête à DROITE..."}
-                {recordingState === 'processing' && "Analyse en cours..."}
+                {recordingState === "idle" &&
+                  "Placez votre visage dans le cadre"}
+                {recordingState === "front" &&
+                  "Regardez fixement l'objectif..."}
+                {recordingState === "left" &&
+                  "Tournez la tête à GAUCHE..."}
+                {recordingState === "right" &&
+                  "Tournez la tête à DROITE..."}
+                {recordingState === "processing" &&
+                  "Analyse en cours..."}
               </h2>
             </div>
-            
+
             <div className="relative w-full h-[60vh] min-h-[400px] bg-slate-200 flex items-center justify-center overflow-hidden">
-              <video 
-                ref={videoRef} 
-                className="absolute inset-0 w-full h-full object-cover" 
-                playsInline 
-                muted 
+              <video
+                ref={videoRef}
+                className="absolute inset-0 w-full h-full object-cover"
+                playsInline
+                muted
                 autoPlay
               />
-              
+
               <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center overflow-hidden">
-                <div className={`relative w-[260px] h-[360px] rounded-[130px] border-4 transition-colors duration-300 shadow-[0_0_0_9999px_rgba(255,255,255,0.85)] ${recordingState !== 'idle' && recordingState !== 'processing' ? 'border-[#2B6CB0]' : 'border-[#64748B]'}`}></div>
+                <div
+                  className={`relative w-[260px] h-[360px] rounded-[130px] border-4 transition-colors duration-300 shadow-[0_0_0_9999px_rgba(255,255,255,0.85)] ${recordingState !== "idle" && recordingState !== "processing" ? "border-[#2B6CB0]" : "border-[#64748B]"}`}
+                ></div>
               </div>
             </div>
-            
+
             <div className="p-6 bg-[#F8FAFC] flex flex-col gap-3 z-10 border-t border-slate-200">
-              <button 
-                onClick={startVideoLivenessSequence} 
-                disabled={recordingState !== 'idle'}
+              <button
+                onClick={startVideoLivenessSequence}
+                disabled={recordingState !== "idle"}
                 className="w-full bg-[#2B6CB0] hover:bg-[#1E4E8C] text-white py-4 rounded-xl font-bold text-[13px] transition-all flex items-center justify-center gap-2 cursor-pointer border-none shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {recordingState === 'idle' ? (
-                  <> <Video className="w-5 h-5" /> Démarrer l'enregistrement </>
+                {recordingState === "idle" ? (
+                  <>
+                    {" "}
+                    <Video className="w-5 h-5" /> Démarrer
+                    l'enregistrement{" "}
+                  </>
                 ) : (
-                  <> <Loader2 className="w-5 h-5 animate-spin" /> Ne quittez pas le cadre... </>
+                  <>
+                    {" "}
+                    <Loader2 className="w-5 h-5 animate-spin" />{" "}
+                    Ne quittez pas le cadre...{" "}
+                  </>
                 )}
               </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

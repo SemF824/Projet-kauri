@@ -1,13 +1,15 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Heart, MessageCircle, Bookmark, Volume2, VolumeX, Music,
   X, Send, Copy, Flag, ChevronRight, Users,
   CheckCircle, Share2, Lock, ArrowLeft, Check, Globe,
+  MoreVertical, Pencil, Trash2, BarChart2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { addComment, setFollowPro } from '../../../../utils/supabase';
+import { useProPublications, type ProPublication } from '../../../contexts/ProPublicationsContext';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,6 +50,47 @@ interface Post {
   trustScore: number;
   accountType: 'pro' | 'association' | 'porteur';
   commentsList: Comment[];
+  isOwn?: boolean;
+  mediaUrl?: string;
+  mediaType?: 'video' | 'image';
+  music?: { title: string; artist: string; artwork: string; previewUrl?: string };
+}
+
+// ── Conversion ProPublication → Post ──────────────────────────────────────────
+const CAT_TO_BGTYPE: Record<string, Post['bgType']> = {
+  Finance: 'finance', Agriculture: 'agriculture', Tech: 'tech',
+  Immobilier: 'immo', Restauration: 'finance',
+  Artisanat: 'tontine', Commerce: 'tontine', Social: 'tontine',
+};
+
+function pubToPost(pub: ProPublication): Post {
+  const initials = (pub.project || pub.title).slice(0, 2).toUpperCase();
+  return {
+    id: 'pro_' + pub.id,
+    handle: '@' + (pub.project || 'pro').toLowerCase().replace(/\s+/g, '_'),
+    displayName: pub.project || pub.title,
+    initials,
+    avatarGrad: ['#D4AF37', '#B05B3B'],
+    isVerified: true,
+    isFollowing: false,
+    caption: pub.title,
+    likes: pub.stats.likes,
+    comments: pub.stats.comments,
+    shares: pub.stats.partages,
+    isLiked: false,
+    isSaved: false,
+    duration: '0:30',
+    audio: pub.music ? `${pub.music.title} — ${pub.music.artist}` : 'Son original · KAURI Pro',
+    category: pub.category,
+    bgType: CAT_TO_BGTYPE[pub.category] ?? 'tontine',
+    trustScore: 4.8,
+    accountType: 'pro',
+    commentsList: [],
+    isOwn: true,
+    mediaUrl: pub.thumbnail || undefined,
+    mediaType: pub.type === 'video' ? 'video' : 'image',
+    music: pub.music ?? undefined,
+  };
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -55,30 +98,30 @@ interface Post {
 const INITIAL_POSTS: Post[] = [
   {
     id: '1',
-    handle: '@laura_invest',
-    displayName: 'Laura Invest',
-    initials: 'LI',
+    handle: '@laura_kauri',
+    displayName: 'Laura Mensah',
+    initials: 'LM',
     avatarGrad: ['#006D77', '#D4AF37'],
     isVerified: true,
     isFollowing: false,
-    caption:
-      'Comment financer son projet agricole au pays sans passer par les banques classiques 🌴💸 #Kauri #Diaspora #Souverainete',
+    caption: "5 raisons pour lesquelles la diaspora africaine abandonne les banques classiques 🏦❌ Et ce qu'elle fait à la place. Thread complet 👇 #Kauri #FinanceAfricaine #Diaspora",
     likes: 12400,
     comments: 342,
     shares: 891,
     isLiked: false,
     isSaved: false,
     duration: '0:47',
-    audio: 'Son original - KAURI Academy',
+    audio: 'Son original — Laura Mensah',
     category: 'Finance',
     bgType: 'finance',
     trustScore: 4.9,
     accountType: 'pro',
+    mediaUrl: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&q=80',
     commentsList: [
-      { id: 'c1', author: 'Jean-Baptiste', initials: 'JB', color: '#006D77', text: 'Super contenu ! Merci pour ces conseils pratiques 🙏', time: '2h', likes: 24, isLiked: false },
-      { id: 'c2', author: 'Marie Claire', initials: 'MC', color: '#B05B3B', text: 'Est-ce que vous proposez des formations pour aller plus loin ?', time: '1h', likes: 8, isLiked: false },
-      { id: 'c3', author: 'Rodrigue K.', initials: 'RK', color: '#8B5CF6', text: 'J\'ai suivi ce conseil l\'an dernier et ça a vraiment marché pour moi à la Réunion !', time: '45min', likes: 41, isLiked: true },
-      { id: 'c4', author: 'Sophie L.', initials: 'SL', color: '#059669', text: 'Partagé à toute ma famille ! Exactement ce qu\'il nous fallait.', time: '20min', likes: 15, isLiked: false },
+      { id: 'c1', author: 'Jean-Baptiste M.', initials: 'JB', color: '#006D77', text: 'Exactement ce dont la diaspora a besoin. Merci pour ce contenu éducatif 🙏', time: '2h', likes: 24, isLiked: false },
+      { id: 'c2', author: 'Marie-Claire D.', initials: 'MC', color: '#B05B3B', text: 'Est-ce que vous proposez un accompagnement personnalisé ?', time: '1h', likes: 8, isLiked: false },
+      { id: 'c3', author: 'Rodrigue K.', initials: 'RK', color: '#8B5CF6', text: "J'ai suivi ce conseil l'an dernier et ça a changé ma vie à La Réunion 🌟", time: '45min', likes: 41, isLiked: true },
+      { id: 'c4', author: 'Sophie L.', initials: 'SL', color: '#059669', text: 'Partagé à toute ma famille et mes amis. Merci !', time: '20min', likes: 15, isLiked: false },
     ],
   },
   {
@@ -89,23 +132,23 @@ const INITIAL_POSTS: Post[] = [
     avatarGrad: ['#1A5C33', '#D4AF37'],
     isVerified: false,
     isFollowing: true,
-    caption:
-      "De Paris à mon village en Martinique — comment j'ai transformé 2 000€ en ferme bio grâce aux tontines 🌱 Le thread complet 👇",
+    caption: "De Paris à ma ferme bio en Martinique 🌱 Comment j'ai transformé 2 000€ d'économies en une coopérative qui nourrit 50 familles. Avec KAURI, seul on va vite, ensemble on va loin. #AgriCaraïbes #Tontine",
     likes: 8920,
     comments: 671,
     shares: 345,
     isLiked: true,
     isSaved: true,
     duration: '1:12',
-    audio: 'Diaspora Beats Vol.3 - DJ Kali',
+    audio: 'Diaspora Beats Vol.3 — DJ Kali',
     category: 'Agriculture',
     bgType: 'agriculture',
     trustScore: 4.6,
     accountType: 'porteur',
+    mediaUrl: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80',
     commentsList: [
-      { id: 'c1', author: 'Isabelle M.', initials: 'IM', color: '#D4AF37', text: 'Incroyable parcours ! Vous inspirez tellement de gens de la diaspora 🌱', time: '3h', likes: 56, isLiked: false },
-      { id: 'c2', author: 'Marcus J.', initials: 'MJ', color: '#3B82F6', text: 'Combien de temps pour rentabiliser l\'investissement initial ?', time: '2h', likes: 12, isLiked: false },
-      { id: 'c3', author: 'Fatou D.', initials: 'FD', color: '#EC4899', text: 'Je suis en train de planifier la même chose pour le Sénégal. On pourrait échanger ?', time: '1h', likes: 33, isLiked: false },
+      { id: 'c1', author: 'Isabelle M.', initials: 'IM', color: '#D4AF37', text: 'Parcours incroyable ! Tu inspires toute la diaspora 🌱', time: '3h', likes: 56, isLiked: false },
+      { id: 'c2', author: 'Marcus J.', initials: 'MJ', color: '#3B82F6', text: 'Combien de temps pour atteindre la rentabilité ?', time: '2h', likes: 12, isLiked: false },
+      { id: 'c3', author: 'Fatou D.', initials: 'FD', color: '#EC4899', text: "Je planifie la même chose au Sénégal. On peut échanger ?", time: '1h', likes: 33, isLiked: false },
     ],
   },
   {
@@ -116,79 +159,78 @@ const INITIAL_POSTS: Post[] = [
     avatarGrad: ['#3D1F66', '#D4AF37'],
     isVerified: true,
     isFollowing: false,
-    caption:
-      "La tontine : l'ancêtre des fintechs ? 🐚 Découvrez comment nos ancêtres ont inventé la finance solidaire bien avant Silicon Valley 🔥 #KauriPower",
+    caption: "La tontine, c'est la fintech que nos ancêtres ont inventée 500 ans avant Silicon Valley 🐚🔥 Decentralisée, sans frais, sans banque. Et si on la modernisait ensemble ? #KauriPower #FinanceSolidaire #Heritage",
     likes: 22100,
     comments: 1203,
     shares: 4500,
     isLiked: false,
     isSaved: false,
     duration: '2:34',
-    audio: 'Son original - Aminata Koné',
+    audio: 'Son original — Aminata Koné',
     category: 'Héritage',
     bgType: 'tontine',
     trustScore: 5.0,
     accountType: 'association',
     commentsList: [
       { id: 'c1', author: 'David N.', initials: 'DN', color: '#006D77', text: "Cette vidéo devrait être enseignée dans toutes les écoles ! 🔥", time: '5h', likes: 412, isLiked: true },
-      { id: 'c2', author: 'Aissatou B.', initials: 'AB', color: '#D4AF37', text: 'Ma grand-mère me parlait de ça ! Si fière de notre héritage financier.', time: '4h', likes: 287, isLiked: false },
-      { id: 'c3', author: 'Thomas V.', initials: 'TV', color: '#8B5CF6', text: 'Incroyable perspective. On a tellement à apprendre de nos traditions.', time: '3h', likes: 156, isLiked: false },
-      { id: 'c4', author: 'Nadia M.', initials: 'NM', color: '#EC4899', text: 'Partagé à mes 3 groupes WhatsApp 😂 tout le monde doit voir ça', time: '2h', likes: 98, isLiked: false },
-      { id: 'c5', author: 'Yves K.', initials: 'YK', color: '#059669', text: "J'organise justement une tontine dans mon quartier depuis 2 ans. Très content que ça prenne de l'ampleur!", time: '1h', likes: 73, isLiked: false },
+      { id: 'c2', author: 'Aissatou B.', initials: 'AB', color: '#D4AF37', text: 'Ma grand-mère me parlait de ça. Tellement fière de notre héritage 🙌', time: '4h', likes: 287, isLiked: false },
+      { id: 'c3', author: 'Thomas V.', initials: 'TV', color: '#8B5CF6', text: 'Perspective incroyable. On a tellement à apprendre de nos traditions.', time: '3h', likes: 156, isLiked: false },
+      { id: 'c4', author: 'Nadia M.', initials: 'NM', color: '#EC4899', text: 'Partagé dans mes 3 groupes WhatsApp 😂 tout le monde doit voir ça', time: '2h', likes: 98, isLiked: false },
+      { id: 'c5', author: 'Yves K.', initials: 'YK', color: '#059669', text: "J'organise une tontine dans mon quartier depuis 2 ans. Super que ça prenne de l'ampleur!", time: '1h', likes: 73, isLiked: false },
     ],
   },
   {
     id: '4',
-    handle: '@marcus_tech',
+    handle: '@marcus_techafrika',
     displayName: 'Marcus Johnson',
     initials: 'MJ',
     avatarGrad: ['#0A1628', '#006D77'],
     isVerified: true,
     isFollowing: false,
-    caption:
-      "J'ai levé 50k€ pour ma startup tech en 30 jours via la communauté KAURI. Voici mon playbook complet 🚀💡 #Tech #Diaspora #Entrepreneuriat",
+    caption: "50 000€ levés en 30 jours via KAURI pour ma startup d'IA agricole 🚀 Le playbook complet — de la pitch deck aux 47 premiers investisseurs de la communauté. DM pour le PDF gratuit. #TechDiaspora #Startup #IA",
     likes: 15600,
     comments: 892,
     shares: 2300,
     isLiked: false,
     isSaved: false,
     duration: '1:58',
-    audio: 'Future Vibes - KAURI FM',
+    audio: 'Future Vibes — KAURI FM',
     category: 'Tech',
     bgType: 'tech',
     trustScore: 4.8,
     accountType: 'porteur',
+    mediaUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600&q=80',
     commentsList: [
-      { id: 'c1', author: 'Kevin P.', initials: 'KP', color: '#006D77', text: 'Respect 🙌 La communauté KAURI est vraiment puissante', time: '6h', likes: 89, isLiked: false },
-      { id: 'c2', author: 'Carla S.', initials: 'CS', color: '#EC4899', text: "C'est exactement ce dont on a besoin dans l'éco-système tech afro-caribéen !", time: '4h', likes: 134, isLiked: false },
-      { id: 'c3', author: 'Léon T.', initials: 'LT', color: '#D4AF37', text: 'Quel est votre secteur ? App mobile ou SaaS ?', time: '2h', likes: 21, isLiked: false },
+      { id: 'c1', author: 'Kevin P.', initials: 'KP', color: '#006D77', text: 'Respect 🙌 La communauté KAURI est vraiment incroyable', time: '6h', likes: 89, isLiked: false },
+      { id: 'c2', author: 'Carla S.', initials: 'CS', color: '#EC4899', text: "C'est exactement ce que l'éco-système tech afro-caribéen attendait !", time: '4h', likes: 134, isLiked: false },
+      { id: 'c3', author: 'Léon T.', initials: 'LT', color: '#D4AF37', text: "C'est quoi votre secteur exactement ? App mobile ou SaaS B2B ?", time: '2h', likes: 21, isLiked: false },
     ],
   },
   {
     id: '5',
-    handle: '@sophie_immo',
+    handle: '@sophie_immo_antilles',
     displayName: 'Sophie Laurent',
     initials: 'SL',
     avatarGrad: ['#B05B3B', '#D4AF37'],
     isVerified: true,
     isFollowing: false,
-    caption:
-      "Mon premier appartement à Fort-de-France à 28 ans 🏠✨ — voici comment KAURI m'a aidée à concrétiser ce rêve sans apport classique 🔑 #Immobilier #Patrimoine",
+    caption: "Mon premier appartement à Fort-de-France à 28 ans 🏠✨ Sans apport bancaire classique, grâce à 12 personnes de ma tontine KAURI. Je vous explique comment on a fait et ce que la banque ne veut pas que vous sachiez. #Immobilier #Patrimoine #Antilles",
     likes: 31200,
     comments: 2890,
     shares: 7600,
     isLiked: true,
     isSaved: true,
     duration: '3:15',
-    audio: 'Île de Rêves - Kalani',
+    audio: 'Île de Rêves — Kalani',
     category: 'Immobilier',
     bgType: 'immo',
     trustScore: 4.7,
     accountType: 'pro',
+    mediaUrl: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&q=80',
     commentsList: [
-      { id: 'c1', author: 'Amanda C.', initials: 'AC', color: '#B05B3B', text: 'Vous avez réalisé mon rêve en vidéo 😭 Merci pour ce contenu si inspirant', time: '8h', likes: 312, isLiked: false },
-      { id: 'c2', author: 'Pierre B.', initials: 'PB', color: '#006D77', text: 'Quel taux de crédit avez-vous obtenu ? Banque locale ou métropole ?', time: '7h', likes: 54, isLiked: false },
-      { id: 'c3', author: 'Nelly G.', initials: 'NG', color: '#8B5CF6', text: 'Moi aussi je veux mon chez-moi aux Antilles ! Vous proposez un accompagnement ?', time: '5h', likes: 78, isLiked: false },
+      { id: 'c1', author: 'Amanda C.', initials: 'AC', color: '#B05B3B', text: "Vous avez mis en images mon rêve 😭 Ce contenu est tellement inspirant", time: '8h', likes: 312, isLiked: false },
+      { id: 'c2', author: 'Pierre B.', initials: 'PB', color: '#006D77', text: 'Quel taux avez-vous obtenu ? Banque locale ou en métropole ?', time: '7h', likes: 54, isLiked: false },
+      { id: 'c3', author: 'Nelly G.', initials: 'NG', color: '#8B5CF6', text: 'Je veux mon chez-moi aux Antilles aussi ! Vous proposez un coaching ?', time: '5h', likes: 78, isLiked: false },
     ],
   },
 ];
@@ -1021,8 +1063,24 @@ export default function DecouverteScreen() {
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastTapRef = useRef(0);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const musicAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+
+  const { publications } = useProPublications();
+
+  // Nouvelles publications pro (en tête de feed)
+  const proPosts = useMemo<Post[]>(() => publications.map(pubToPost), [publications]);
 
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
+  // Interactions locales sur les proPosts (like, save, follow)
+  const [proInteract, setProInteract] = useState<Record<string, Partial<Post>>>({});
+
+  // Feed fusionné : proPosts (avec overrides) + posts existants
+  const allPosts = useMemo<Post[]>(() => [
+    ...proPosts.map(p => ({ ...p, ...(proInteract[p.id] ?? {}) })),
+    ...posts,
+  ], [proPosts, posts, proInteract]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [tab, setTab] = useState<'abonnements' | 'pourvous'>('pourvous');
@@ -1033,7 +1091,75 @@ export default function DecouverteScreen() {
   const [shareOpen, setShareOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
 
-  const currentPost = posts[currentIndex];
+  // Creator tools state
+  const [creatorMenuOpen, setCreatorMenuOpen] = useState(false);
+  const [editCaptionOpen, setEditCaptionOpen] = useState(false);
+  const [editCaptionText, setEditCaptionText] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  const currentPost = allPosts[currentIndex] ?? allPosts[0];
+
+  // ── Contrôle vidéo : joue uniquement la slide visible ─────────────────────
+  useEffect(() => {
+    videoRefs.current.forEach((v, i) => {
+      if (!v) return;
+      if (i === currentIndex) {
+        v.muted = isMuted;
+        v.play().catch(() => {});
+      } else {
+        v.pause();
+        v.currentTime = 0;
+      }
+    });
+    // Sync mute sur l'audio musique
+    if (musicAudioRef.current) {
+      musicAudioRef.current.muted = isMuted;
+    }
+  }, [currentIndex, isMuted]);
+
+  // ── Contrôle musique : démarre automatiquement au scroll ──────────────────
+  useEffect(() => {
+    // Stopper la musique du post précédent
+    musicAudioRef.current?.pause();
+    musicAudioRef.current = null;
+    setMusicPlaying(false);
+
+    // Démarrer automatiquement si le nouveau post a une musique
+    const previewUrl = allPosts[currentIndex]?.music?.previewUrl;
+    if (previewUrl) {
+      const audio = new Audio(previewUrl);
+      audio.muted = isMuted;
+      audio.onended = () => setMusicPlaying(false);
+      audio.play().catch(() => {});
+      musicAudioRef.current = audio;
+      setMusicPlaying(true);
+    }
+  }, [currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Sync mute en temps réel (sans attendre un scroll) ─────────────────────
+  useEffect(() => {
+    if (musicAudioRef.current) musicAudioRef.current.muted = isMuted;
+  }, [isMuted]);
+
+  // Nettoyage audio à l'unmount
+  useEffect(() => () => { musicAudioRef.current?.pause(); }, []);
+
+  const toggleMusic = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    const previewUrl = currentPost?.music?.previewUrl;
+    if (!previewUrl) return;
+    if (musicPlaying) {
+      musicAudioRef.current?.pause();
+      setMusicPlaying(false);
+    } else {
+      if (!musicAudioRef.current) {
+        musicAudioRef.current = new Audio(previewUrl);
+        musicAudioRef.current.onended = () => setMusicPlaying(false);
+      }
+      musicAudioRef.current.play().catch(() => {});
+      setMusicPlaying(true);
+    }
+  }, [currentPost, musicPlaying]);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
@@ -1048,31 +1174,78 @@ export default function DecouverteScreen() {
   }, [currentIndex]);
 
   const toggleLike = (id: string) => {
-    setPosts((prev) =>
-      prev.map((p) =>
+    if (id.startsWith('pro_')) {
+      setProInteract(prev => {
+        const cur = prev[id] ?? {};
+        const post = allPosts.find(p => p.id === id)!;
+        const isLiked = !post.isLiked;
+        return { ...prev, [id]: { ...cur, isLiked, likes: isLiked ? post.likes + 1 : post.likes - 1 } };
+      });
+    } else {
+      setPosts((prev) => prev.map((p) =>
         p.id === id ? { ...p, isLiked: !p.isLiked, likes: p.isLiked ? p.likes - 1 : p.likes + 1 } : p,
-      ),
-    );
+      ));
+    }
   };
 
   const toggleSave = (id: string) => {
-    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, isSaved: !p.isSaved } : p)));
+    if (id.startsWith('pro_')) {
+      setProInteract(prev => {
+        const cur = prev[id] ?? {};
+        const post = allPosts.find(p => p.id === id)!;
+        return { ...prev, [id]: { ...cur, isSaved: !post.isSaved } };
+      });
+    } else {
+      setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, isSaved: !p.isSaved } : p)));
+    }
+  };
+
+  const saveEditCaption = () => {
+    if (currentPost.id.startsWith('pro_')) {
+      setProInteract(prev => ({ ...prev, [currentPost.id]: { ...(prev[currentPost.id] ?? {}), caption: editCaptionText } }));
+    } else {
+      setPosts(prev => prev.map(p => p.id === currentPost.id ? { ...p, caption: editCaptionText } : p));
+    }
+    setEditCaptionOpen(false);
+    setCreatorMenuOpen(false);
+    toast.success('Description mise à jour');
+  };
+
+  const deletePost = () => {
+    // Les proPosts viennent du contexte — on ne les supprime pas ici (gérer depuis ProPublicationStats)
+    setPosts(prev => prev.filter(p => p.id !== currentPost.id));
+    setDeleteConfirmOpen(false);
+    setCreatorMenuOpen(false);
+    setCurrentIndex(i => Math.max(0, i - 1));
+    toast.success('Publication supprimée');
   };
 
   const toggleFollow = (id: string) => {
-    const post = posts.find(p => p.id === id);
+    const post = allPosts.find(p => p.id === id);
     if (!post) return;
     const nowFollowing = !post.isFollowing;
-    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, isFollowing: nowFollowing } : p)));
+    if (id.startsWith('pro_')) {
+      setProInteract(prev => ({ ...prev, [id]: { ...(prev[id] ?? {}), isFollowing: nowFollowing } }));
+    } else {
+      setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, isFollowing: nowFollowing } : p)));
+    }
     setFollowPro(`decouverte_${id}`, nowFollowing).catch(() => {
-      setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, isFollowing: !nowFollowing } : p)));
+      if (id.startsWith('pro_')) {
+        setProInteract(prev => ({ ...prev, [id]: { ...(prev[id] ?? {}), isFollowing: !nowFollowing } }));
+      } else {
+        setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, isFollowing: !nowFollowing } : p)));
+      }
     });
   };
 
   const updatePostComments = (postId: string, newComments: Comment[]) => {
-    setPosts(prev => prev.map(p =>
-      p.id === postId ? { ...p, commentsList: newComments, comments: newComments.length } : p
-    ));
+    if (postId.startsWith('pro_')) {
+      setProInteract(prev => ({ ...prev, [postId]: { ...(prev[postId] ?? {}), commentsList: newComments, comments: newComments.length } }));
+    } else {
+      setPosts(prev => prev.map(p =>
+        p.id === postId ? { ...p, commentsList: newComments, comments: newComments.length } : p
+      ));
+    }
   };
 
   const handleVideoTap = useCallback(
@@ -1081,7 +1254,7 @@ export default function DecouverteScreen() {
       const now = Date.now();
       if (now - lastTapRef.current < 320) {
         setFloatingHeart({ x: e.clientX, y: e.clientY });
-        if (!posts[currentIndex].isLiked) toggleLike(posts[currentIndex].id);
+        if (!allPosts[currentIndex]?.isLiked) toggleLike(allPosts[currentIndex]?.id ?? '');
         setTimeout(() => setFloatingHeart(null), 900);
       }
       lastTapRef.current = now;
@@ -1127,13 +1300,41 @@ export default function DecouverteScreen() {
             zIndex: 0,
           }}
         >
-          {posts.map((post) => (
+          {allPosts.map((post, idx) => (
             <div
               key={post.id}
               onClick={handleVideoTap}
               style={{ height: '100dvh', scrollSnapAlign: 'start', position: 'relative', flexShrink: 0, cursor: 'pointer' }}
             >
               <VideoBackground bgType={post.bgType} />
+
+              {/* Vidéo uploadée (blob URL) ou URL directe mp4 */}
+              {post.mediaUrl && post.mediaType === 'video' && (
+                <video
+                  ref={el => { videoRefs.current[idx] = el; }}
+                  src={post.mediaUrl}
+                  playsInline
+                  loop
+                  muted={isMuted}
+                  style={{
+                    position: 'absolute', inset: 0, width: '100%', height: '100%',
+                    objectFit: 'cover',
+                  }}
+                />
+              )}
+
+              {/* Image (photo uploadée ou URL) */}
+              {post.mediaUrl && post.mediaType !== 'video' && (
+                <img
+                  src={post.mediaUrl}
+                  alt=""
+                  style={{
+                    position: 'absolute', inset: 0, width: '100%', height: '100%',
+                    objectFit: 'cover', opacity: 0.88,
+                  }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -1238,21 +1439,31 @@ export default function DecouverteScreen() {
                 {currentPost.initials}
               </span>
             </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleFollow(currentPost.id); }}
-              style={{
+            {currentPost.isOwn ? (
+              <div style={{
                 position: 'absolute', bottom: -10, left: '50%', transform: 'translateX(-50%)',
                 width: 22, height: 22, borderRadius: '50%',
-                background: currentPost.isFollowing ? '#4A4A4A' : '#B05B3B',
-                border: '2px solid white',
+                background: '#D4AF37', border: '2px solid white',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'white', lineHeight: 1,
-                transition: 'background 0.25s',
-              }}
-              aria-label={currentPost.isFollowing ? 'Ne plus suivre' : 'Suivre'}
-            >
-              {currentPost.isFollowing ? '✓' : '+'}
-            </button>
+                fontSize: 10, fontWeight: 800, color: 'white',
+              }}>★</div>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleFollow(currentPost.id); }}
+                style={{
+                  position: 'absolute', bottom: -10, left: '50%', transform: 'translateX(-50%)',
+                  width: 22, height: 22, borderRadius: '50%',
+                  background: currentPost.isFollowing ? '#4A4A4A' : '#B05B3B',
+                  border: '2px solid white',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'white', lineHeight: 1,
+                  transition: 'background 0.25s',
+                }}
+                aria-label={currentPost.isFollowing ? 'Ne plus suivre' : 'Suivre'}
+              >
+                {currentPost.isFollowing ? '✓' : '+'}
+              </button>
+            )}
           </div>
 
           {/* Like */}
@@ -1347,6 +1558,31 @@ export default function DecouverteScreen() {
               <Bookmark size={22} fill={currentPost.isSaved ? '#D4AF37' : 'none'} color={currentPost.isSaved ? '#D4AF37' : 'white'} strokeWidth={1.8} />
             </motion.div>
           </button>
+
+          {/* ── Creator menu button (own posts only) ── */}
+          {currentPost.isOwn && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setCreatorMenuOpen(true); }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', marginTop: 4 }}
+            >
+              <motion.div
+                whileTap={{ scale: 1.15 }}
+                style={{
+                  width: 52, height: 52, borderRadius: '50%',
+                  background: 'rgba(212,175,55,0.25)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1.5px solid rgba(212,175,55,0.6)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }}
+              >
+                <MoreVertical size={22} color="#D4AF37" strokeWidth={2} />
+              </motion.div>
+              <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 10, fontWeight: 600, textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>
+                Gérer
+              </span>
+            </button>
+          )}
         </div>
 
         {/* ── 5. BOTTOM INFO AREA ───────────────────────────────── */}
@@ -1402,38 +1638,75 @@ export default function DecouverteScreen() {
             )}
           </div>
 
-          {/* Audio track */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)', borderRadius: 20, padding: '6px 12px',
-            border: '1px solid rgba(255,255,255,0.12)', maxWidth: 240, overflow: 'hidden',
-          }}>
-            <Music size={12} color="#D4AF37" strokeWidth={2} style={{ flexShrink: 0 }} />
+          {/* Audio track — cliquable pour lecture 30s */}
+          <button
+            onClick={toggleMusic}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: musicPlaying ? 'rgba(212,175,55,0.18)' : 'rgba(0,0,0,0.45)',
+              backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+              borderRadius: 20, padding: '5px 10px 5px 6px',
+              border: `1px solid ${musicPlaying ? 'rgba(212,175,55,0.5)' : 'rgba(255,255,255,0.12)'}`,
+              maxWidth: 240, overflow: 'hidden', cursor: currentPost.music?.previewUrl ? 'pointer' : 'default',
+              transition: 'all 0.25s',
+            }}
+          >
+            {/* Pochette / icône */}
+            {currentPost.music?.artwork ? (
+              <img
+                src={currentPost.music.artwork}
+                alt=""
+                style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1.5px solid rgba(212,175,55,0.6)' }}
+              />
+            ) : (
+              <Music size={12} color="#D4AF37" strokeWidth={2} style={{ flexShrink: 0, marginLeft: 2 }} />
+            )}
+
+            {/* Ticker titre */}
             <div style={{ overflow: 'hidden', flex: 1 }}>
               <motion.div
                 key={currentPost.id}
                 style={{ display: 'flex', gap: 40, whiteSpace: 'nowrap' }}
                 animate={{ x: ['0%', '-50%'] }}
-                transition={{ duration: 6, repeat: Infinity, ease: 'linear', repeatType: 'loop' }}
+                transition={{ duration: 8, repeat: Infinity, ease: 'linear', repeatType: 'loop' }}
               >
-                <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: 500 }}>{currentPost.audio}</span>
-                <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: 500 }}>{currentPost.audio}</span>
+                <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: 500 }}>{currentPost.audio}</span>
+                <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: 500 }}>{currentPost.audio}</span>
               </motion.div>
             </div>
-            <motion.div
-              style={{
-                width: 28, height: 28, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #1a1a1a, #333)',
-                border: '2px solid rgba(212,175,55,0.5)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-            >
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#D4AF37' }} />
-            </motion.div>
-          </div>
+
+            {/* Disque tournant ou bouton play/pause */}
+            {currentPost.music?.previewUrl ? (
+              <div style={{
+                width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(212,175,55,0.25)', border: '1.5px solid rgba(212,175,55,0.7)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {musicPlaying
+                  ? <div style={{ width: 8, height: 8, borderLeft: '2.5px solid #D4AF37', borderRight: '2.5px solid #D4AF37', borderRadius: 1 }} />
+                  : <div style={{ width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderLeft: '8px solid #D4AF37', marginLeft: 2 }} />
+                }
+              </div>
+            ) : (
+              <motion.div
+                style={{
+                  width: 26, height: 26, borderRadius: '50%',
+                  background: currentPost.music?.artwork
+                    ? `url(${currentPost.music.artwork}) center/cover`
+                    : 'linear-gradient(135deg, #1a1a1a, #333)',
+                  border: '2px solid rgba(212,175,55,0.6)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  overflow: 'hidden',
+                }}
+                animate={{ rotate: [0, 360] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+              >
+                {!currentPost.music?.artwork && (
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#D4AF37' }} />
+                )}
+              </motion.div>
+            )}
+          </button>
         </div>
 
         {/* ── 6. SWIPE DOTS INDICATOR ───────────────────────────── */}
@@ -1442,7 +1715,7 @@ export default function DecouverteScreen() {
           zIndex: 20, display: 'flex', flexDirection: 'column', gap: 5,
           pointerEvents: 'none', opacity: 0.5,
         }}>
-          {posts.map((_, i) => (
+          {allPosts.map((_, i) => (
             <div key={i} style={{
               width: 3, height: i === currentIndex ? 18 : 5, borderRadius: 2,
               background: i === currentIndex ? 'white' : 'rgba(255,255,255,0.4)',
@@ -1489,6 +1762,164 @@ export default function DecouverteScreen() {
               onClose={() => setCommentsOpen(false)}
               onUpdatePost={(comments) => updatePostComments(currentPost.id, comments)}
             />
+          )}
+        </AnimatePresence>
+
+        {/* ── CREATOR MENU SHEET ── */}
+        <AnimatePresence>
+          {creatorMenuOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 300 }}
+                onClick={() => setCreatorMenuOpen(false)}
+              />
+              <motion.div
+                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                style={{
+                  position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 310,
+                  background: '#1a1a2e', borderRadius: '24px 24px 0 0',
+                  padding: '12px 0 32px',
+                  boxShadow: '0 -8px 40px rgba(0,0,0,0.6)',
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 16 }}>
+                  <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.15)' }} />
+                </div>
+                <p style={{ margin: '0 20px 16px', color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Votre publication
+                </p>
+                {[
+                  {
+                    icon: <Pencil size={18} color="#D4AF37" />,
+                    label: 'Modifier la description',
+                    sub: 'Changer le texte de votre post',
+                    action: () => { setEditCaptionText(currentPost.caption); setEditCaptionOpen(true); setCreatorMenuOpen(false); },
+                  },
+                  {
+                    icon: <BarChart2 size={18} color="#006D77" />,
+                    label: 'Voir les statistiques',
+                    sub: 'Vues, likes, clics CTA…',
+                    action: () => { navigate('/kauri/pro-publication-stats'); setCreatorMenuOpen(false); },
+                  },
+                  {
+                    icon: <Trash2 size={18} color="#EF4444" />,
+                    label: 'Supprimer la publication',
+                    sub: 'Action irréversible',
+                    action: () => { setDeleteConfirmOpen(true); setCreatorMenuOpen(false); },
+                    danger: true,
+                  },
+                ].map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={item.action}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+                      padding: '14px 20px', background: 'none', border: 'none', cursor: 'pointer',
+                      borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                    }}
+                  >
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {item.icon}
+                    </div>
+                    <div style={{ textAlign: 'left' }}>
+                      <p style={{ margin: 0, color: item.danger ? '#EF4444' : 'white', fontSize: 14, fontWeight: 600 }}>{item.label}</p>
+                      <p style={{ margin: 0, color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>{item.sub}</p>
+                    </div>
+                  </button>
+                ))}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* ── EDIT CAPTION SHEET ── */}
+        <AnimatePresence>
+          {editCaptionOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 300 }}
+                onClick={() => setEditCaptionOpen(false)}
+              />
+              <motion.div
+                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                style={{
+                  position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 310,
+                  background: '#1a1a2e', borderRadius: '24px 24px 0 0',
+                  padding: '16px 20px 32px', boxShadow: '0 -8px 40px rgba(0,0,0,0.6)',
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 16 }}>
+                  <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.15)' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <p style={{ margin: 0, color: 'white', fontSize: 16, fontWeight: 700 }}>Modifier la description</p>
+                  <button onClick={() => setEditCaptionOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', fontSize: 22 }}>×</button>
+                </div>
+                <textarea
+                  value={editCaptionText}
+                  onChange={e => setEditCaptionText(e.target.value)}
+                  rows={4}
+                  style={{
+                    width: '100%', background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(255,255,255,0.12)',
+                    borderRadius: 14, padding: '12px 14px', color: 'white', fontSize: 14, lineHeight: 1.55,
+                    resize: 'none', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+                  }}
+                />
+                <p style={{ margin: '6px 0 16px', color: 'rgba(255,255,255,0.35)', fontSize: 11 }}>{editCaptionText.length} caractères</p>
+                <button
+                  onClick={saveEditCaption}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #D4AF37, #F59E0B)',
+                    color: 'white', fontSize: 15, fontWeight: 700,
+                  }}
+                >
+                  Enregistrer les modifications
+                </button>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* ── DELETE CONFIRM ── */}
+        <AnimatePresence>
+          {deleteConfirmOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 300 }}
+                onClick={() => setDeleteConfirmOpen(false)}
+              />
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                style={{
+                  position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+                  zIndex: 310, background: '#1a1a2e', borderRadius: 20, padding: 24, width: 'calc(100% - 48px)',
+                  boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                  <Trash2 size={24} color="#EF4444" />
+                </div>
+                <p style={{ margin: '0 0 8px', color: 'white', fontSize: 17, fontWeight: 800, textAlign: 'center' }}>Supprimer ce post ?</p>
+                <p style={{ margin: '0 0 24px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', lineHeight: 1.5 }}>Cette action est irréversible. Votre publication sera définitivement retirée du feed.</p>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => setDeleteConfirmOpen(false)} style={{ flex: 1, padding: '13px', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.15)', background: 'transparent', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                    Annuler
+                  </button>
+                  <button onClick={deletePost} style={{ flex: 1, padding: '13px', borderRadius: 12, border: 'none', background: '#EF4444', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                    Supprimer
+                  </button>
+                </div>
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
 

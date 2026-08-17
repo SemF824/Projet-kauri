@@ -35,6 +35,14 @@ export interface TimelinePoint {
   clics: number;
 }
 
+export interface MusicTrack {
+  id: number;
+  title: string;
+  artist: string;
+  artwork: string;
+  previewUrl: string;
+}
+
 export interface ProPublication {
   id: string;
   title: string;
@@ -44,6 +52,8 @@ export interface ProPublication {
   ctaType: 'investir' | 'don' | 'decouvrir';
   publishedAt: string;
   thumbnail: string;
+  audio?: string;
+  music?: MusicTrack;
   stats: PublicationStats;
   timeline: TimelinePoint[];
   top_contributeurs: Contributeur[];
@@ -150,6 +160,7 @@ export function computeSocialStats(pubs: ProPublication[]) {
 // ── Context ───────────────────────────────────────────────────────────────────
 interface ProPublicationsContextValue {
   publications: ProPublication[];
+  addPublication: (p: ProPublication) => void;
   updatePublication: (p: ProPublication) => void;
   deletePublication: (id: string) => void;
 }
@@ -159,6 +170,9 @@ const ProPublicationsContext = createContext<ProPublicationsContextValue | null>
 export function ProPublicationsProvider({ children }: { children: ReactNode }) {
   const [publications, setPublications] = useState<ProPublication[]>(INITIAL_PUBLICATIONS);
 
+  const addPublication = (p: ProPublication) =>
+    setPublications(prev => [p, ...prev]);
+
   const updatePublication = (p: ProPublication) =>
     setPublications(prev => prev.map(x => x.id === p.id ? p : x));
 
@@ -166,7 +180,7 @@ export function ProPublicationsProvider({ children }: { children: ReactNode }) {
     setPublications(prev => prev.filter(x => x.id !== id));
 
   return (
-    <ProPublicationsContext.Provider value={{ publications, updatePublication, deletePublication }}>
+    <ProPublicationsContext.Provider value={{ publications, addPublication, updatePublication, deletePublication }}>
       {children}
     </ProPublicationsContext.Provider>
   );

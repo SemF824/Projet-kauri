@@ -152,9 +152,12 @@ function ProjetCard({ proj, animated }: { proj: ProProjet; animated: boolean }) 
     <div className="rounded-2xl bg-white overflow-hidden"
       style={{ border: `1.5px solid ${proj.color}25`, boxShadow: `0 2px 10px ${proj.color}0A` }}>
 
-      {/* Header projet */}
+      {/* Header projet — entièrement cliquable */}
       <div className="px-4 pt-4 pb-3">
-        <div className="flex items-center gap-3 mb-3">
+        <button
+          onClick={() => navigate('/kauri/pro-projets')}
+          className="w-full flex items-center gap-3 mb-3 text-left active:opacity-80 transition-opacity"
+        >
           <div className="flex items-center justify-center flex-shrink-0"
             style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${proj.color}14` }}>
             <TrendingUp style={{ width: 18, height: 18, color: proj.color }} strokeWidth={2} />
@@ -183,11 +186,8 @@ function ProjetCard({ proj, animated }: { proj: ProProjet; animated: boolean }) 
               <span className="text-[10px]" style={{ color: finBadge.color }}>{finBadge.label}</span>
             </div>
           </div>
-          <button onClick={() => navigate('/kauri/pro-projets')}
-            className="p-1 rounded-lg hover:bg-[#F8FAFC] transition-colors flex-shrink-0">
-            <ChevronRight style={{ width: 16, height: 16, color: '#CBD5E1' }} />
-          </button>
-        </div>
+          <ChevronRight style={{ width: 16, height: 16, color: '#CBD5E1', flexShrink: 0 }} />
+        </button>
 
         {/* Barre progression globale */}
         <div className="flex items-center gap-2 mb-1.5">

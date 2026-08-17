@@ -1,12 +1,27 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { 
-  ShieldAlert, ShieldCheck, UserCheck, UserX, KeyRound, 
-  FileText, Loader2, RefreshCw, Search, User, ChevronRight, X, ZoomIn, Upload, Video, Trash2, AlertOctagon
-} from 'lucide-react';
-import { getSupabase } from '../../../../utils/supabase';
-import { useAuth } from '../../../contexts/AuthContext';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
+import {
+  ShieldAlert,
+  ShieldCheck,
+  UserCheck,
+  UserX,
+  KeyRound,
+  FileText,
+  Loader2,
+  RefreshCw,
+  Search,
+  User,
+  ChevronRight,
+  X,
+  ZoomIn,
+  Upload,
+  Video,
+  Trash2,
+  AlertOctagon,
+} from "lucide-react";
+import { getSupabase } from "../../../../utils/supabase";
+import { useAuth } from "../../../contexts/AuthContext";
+import { toast } from "sonner";
 
 interface KYCRequest {
   id: string;
@@ -14,7 +29,7 @@ interface KYCRequest {
   email: string;
   phone?: string;
   accountType: string;
-  kycStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
+  kycStatus: "unverified" | "pending" | "verified" | "rejected";
   street?: string;
   city?: string;
   zip?: string;
@@ -24,7 +39,7 @@ interface KYCRequest {
 
 interface LightboxState {
   url: string;
-  type: 'image' | 'pdf' | 'video';
+  type: "image" | "pdf" | "video";
 }
 
 // ── 🛡️ UTILITAIRES WEBCRYPTO & INDEXED-DB ──
@@ -58,7 +73,9 @@ async function saveKeyToEnclave(id: string, key: CryptoKey) {
   });
 }
 
-async function getKeyFromEnclave(id: string): Promise<CryptoKey | undefined> {
+async function getKeyFromEnclave(
+  id: string,
+): Promise<CryptoKey | undefined> {
   const db = await getDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
@@ -94,19 +111,44 @@ function privatePemToArrayBuffer(pem: string): ArrayBuffer {
 
 function detectMimeType(arrayBuffer: ArrayBuffer): string {
   const bytes = new Uint8Array(arrayBuffer).slice(0, 12);
-  if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
+  if (
+    bytes[0] === 0x25 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x44 &&
+    bytes[3] === 0x46
+  ) {
     return "application/pdf";
   }
-  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
     return "image/png";
   }
-  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
+  if (
+    bytes[0] === 0x47 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46
+  ) {
     return "image/gif";
   }
-  if (bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) {
+  if (
+    bytes[0] === 0x1a &&
+    bytes[1] === 0x45 &&
+    bytes[2] === 0xdf &&
+    bytes[3] === 0xa3
+  ) {
     return "video/webm";
   }
-  if (bytes.length >= 8 && bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
+  if (
+    bytes.length >= 8 &&
+    bytes[4] === 0x66 &&
+    bytes[5] === 0x74 &&
+    bytes[6] === 0x79 &&
+    bytes[7] === 0x70
+  ) {
     return "video/mp4";
   }
   return "image/jpeg";
@@ -114,35 +156,55 @@ function detectMimeType(arrayBuffer: ArrayBuffer): string {
 
 export function KYCAdminDashboardScreen() {
   const navigate = useNavigate();
-  const { user, profile, loading: authContextLoading } = useAuth();
+  const {
+    user,
+    profile,
+    loading: authContextLoading,
+  } = useAuth();
   const supabase = getSupabase();
 
   const [requests, setRequests] = useState<KYCRequest[]>([]);
-  const [selectedRequest, setSelectedRequest] = useState<KYCRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] =
+    useState<KYCRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'unverified' | 'pending' | 'verified' | 'rejected'>('all');
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "unverified" | "pending" | "verified" | "rejected"
+  >("all");
+
   const [isKeyLoaded, setIsKeyActive] = useState(false);
-  const [importedCryptoKey, setImportedCryptoKey] = useState<CryptoKey | null>(null);
-  
-  const [decryptedIdentityUrl, setDecryptedIdentityUrl] = useState<string | null>(null);
-  const [decryptedSelfieUrl, setDecryptedSelfieUrl] = useState<string | null>(null);
+  const [importedCryptoKey, setImportedCryptoKey] =
+    useState<CryptoKey | null>(null);
+
+  const [decryptedIdentityUrl, setDecryptedIdentityUrl] =
+    useState<string | null>(null);
+  const [decryptedSelfieUrl, setDecryptedSelfieUrl] = useState<
+    string | null
+  >(null);
   const [isDecrypting, setIsDecrypting] = useState(false);
 
-  const [isIdentityEncrypted, setIsIdentityEncrypted] = useState(false);
-  const [isSelfieEncrypted, setIsSelfieEncrypted] = useState(false);
+  const [isIdentityEncrypted, setIsIdentityEncrypted] =
+    useState(false);
+  const [isSelfieEncrypted, setIsSelfieEncrypted] =
+    useState(false);
 
-  const [identityFileType, setIdentityFileType] = useState<'image' | 'pdf' | 'video'>('image');
-  const [selfieFileType, setSelfieFileType] = useState<'image' | 'pdf' | 'video'>('image');
+  const [identityFileType, setIdentityFileType] = useState<
+    "image" | "pdf" | "video"
+  >("image");
+  const [selfieFileType, setSelfieFileType] = useState<
+    "image" | "pdf" | "video"
+  >("image");
 
-  const [lightbox, setLightbox] = useState<LightboxState | null>(null);
+  const [lightbox, setLightbox] =
+    useState<LightboxState | null>(null);
 
   useEffect(() => {
     const initializeSavedKey = async () => {
       try {
-        const enclaveKey = await getKeyFromEnclave('kauri_admin_ecdh');
+        const enclaveKey = await getKeyFromEnclave(
+          "kauri_admin_ecdh",
+        );
         if (enclaveKey) {
           setImportedCryptoKey(enclaveKey);
           setIsKeyActive(true);
@@ -158,30 +220,40 @@ export function KYCAdminDashboardScreen() {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('updated_at', { ascending: false });
+        .from("profiles")
+        .select("*")
+        .order("updated_at", { ascending: false });
 
       if (error) throw error;
 
-      const formatted: KYCRequest[] = (data || []).map((p: any) => ({
-        id: p.id,
-        fullName: p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Non renseigné',
-        email: p.email || 'Inconnu',
-        phone: p.phone_number || 'Non communiqué',
-        accountType: p.account_type || 'particulier',
-        kycStatus: p.kyc_status || 'unverified',
-        street: p.street || 'Non renseigné',
-        city: p.city || 'Non renseigné',
-        zip: p.zip || 'Non renseigné',
-        userPublicKeysJSON: p.user_public_key,
-        createdAt: p.created_at || p.updated_at || new Date().toISOString()
-      }));
+      const formatted: KYCRequest[] = (data || []).map(
+        (p: any) => ({
+          id: p.id,
+          fullName:
+            p.full_name ||
+            `${p.first_name || ""} ${p.last_name || ""}`.trim() ||
+            "Non renseigné",
+          email: p.email || "Inconnu",
+          phone: p.phone_number || "Non communiqué",
+          accountType: p.account_type || "particulier",
+          kycStatus: p.kyc_status || "unverified",
+          street: p.street || "Non renseigné",
+          city: p.city || "Non renseigné",
+          zip: p.zip || "Non renseigné",
+          userPublicKeysJSON: p.user_public_key,
+          createdAt:
+            p.created_at ||
+            p.updated_at ||
+            new Date().toISOString(),
+        }),
+      );
 
       setRequests(formatted);
     } catch (err: any) {
-      console.error('[KYC Fetch Error]:', err);
-      toast.error("Erreur de synchronisation du registre des comptes.");
+      console.error("[KYC Fetch Error]:", err);
+      toast.error(
+        "Erreur de synchronisation du registre des comptes.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -191,14 +263,18 @@ export function KYCAdminDashboardScreen() {
     fetchAllProfiles();
   }, []);
 
-  const handleKeyFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleKeyFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
       const pemText = await file.text();
-      if (!pemText.includes('-----BEGIN PRIVATE KEY-----')) {
-        toast.error("Le fichier sélectionné ne possède pas les en-têtes PKCS#8 d'une clé valide.");
+      if (!pemText.includes("-----BEGIN PRIVATE KEY-----")) {
+        toast.error(
+          "Le fichier sélectionné ne possède pas les en-têtes PKCS#8 d'une clé valide.",
+        );
         return;
       }
 
@@ -207,26 +283,30 @@ export function KYCAdminDashboardScreen() {
         "pkcs8",
         rawBinaryKey,
         { name: "ECDH", namedCurve: "P-256" },
-        false, 
-        ["deriveKey"]
+        false,
+        ["deriveKey"],
       );
 
-      await saveKeyToEnclave('kauri_admin_ecdh', cryptoKey);
+      await saveKeyToEnclave("kauri_admin_ecdh", cryptoKey);
       setImportedCryptoKey(cryptoKey);
       setIsKeyActive(true);
-      toast.success("Enclave ECC armée. Clé scellée avec succès.");
-      
+      toast.success(
+        "Enclave ECC armée. Clé scellée avec succès.",
+      );
+
       if (selectedRequest) {
         handleViewAndDecryptDocs(selectedRequest, cryptoKey);
       }
     } catch (err) {
       console.error(err);
-      toast.error("Échec d'intégration binaire. La clé n'est pas une clé ECC P-256 valide.");
+      toast.error(
+        "Échec d'intégration binaire. La clé n'est pas une clé ECC P-256 valide.",
+      );
     }
   };
 
   const handleRevokeKey = async () => {
-    await removeKeyFromEnclave('kauri_admin_ecdh');
+    await removeKeyFromEnclave("kauri_admin_ecdh");
     setImportedCryptoKey(null);
     setIsKeyActive(false);
     setDecryptedIdentityUrl(null);
@@ -234,32 +314,47 @@ export function KYCAdminDashboardScreen() {
     toast.info("Enclave administrative purgée.");
   };
 
-  const decryptPayload = async (packedArrayBuffer: ArrayBuffer, adminEcdhPriv: CryptoKey, userKeysJSON: string): Promise<{ url: string; type: 'image' | 'pdf' | 'video' }> => {
+  const decryptPayload = async (
+    packedArrayBuffer: ArrayBuffer,
+    adminEcdhPriv: CryptoKey,
+    userKeysJSON: string,
+  ): Promise<{
+    url: string;
+    type: "image" | "pdf" | "video";
+  }> => {
     const packedBytes = new Uint8Array(packedArrayBuffer);
     const view = new DataView(packedBytes.buffer);
-    
+
     const adminFekLen = view.getUint32(0, false);
     const userFekLen = view.getUint32(4, false);
     const sigLen = view.getUint32(8, false);
-    
-    const ephPubRaw = packedBytes.slice(12, 77); 
+
+    const ephPubRaw = packedBytes.slice(12, 77);
     const wrapIV = packedBytes.slice(77, 89);
     const fileIV = packedBytes.slice(89, 101);
-    
+
     let offset = 101;
-    const adminEncFek = packedBytes.slice(offset, offset + adminFekLen);
+    const adminEncFek = packedBytes.slice(
+      offset,
+      offset + adminFekLen,
+    );
     offset += adminFekLen;
-    offset += userFekLen; 
-    
-    const signature = packedBytes.slice(offset, offset + sigLen);
+    offset += userFekLen;
+
+    const signature = packedBytes.slice(
+      offset,
+      offset + sigLen,
+    );
     offset += sigLen;
-    
+
     const ciphertext = packedBytes.slice(offset);
 
     if (!userKeysJSON) {
-      throw new Error("Trousseau public ECC manquant sur le profil.");
+      throw new Error(
+        "Trousseau public ECC manquant sur le profil.",
+      );
     }
-    
+
     let userKeys;
     try {
       userKeys = JSON.parse(userKeysJSON);
@@ -267,38 +362,51 @@ export function KYCAdminDashboardScreen() {
       throw new Error("Corruption du trousseau de clés JSON.");
     }
 
-    if (!userKeys.ecdsa) throw new Error("Clé ECDSA manquante.");
+    if (!userKeys.ecdsa)
+      throw new Error("Clé ECDSA manquante.");
 
     const verifyKey = await window.crypto.subtle.importKey(
       "spki",
       privatePemToArrayBuffer(userKeys.ecdsa),
       { name: "ECDSA", namedCurve: "P-256" },
       false,
-      ["verify"]
+      ["verify"],
     );
 
-    const dataToVerify = new Uint8Array(ephPubRaw.byteLength + fileIV.byteLength + ciphertext.byteLength);
+    const dataToVerify = new Uint8Array(
+      ephPubRaw.byteLength +
+        fileIV.byteLength +
+        ciphertext.byteLength,
+    );
     dataToVerify.set(new Uint8Array(ephPubRaw), 0);
-    dataToVerify.set(new Uint8Array(fileIV), ephPubRaw.byteLength);
-    dataToVerify.set(new Uint8Array(ciphertext), ephPubRaw.byteLength + fileIV.byteLength);
+    dataToVerify.set(
+      new Uint8Array(fileIV),
+      ephPubRaw.byteLength,
+    );
+    dataToVerify.set(
+      new Uint8Array(ciphertext),
+      ephPubRaw.byteLength + fileIV.byteLength,
+    );
 
     const isAuthentic = await window.crypto.subtle.verify(
       { name: "ECDSA", hash: { name: "SHA-256" } },
       verifyKey,
       signature,
-      dataToVerify
+      dataToVerify,
     );
 
     if (!isAuthentic) {
-      throw new Error("VIOLATION DE SÉCURITÉ : La signature ECDSA ne correspond pas.");
+      throw new Error(
+        "VIOLATION DE SÉCURITÉ : La signature ECDSA ne correspond pas.",
+      );
     }
 
     const ephPubKey = await window.crypto.subtle.importKey(
-      "raw", 
-      ephPubRaw, 
-      { name: "ECDH", namedCurve: "P-256" }, 
-      false, 
-      []
+      "raw",
+      ephPubRaw,
+      { name: "ECDH", namedCurve: "P-256" },
+      false,
+      [],
     );
 
     const adminWrapKey = await window.crypto.subtle.deriveKey(
@@ -306,39 +414,49 @@ export function KYCAdminDashboardScreen() {
       adminEcdhPriv,
       { name: "AES-GCM", length: 256 },
       false,
-      ["decrypt"]
+      ["decrypt"],
     );
 
     const decryptedFekRaw = await window.crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: wrapIV }, 
-      adminWrapKey, 
-      adminEncFek
+      { name: "AES-GCM", iv: wrapIV },
+      adminWrapKey,
+      adminEncFek,
     );
 
     const fek = await window.crypto.subtle.importKey(
-      "raw", 
-      decryptedFekRaw, 
-      { name: "AES-GCM" }, 
-      false, 
-      ["decrypt"]
+      "raw",
+      decryptedFekRaw,
+      { name: "AES-GCM" },
+      false,
+      ["decrypt"],
     );
 
-    const decryptedFileBuffer = await window.crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: fileIV }, 
-      fek, 
-      ciphertext
-    );
+    const decryptedFileBuffer =
+      await window.crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: fileIV },
+        fek,
+        ciphertext,
+      );
 
     const exactMime = detectMimeType(decryptedFileBuffer);
-    const finalBlob = new Blob([decryptedFileBuffer], { type: exactMime });
-    
+    const finalBlob = new Blob([decryptedFileBuffer], {
+      type: exactMime,
+    });
+
     return {
       url: URL.createObjectURL(finalBlob),
-      type: exactMime.startsWith('video') ? 'video' : exactMime === "application/pdf" ? 'pdf' : 'image'
+      type: exactMime.startsWith("video")
+        ? "video"
+        : exactMime === "application/pdf"
+          ? "pdf"
+          : "image",
     };
   };
 
-  const handleViewAndDecryptDocs = async (req: KYCRequest, forcedKey?: CryptoKey) => {
+  const handleViewAndDecryptDocs = async (
+    req: KYCRequest,
+    forcedKey?: CryptoKey,
+  ) => {
     setSelectedRequest(req);
     setDecryptedIdentityUrl(null);
     setDecryptedSelfieUrl(null);
@@ -347,97 +465,128 @@ export function KYCAdminDashboardScreen() {
 
     setIsDecrypting(true);
     try {
-      const { data: files, error: listError } = await supabase.storage
-        .from('secure-kyc')
-        .list(req.id);
+      const { data: files, error: listError } =
+        await supabase.storage.from("secure-kyc").list(req.id);
 
       if (listError) throw listError;
 
       const activeKey = forcedKey || importedCryptoKey;
 
-      const identityFile = files?.find(f => f.name.startsWith('identity'));
-      const selfieFile = files?.find(f => f.name.startsWith('selfie'));
+      const identityFile = files?.find((f) =>
+        f.name.startsWith("identity"),
+      );
+      const selfieFile = files?.find((f) =>
+        f.name.startsWith("selfie"),
+      );
 
       if (identityFile) {
-        const isEnc = identityFile.name.endsWith('.enc');
+        const isEnc = identityFile.name.endsWith(".enc");
         setIsIdentityEncrypted(isEnc);
 
         const { data: blob } = await supabase.storage
-          .from('secure-kyc')
+          .from("secure-kyc")
           .download(`${req.id}/${identityFile.name}`);
 
         if (blob) {
           if (isEnc) {
             if (activeKey) {
               const arrayBuf = await blob.arrayBuffer();
-              const result = await decryptPayload(arrayBuf, activeKey, req.userPublicKeysJSON);
+              const result = await decryptPayload(
+                arrayBuf,
+                activeKey,
+                req.userPublicKeysJSON,
+              );
               setIdentityFileType(result.type);
               setDecryptedIdentityUrl(result.url);
             }
           } else {
-            setIdentityFileType(blob.type.startsWith('video') ? 'video' : blob.type === 'application/pdf' ? 'pdf' : 'image');
+            setIdentityFileType(
+              blob.type.startsWith("video")
+                ? "video"
+                : blob.type === "application/pdf"
+                  ? "pdf"
+                  : "image",
+            );
             setDecryptedIdentityUrl(URL.createObjectURL(blob));
           }
         }
       }
 
       if (selfieFile) {
-        const isEnc = selfieFile.name.endsWith('.enc');
+        const isEnc = selfieFile.name.endsWith(".enc");
         setIsSelfieEncrypted(isEnc);
 
         const { data: blob } = await supabase.storage
-          .from('secure-kyc')
+          .from("secure-kyc")
           .download(`${req.id}/${selfieFile.name}`);
 
         if (blob) {
           if (isEnc) {
             if (activeKey) {
               const arrayBuf = await blob.arrayBuffer();
-              const result = await decryptPayload(arrayBuf, activeKey, req.userPublicKeysJSON);
+              const result = await decryptPayload(
+                arrayBuf,
+                activeKey,
+                req.userPublicKeysJSON,
+              );
               setSelfieFileType(result.type);
               setDecryptedSelfieUrl(result.url);
             }
           } else {
-            setSelfieFileType(blob.type.startsWith('video') ? 'video' : blob.type === 'application/pdf' ? 'pdf' : 'image');
+            setSelfieFileType(
+              blob.type.startsWith("video")
+                ? "video"
+                : blob.type === "application/pdf"
+                  ? "pdf"
+                  : "image",
+            );
             setDecryptedSelfieUrl(URL.createObjectURL(blob));
           }
         }
       }
-
     } catch (err: any) {
-      console.error('[Decryption Crash]:', err);
-      toast.error(err.message || "Erreur de décodage du package cryptographique.");
+      console.error("[Decryption Crash]:", err);
+      toast.error(
+        err.message ||
+          "Erreur de décodage du package cryptographique.",
+      );
     } finally {
       setIsDecrypting(false);
     }
   };
 
-  const handleUpdateStatus = async (status: 'verified' | 'rejected') => {
+  const handleUpdateStatus = async (
+    status: "verified" | "rejected",
+  ) => {
     if (!selectedRequest) return;
 
     if (!isKeyLoaded || !importedCryptoKey) {
-      toast.error("Vous devez charger la clé privée administrative pour statuer sur un dossier.");
+      toast.error(
+        "Vous devez charger la clé privée administrative pour statuer sur un dossier.",
+      );
       return;
     }
 
     setIsActionLoading(true);
     try {
       const { error } = await supabase
-        .from('profiles')
-        .update({ 
+        .from("profiles")
+        .update({
           kyc_status: status,
-          trust_score: status === 'verified' ? 85 : 10,
-          kyc_completed: status === 'verified'
+          trust_score: status === "verified" ? 85 : 10,
+          kyc_completed: status === "verified",
         })
-        .eq('id', selectedRequest.id);
+        .eq("id", selectedRequest.id);
 
       if (error) throw error;
 
-      toast.success(`Statut mis à jour : ${status.toUpperCase()}`);
+      toast.success(
+        `Statut mis à jour : ${status.toUpperCase()}`,
+      );
       setSelectedRequest(null);
       fetchAllProfiles();
     } catch (err: any) {
-      console.error('[Status DB Error]:', err);
+      console.error("[Status DB Error]:", err);
       toast.error("Erreur lors de la mise à jour du profil.");
     } finally {
       setIsActionLoading(false);
@@ -447,80 +596,102 @@ export function KYCAdminDashboardScreen() {
   // ── 🎯 ACTION DESTRUCTIVE DE PURGE TOTALE ET IRREVERSIBLE ──
   const handlePurgeDossier = async () => {
     if (!selectedRequest) return;
-    
+
     const confirmPurge = window.confirm(
       `⚠️ ATTENTION : ACTION IRREVOCABLE !\n\n` +
-      `Voulez-vous supprimer définitivement les fichiers chiffrés du compte de ${selectedRequest.fullName} ?\n` +
-      `Les fichiers seront effacés du Storage Supabase et le compte repassera en 'unverified'.`
+        `Voulez-vous supprimer définitivement les fichiers chiffrés du compte de ${selectedRequest.fullName} ?\n` +
+        `Les fichiers seront effacés du Storage Supabase et le compte repassera en 'unverified'.`,
     );
 
     if (!confirmPurge) return;
 
     setIsActionLoading(true);
-    const toastId = toast.loading("Destruction physique des fichiers sur Supabase...");
+    const toastId = toast.loading(
+      "Destruction physique des fichiers sur Supabase...",
+    );
 
     try {
       // 1. Lister tous les fichiers présents dans le dossier de l'utilisateur
-      const { data: userFiles, error: listError } = await supabase.storage
-        .from('secure-kyc')
-        .list(selectedRequest.id);
+      const { data: userFiles, error: listError } =
+        await supabase.storage
+          .from("secure-kyc")
+          .list(selectedRequest.id);
 
-      if (listError) console.warn("Erreur listing Storage:", listError);
+      if (listError)
+        console.warn("Erreur listing Storage:", listError);
 
       // 2. Construction de la liste exacte des chemins à supprimer
       if (userFiles && userFiles.length > 0) {
-        const filePaths = userFiles.map(f => `${selectedRequest.id}/${f.name}`);
-        const { error: deleteStorageErr } = await supabase.storage
-          .from('secure-kyc')
-          .remove(filePaths);
+        const filePaths = userFiles.map(
+          (f) => `${selectedRequest.id}/${f.name}`,
+        );
+        const { error: deleteStorageErr } =
+          await supabase.storage
+            .from("secure-kyc")
+            .remove(filePaths);
 
         if (deleteStorageErr) {
-          console.error("Storage Delete Error:", deleteStorageErr);
-          toast.error("Erreur RLS Storage : Vérifiez vos permissions de suppression dans Supabase.");
+          console.error(
+            "Storage Delete Error:",
+            deleteStorageErr,
+          );
+          toast.error(
+            "Erreur RLS Storage : Vérifiez vos permissions de suppression dans Supabase.",
+          );
         }
       }
 
       // 3. Remise à zéro stricte du profil en BDD (y compris les adresses pour obliger à une re-saisie propre)
       const { error: dbError } = await supabase
-        .from('profiles')
-        .update({ 
-          kyc_status: 'unverified',
+        .from("profiles")
+        .update({
+          kyc_status: "unverified",
           trust_score: 10,
           kyc_completed: false,
           street: null,
           zip: null,
-          city: null
+          city: null,
         })
-        .eq('id', selectedRequest.id);
+        .eq("id", selectedRequest.id);
 
       if (dbError) throw dbError;
 
-      toast.success("Dossier intégralement détruit et réinitialisé.", { id: toastId });
-      
+      toast.success(
+        "Dossier intégralement détruit et réinitialisé.",
+        { id: toastId },
+      );
+
       // 4. Nettoyage de l'interface
       setDecryptedIdentityUrl(null);
       setDecryptedSelfieUrl(null);
       setSelectedRequest(null);
-      
+
       // 5. Rafraîchissement synchrone du tableau
       await fetchAllProfiles();
     } catch (err: any) {
-      console.error('[Purge Crash]:', err);
-      toast.error(`Erreur de purge : ${err.message || String(err)}`, { id: toastId });
+      console.error("[Purge Crash]:", err);
+      toast.error(
+        `Erreur de purge : ${err.message || String(err)}`,
+        { id: toastId },
+      );
     } finally {
       setIsActionLoading(false);
     }
   };
 
-  const filteredRequests = requests.filter(r => {
-    const matchesSearch = r.fullName.toLowerCase().includes(searchQuery.toLowerCase()) || r.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || r.kycStatus === statusFilter;
+  const filteredRequests = requests.filter((r) => {
+    const matchesSearch =
+      r.fullName
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      r.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || r.kycStatus === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-slate-100 flex flex-col font-sans select-none">
-      
       {/* BANDEAU SUPERIEUR */}
       <div className="border-b border-slate-800 bg-[#1E293B]/60 backdrop-blur-xl px-8 py-5 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
@@ -528,20 +699,25 @@ export function KYCAdminDashboardScreen() {
             <ShieldAlert className="w-5 h-5 text-amber-500" />
           </div>
           <div>
-            <h1 className="text-lg font-black tracking-wider text-white">KAURI REGULATORY MATRIX</h1>
-            <p className="text-xs text-slate-400">Registre général de vérification (ECC P-256)</p>
+            <h1 className="text-lg font-black tracking-wider text-white">
+              KAURI REGULATORY MATRIX
+            </h1>
+            <p className="text-xs text-slate-400">
+              Registre général de vérification (ECC P-256)
+            </p>
           </div>
         </div>
-        <button 
-          onClick={fetchAllProfiles} 
+        <button
+          onClick={fetchAllProfiles}
           className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all cursor-pointer border-none text-white"
         >
-          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+          />
         </button>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        
         {/* COLONNE GAUCHE */}
         <div className="w-3/5 border-r border-slate-800 p-6 flex flex-col space-y-4 overflow-y-auto">
           <div className="relative">
@@ -556,15 +732,33 @@ export function KYCAdminDashboardScreen() {
           </div>
 
           <div className="flex border-b border-slate-800 text-xs font-bold gap-2">
-            {(['all', 'unverified', 'pending', 'verified', 'rejected'] as const).map((status) => (
+            {(
+              [
+                "all",
+                "unverified",
+                "pending",
+                "verified",
+                "rejected",
+              ] as const
+            ).map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={`pb-3 px-3 capitalize bg-transparent border-none transition-all cursor-pointer ${
-                  statusFilter === status ? 'border-b-2 border-amber-500 text-amber-500 font-black' : 'text-slate-400 hover:text-white'
+                  statusFilter === status
+                    ? "border-b-2 border-amber-500 text-amber-500 font-black"
+                    : "text-slate-400 hover:text-white"
                 }`}
               >
-                {status === 'all' ? 'Tous les profils' : status === 'unverified' ? 'Non fournis' : status === 'pending' ? 'À valider' : status === 'verified' ? 'Vérifiés' : 'Rejetés'}
+                {status === "all"
+                  ? "Tous les profils"
+                  : status === "unverified"
+                    ? "Non fournis"
+                    : status === "pending"
+                      ? "À valider"
+                      : status === "verified"
+                        ? "Vérifiés"
+                        : "Rejetés"}
               </button>
             ))}
           </div>
@@ -575,48 +769,76 @@ export function KYCAdminDashboardScreen() {
             </div>
           ) : filteredRequests.length === 0 ? (
             <div className="text-center py-16 border-2 border-dashed border-slate-800 rounded-2xl">
-              <p className="text-sm text-slate-400">Aucun dossier ne correspond aux critères.</p>
+              <p className="text-sm text-slate-400">
+                Aucun dossier ne correspond aux critères.
+              </p>
             </div>
           ) : (
             <div className="bg-[#1E293B]/20 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-800 bg-[#1E293B]/40 text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                    <th className="py-3 px-4">Titulaire / Identifiants</th>
+                    <th className="py-3 px-4">
+                      Titulaire / Identifiants
+                    </th>
                     <th className="py-3 px-4">Type</th>
-                    <th className="py-3 px-4">État de conformité</th>
-                    <th className="py-3 px-4 text-right">Action</th>
+                    <th className="py-3 px-4">
+                      État de conformité
+                    </th>
+                    <th className="py-3 px-4 text-right">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-xs">
                   {filteredRequests.map((req) => (
-                    <tr 
-                      key={req.id} 
-                      className={`hover:bg-[#1E293B]/30 transition-colors ${selectedRequest?.id === req.id ? 'bg-amber-500/5' : ''}`}
+                    <tr
+                      key={req.id}
+                      className={`hover:bg-[#1E293B]/30 transition-colors ${selectedRequest?.id === req.id ? "bg-amber-500/5" : ""}`}
                     >
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-white uppercase tracking-tight">{req.fullName}</div>
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">{req.email}</div>
+                        <div className="font-bold text-white uppercase tracking-tight">
+                          {req.fullName}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          {req.email}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-300 bg-slate-800/60 px-2 py-0.5 rounded border border-slate-700">{req.accountType}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-300 bg-slate-800/60 px-2 py-0.5 rounded border border-slate-700">
+                          {req.accountType}
+                        </span>
                       </td>
                       <td className="py-3.5 px-4">
-                        <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                          req.kycStatus === 'verified' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
-                          req.kycStatus === 'rejected' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 
-                          req.kycStatus === 'unverified' ? 'bg-slate-500/10 text-slate-400 border border-slate-500/20' : 
-                          'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                        }`}>
-                          {req.kycStatus === 'pending' ? 'À valider' : req.kycStatus === 'verified' ? 'Vérifié' : req.kycStatus === 'unverified' ? 'Non fourni' : 'Rejeté'}
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                            req.kycStatus === "verified"
+                              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                              : req.kycStatus === "rejected"
+                                ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                                : req.kycStatus === "unverified"
+                                  ? "bg-slate-500/10 text-slate-400 border border-slate-500/20"
+                                  : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                          }`}
+                        >
+                          {req.kycStatus === "pending"
+                            ? "À valider"
+                            : req.kycStatus === "verified"
+                              ? "Vérifié"
+                              : req.kycStatus === "unverified"
+                                ? "Non fourni"
+                                : "Rejeté"}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <button
-                          onClick={() => handleViewAndDecryptDocs(req)}
+                          onClick={() =>
+                            handleViewAndDecryptDocs(req)
+                          }
                           className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold text-[11px] transition-all inline-flex items-center gap-1 cursor-pointer border-none shadow-md"
                         >
-                          Inspecter <ChevronRight className="w-3 h-3" />
+                          Inspecter{" "}
+                          <ChevronRight className="w-3 h-3" />
                         </button>
                       </td>
                     </tr>
@@ -629,7 +851,6 @@ export function KYCAdminDashboardScreen() {
 
         {/* COLONNE DROITE */}
         <div className="w-2/5 p-6 overflow-y-auto bg-[#090D1A]">
-          
           {/* INTERFACE IMPORTEUR DE CLE */}
           {!isKeyLoaded ? (
             <div className="bg-[#1E293B]/60 border border-slate-800 p-6 rounded-3xl text-center space-y-4 mb-6">
@@ -637,23 +858,35 @@ export function KYCAdminDashboardScreen() {
                 <KeyRound className="w-5 h-5 text-amber-500" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Clef Administrative ECC</h3>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">Glissez le fichier de la clé privée ECDH (.pem) pour dériver les secrets.</p>
+                <h3 className="text-sm font-bold text-white">
+                  Clef Administrative ECC
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  Glissez le fichier de la clé privée ECDH
+                  (.pem) pour dériver les secrets.
+                </p>
               </div>
               <label className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10 border-none">
                 <Upload className="w-4 h-4" />
                 Charger clé ECDH (.pem)
-                <input type="file" accept=".pem,.key,.txt" onChange={handleKeyFileChange} className="hidden" />
+                <input
+                  type="file"
+                  accept=".pem,.key,.txt"
+                  onChange={handleKeyFileChange}
+                  className="hidden"
+                />
               </label>
             </div>
           ) : (
             <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <p className="text-xs text-emerald-400 font-bold">Enclave ECDH Active</p>
+                <p className="text-xs text-emerald-400 font-bold">
+                  Enclave ECDH Active
+                </p>
               </div>
-              <button 
-                onClick={handleRevokeKey} 
+              <button
+                onClick={handleRevokeKey}
                 className="text-[10px] text-slate-400 hover:text-white underline bg-transparent border-none cursor-pointer"
               >
                 Désactiver
@@ -664,76 +897,141 @@ export function KYCAdminDashboardScreen() {
           {selectedRequest ? (
             <div className="space-y-6">
               <div className="bg-[#1E293B]/30 border border-slate-800 p-5 rounded-2xl space-y-4">
-                <h3 className="text-sm font-bold text-white border-b border-slate-800 pb-2 uppercase tracking-wider">Attestation Personnelle</h3>
+                <h3 className="text-sm font-bold text-white border-b border-slate-800 pb-2 uppercase tracking-wider">
+                  Attestation Personnelle
+                </h3>
                 <div className="grid grid-cols-2 gap-4 text-xs">
                   <div className="col-span-2">
-                    <span className="text-slate-500 block mb-0.5">Titulaire du compte :</span>
-                    <strong className="text-white text-sm uppercase">{selectedRequest.fullName}</strong>
+                    <span className="text-slate-500 block mb-0.5">
+                      Titulaire du compte :
+                    </span>
+                    <strong className="text-white text-sm uppercase">
+                      {selectedRequest.fullName}
+                    </strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 block mb-0.5">Téléphone :</span>
-                    <strong className="text-slate-200">{selectedRequest.phone}</strong>
+                    <span className="text-slate-500 block mb-0.5">
+                      Téléphone :
+                    </span>
+                    <strong className="text-slate-200">
+                      {selectedRequest.phone}
+                    </strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 block mb-0.5">Identifiant interne :</span>
-                    <strong className="text-slate-400 font-mono text-[10px] block truncate">{selectedRequest.id}</strong>
+                    <span className="text-slate-500 block mb-0.5">
+                      Identifiant interne :
+                    </span>
+                    <strong className="text-slate-400 font-mono text-[10px] block truncate">
+                      {selectedRequest.id}
+                    </strong>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-slate-500 block mb-0.5">Adresse physique déclarée :</span>
+                    <span className="text-slate-500 block mb-0.5">
+                      Adresse physique déclarée :
+                    </span>
                     <strong className="text-slate-200 block bg-[#0F172A] p-3 rounded-xl border border-slate-800 mt-1 leading-normal">
-                      {selectedRequest.street}, {selectedRequest.zip} {selectedRequest.city}
+                      {selectedRequest.street},{" "}
+                      {selectedRequest.zip}{" "}
+                      {selectedRequest.city}
                     </strong>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Pièces justificatives décryptées</h3>
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  Pièces justificatives décryptées
+                </h3>
                 {isDecrypting ? (
                   <div className="py-12 text-center border border-slate-800 rounded-2xl bg-[#1E293B]/10">
                     <Loader2 className="w-6 h-6 animate-spin text-amber-500 mx-auto mb-2" />
-                    <p className="text-xs text-slate-400">Validation ECDSA et dérivation de clé...</p>
+                    <p className="text-xs text-slate-400">
+                      Validation ECDSA et dérivation de clé...
+                    </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    
                     {/* APERÇU PIECE D'IDENTITÉ */}
                     <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden group transition-all">
                       {decryptedIdentityUrl ? (
                         <div className="w-full h-full relative flex flex-col items-center justify-center">
-                          {identityFileType === 'pdf' ? (
-                            <div 
-                              onClick={() => setLightbox({ url: decryptedIdentityUrl, type: 'pdf' })}
+                          {identityFileType === "pdf" ? (
+                            <div
+                              onClick={() =>
+                                setLightbox({
+                                  url: decryptedIdentityUrl,
+                                  type: "pdf",
+                                })
+                              }
                               className="w-full h-44 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/40 flex flex-col items-center justify-center cursor-zoom-in transition-all text-center p-3"
                             >
                               <FileText className="w-10 h-10 text-red-500 mb-2" />
-                              <span className="text-[11px] font-bold text-white block truncate max-w-full">JUSTIFICATIF PDF</span>
-                              <span className="text-[9px] text-slate-400 mt-1">Cliquer pour zoomer</span>
+                              <span className="text-[11px] font-bold text-white block truncate max-w-full">
+                                JUSTIFICATIF PDF
+                              </span>
+                              <span className="text-[9px] text-slate-400 mt-1">
+                                Cliquer pour zoomer
+                              </span>
                             </div>
-                          ) : identityFileType === 'video' ? (
-                            <div className="w-full h-full relative cursor-zoom-in" onClick={() => setLightbox({ url: decryptedIdentityUrl, type: 'video' })}>
-                              <video src={decryptedIdentityUrl} className="w-full h-44 object-cover rounded-xl" autoPlay loop muted playsInline />
+                          ) : identityFileType === "video" ? (
+                            <div
+                              className="w-full h-full relative cursor-zoom-in"
+                              onClick={() =>
+                                setLightbox({
+                                  url: decryptedIdentityUrl,
+                                  type: "video",
+                                })
+                              }
+                            >
+                              <video
+                                src={decryptedIdentityUrl}
+                                className="w-full h-44 object-cover rounded-xl"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                              />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
                                 <ZoomIn className="w-5 h-5 text-white" />
                               </div>
                             </div>
                           ) : (
-                            <div className="w-full h-full relative cursor-zoom-in" onClick={() => setLightbox({ url: decryptedIdentityUrl, type: 'image' })}>
-                              <img src={decryptedIdentityUrl} alt="Identity" className="w-full h-44 object-cover rounded-xl" />
+                            <div
+                              className="w-full h-full relative cursor-zoom-in"
+                              onClick={() =>
+                                setLightbox({
+                                  url: decryptedIdentityUrl,
+                                  type: "image",
+                                })
+                              }
+                            >
+                              <img
+                                src={decryptedIdentityUrl}
+                                alt="Identity"
+                                className="w-full h-44 object-cover rounded-xl"
+                              />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
                                 <ZoomIn className="w-5 h-5 text-white" />
                               </div>
                             </div>
                           )}
-                          <span className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isIdentityEncrypted ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'}`}>
-                            {isIdentityEncrypted ? 'SIGNATURE ECDSA OK' : 'BRUT'}
+                          <span
+                            className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isIdentityEncrypted ? "bg-amber-500 text-slate-950" : "bg-emerald-500 text-white"}`}
+                          >
+                            {isIdentityEncrypted
+                              ? "SIGNATURE ECDSA OK"
+                              : "BRUT"}
                           </span>
                         </div>
                       ) : (
                         <div className="text-center space-y-2">
                           <FileText className="w-8 h-8 text-slate-600 mx-auto" />
-                          <p className="text-xs font-bold text-slate-400">identity.enc</p>
-                          <span className="text-[10px] text-amber-500 font-bold block">NON TRANSMIS</span>
+                          <p className="text-xs font-bold text-slate-400">
+                            identity.enc
+                          </p>
+                          <span className="text-[10px] text-amber-500 font-bold block">
+                            NON TRANSMIS
+                          </span>
                         </div>
                       )}
                     </div>
@@ -742,42 +1040,83 @@ export function KYCAdminDashboardScreen() {
                     <div className="border border-slate-800 rounded-2xl p-2 bg-[#1E293B]/20 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden group transition-all">
                       {decryptedSelfieUrl ? (
                         <div className="w-full h-full relative flex flex-col items-center justify-center">
-                          {selfieFileType === 'pdf' ? (
-                            <div 
-                              onClick={() => setLightbox({ url: decryptedSelfieUrl, type: 'pdf' })}
+                          {selfieFileType === "pdf" ? (
+                            <div
+                              onClick={() =>
+                                setLightbox({
+                                  url: decryptedSelfieUrl,
+                                  type: "pdf",
+                                })
+                              }
                               className="w-full h-44 rounded-xl bg-slate-900 border border-slate-800 hover:border-amber-500/40 flex flex-col items-center justify-center cursor-zoom-in transition-all text-center p-3"
                             >
                               <FileText className="w-10 h-10 text-red-500 mb-2" />
-                              <span className="text-[11px] font-bold text-white block truncate max-w-full">SELFIE PDF</span>
+                              <span className="text-[11px] font-bold text-white block truncate max-w-full">
+                                SELFIE PDF
+                              </span>
                             </div>
-                          ) : selfieFileType === 'video' ? (
-                            <div className="w-full h-full relative cursor-zoom-in" onClick={() => setLightbox({ url: decryptedSelfieUrl, type: 'video' })}>
-                              <video src={decryptedSelfieUrl} className="w-full h-44 object-cover rounded-xl" autoPlay loop muted playsInline />
+                          ) : selfieFileType === "video" ? (
+                            <div
+                              className="w-full h-full relative cursor-zoom-in"
+                              onClick={() =>
+                                setLightbox({
+                                  url: decryptedSelfieUrl,
+                                  type: "video",
+                                })
+                              }
+                            >
+                              <video
+                                src={decryptedSelfieUrl}
+                                className="w-full h-44 object-cover rounded-xl"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                              />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
                                 <ZoomIn className="w-5 h-5 text-white" />
                               </div>
                             </div>
                           ) : (
-                            <div className="w-full h-full relative cursor-zoom-in" onClick={() => setLightbox({ url: decryptedSelfieUrl, type: 'image' })}>
-                              <img src={decryptedSelfieUrl} alt="Selfie" className="w-full h-44 object-cover rounded-xl" />
+                            <div
+                              className="w-full h-full relative cursor-zoom-in"
+                              onClick={() =>
+                                setLightbox({
+                                  url: decryptedSelfieUrl,
+                                  type: "image",
+                                })
+                              }
+                            >
+                              <img
+                                src={decryptedSelfieUrl}
+                                alt="Selfie"
+                                className="w-full h-44 object-cover rounded-xl"
+                              />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
                                 <ZoomIn className="w-5 h-5 text-white" />
                               </div>
                             </div>
                           )}
-                          <span className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isSelfieEncrypted ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'}`}>
-                            {isSelfieEncrypted ? 'SIGNATURE ECDSA OK' : 'BRUT'}
+                          <span
+                            className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isSelfieEncrypted ? "bg-amber-500 text-slate-950" : "bg-emerald-500 text-white"}`}
+                          >
+                            {isSelfieEncrypted
+                              ? "SIGNATURE ECDSA OK"
+                              : "BRUT"}
                           </span>
                         </div>
                       ) : (
                         <div className="text-center space-y-2">
                           <User className="w-8 h-8 text-slate-600 mx-auto" />
-                          <p className="text-xs font-bold text-slate-400">selfie.enc</p>
-                          <span className="text-[10px] text-amber-500 font-bold block">NON TRANSMIS</span>
+                          <p className="text-xs font-bold text-slate-400">
+                            selfie.enc
+                          </p>
+                          <span className="text-[10px] text-amber-500 font-bold block">
+                            NON TRANSMIS
+                          </span>
                         </div>
                       )}
                     </div>
-
                   </div>
                 )}
               </div>
@@ -786,15 +1125,27 @@ export function KYCAdminDashboardScreen() {
               <div className="flex flex-col gap-3 pt-4 border-t border-slate-800">
                 <div className="flex gap-3">
                   <button
-                    onClick={() => handleUpdateStatus('rejected')}
-                    disabled={isActionLoading || isDecrypting || !isKeyLoaded}
+                    onClick={() =>
+                      handleUpdateStatus("rejected")
+                    }
+                    disabled={
+                      isActionLoading ||
+                      isDecrypting ||
+                      !isKeyLoaded
+                    }
                     className="flex-1 py-4 border border-red-500/30 hover:border-red-500 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed border-none cursor-pointer"
                   >
                     <UserX className="w-4 h-4" /> Rejeter
                   </button>
                   <button
-                    onClick={() => handleUpdateStatus('verified')}
-                    disabled={isActionLoading || isDecrypting || !isKeyLoaded}
+                    onClick={() =>
+                      handleUpdateStatus("verified")
+                    }
+                    disabled={
+                      isActionLoading ||
+                      isDecrypting ||
+                      !isKeyLoaded
+                    }
                     className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed border-none cursor-pointer"
                   >
                     <UserCheck className="w-4 h-4" /> Confirmer
@@ -805,15 +1156,21 @@ export function KYCAdminDashboardScreen() {
                   disabled={isActionLoading || isDecrypting}
                   className="w-full py-3.5 border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 cursor-pointer"
                 >
-                  <Trash2 className="w-4 h-4" /> Purger les fichiers & Réinitialiser le compte
+                  <Trash2 className="w-4 h-4" /> Purger les
+                  fichiers & Réinitialiser le compte
                 </button>
               </div>
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-center py-24 border-2 border-dashed border-slate-800 rounded-3xl">
               <FileText className="w-12 h-12 text-slate-700 mb-3" />
-              <h3 className="text-sm font-bold text-slate-400">Station d'inspection vide</h3>
-              <p className="text-xs text-slate-500 max-w-[240px] mt-1">Sélectionnez une ligne du tableau de gauche pour initier le déchiffrement local du dossier.</p>
+              <h3 className="text-sm font-bold text-slate-400">
+                Station d'inspection vide
+              </h3>
+              <p className="text-xs text-slate-500 max-w-[240px] mt-1">
+                Sélectionnez une ligne du tableau de gauche pour
+                initier le déchiffrement local du dossier.
+              </p>
             </div>
           )}
         </div>
@@ -822,7 +1179,7 @@ export function KYCAdminDashboardScreen() {
       {/* LIGHTBOX DE L'ADMINISTRATEUR */}
       {lightbox && (
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <button 
+          <button
             onClick={() => setLightbox(null)}
             className="absolute top-6 right-6 p-3 bg-slate-900 border border-slate-800 text-white rounded-full transition-all cursor-pointer shadow-xl z-50 hover:bg-slate-800"
           >
@@ -832,31 +1189,30 @@ export function KYCAdminDashboardScreen() {
             <div className="absolute top-4 left-4 bg-black/60 backdrop-blur px-4 py-1.5 rounded-full text-white text-xs font-bold tracking-widest z-10">
               Audit Zoomed View
             </div>
-            
-            {lightbox.type === 'pdf' ? (
-              <iframe 
-                src={lightbox.url} 
+
+            {lightbox.type === "pdf" ? (
+              <iframe
+                src={lightbox.url}
                 className="w-full h-[84vh] rounded-xl border-none bg-white"
                 title="Kauri Fullscreen Audit Frame"
               />
-            ) : lightbox.type === 'video' ? (
-              <video 
-                src={lightbox.url} 
-                controls 
-                autoPlay 
+            ) : lightbox.type === "video" ? (
+              <video
+                src={lightbox.url}
+                controls
+                autoPlay
                 className="max-w-full max-h-[84vh] object-contain rounded-xl"
               />
             ) : (
-              <img 
-                src={lightbox.url} 
-                alt="Audit Zoomed View" 
+              <img
+                src={lightbox.url}
+                alt="Audit Zoomed View"
                 className="max-w-full max-h-[84vh] object-contain rounded-xl"
               />
             )}
           </div>
         </div>
       )}
-
     </div>
   );
 }
