@@ -83,8 +83,18 @@ out/
 
 # IDE and OS files
 .vscode/
+.idea/
 .DS_Store
-*.md
+*.pem
+*.key
+*.cert
+*.crt
+
+# Skills & AI Tooling
 .claude/
-claude/
-./claude/
+.agents/
+skills-lock.json
+guidelines/
+
+# Documentation / Markdown
+*.md
