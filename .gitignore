@@ -84,3 +84,4 @@ out/
 # IDE and OS files
 .vscode/
 .DS_Store
+*.md
