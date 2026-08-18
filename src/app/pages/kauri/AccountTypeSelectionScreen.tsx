@@ -69,9 +69,7 @@ async function saveKeysToEnclave(
 
 async function getKeysFromEnclave(
   id: string,
-): Promise<
-  { ecdhPriv: CryptoKey; ecdsaPriv: CryptoKey } | undefined
-> {
+): Promise<{ ecdhPriv: CryptoKey; ecdsaPriv: CryptoKey } | undefined> {
   const db = await getDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
@@ -118,19 +116,11 @@ export function AccountTypeSelectionScreen() {
     phone: "",
     businessName: "",
   });
-  const [errors, setErrors] = useState<Record<string, string>>(
-    {},
-  );
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [activeUserId, setActiveUserId] = useState<
-    string | null
-  >(null);
-  const [idPreviewUrl, setIdPreviewUrl] = useState<
-    string | null
-  >(null);
-  const [selfiePreviewUrl, setSelfiePreviewUrl] = useState<
-    string | null
-  >(null);
+  const [activeUserId, setActiveUserId] = useState<string | null>(null);
+  const [idPreviewUrl, setIdPreviewUrl] = useState<string | null>(null);
+  const [selfiePreviewUrl, setSelfiePreviewUrl] = useState<string | null>(null);
   const identityInputRef = useRef<HTMLInputElement>(null);
 
   const [showCamera, setShowCamera] = useState(false);
@@ -143,39 +133,26 @@ export function AccountTypeSelectionScreen() {
   const videoChunksRef = useRef<BlobPart[]>([]);
   const keyframesRef = useRef<ImageData[]>([]);
 
-  const selectType = (
-    type: "particulier" | "professionnel",
-  ) => {
+  const selectType = (type: "particulier" | "professionnel") => {
     setAccountType(type);
     setStep("name");
   };
 
   const getStepsSequence = (): Step[] =>
     accountType === "professionnel"
-      ? [
-          "name",
-          "business",
-          "email",
-          "password",
-          "phone",
-          "documents",
-        ]
+      ? ["name", "business", "email", "password", "phone", "documents"]
       : ["name", "email", "password", "phone", "documents"];
   const stepsSequence = getStepsSequence();
   const currentStepIndex = stepsSequence.indexOf(step);
   const progressPercentage =
     step === "choose"
       ? 0
-      : Math.round(
-          ((currentStepIndex + 1) / stepsSequence.length) * 100,
-        );
+      : Math.round(((currentStepIndex + 1) / stepsSequence.length) * 100);
 
   const validateEmail = (emailStr: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
   const isPasswordRobust = (pass: string) =>
-    pass.length >= 8 &&
-    /[A-Z]/.test(pass) &&
-    /[0-9]/.test(pass);
+    pass.length >= 8 && /[A-Z]/.test(pass) && /[0-9]/.test(pass);
 
   const validateCurrentStep = (): boolean => {
     const e: Record<string, string> = {};
@@ -200,9 +177,7 @@ export function AccountTypeSelectionScreen() {
   const handleNext = () => {
     if (!validateCurrentStep()) return;
     if (step === "name")
-      setStep(
-        accountType === "professionnel" ? "business" : "email",
-      );
+      setStep(accountType === "professionnel" ? "business" : "email");
     else if (step === "business") setStep("email");
     else if (step === "email") setStep("password");
     else if (step === "password") setStep("phone");
@@ -214,9 +189,7 @@ export function AccountTypeSelectionScreen() {
     if (step === "name") setStep("choose");
     else if (step === "business") setStep("name");
     else if (step === "email")
-      setStep(
-        accountType === "professionnel" ? "business" : "name",
-      );
+      setStep(accountType === "professionnel" ? "business" : "name");
     else if (step === "password") setStep("email");
     else if (step === "phone") setStep("password");
     else if (step === "documents") setStep("phone");
@@ -229,18 +202,16 @@ export function AccountTypeSelectionScreen() {
     setIsLoading(true);
     try {
       const supabase = getSupabase();
-      const ecdhKeyPair =
-        await window.crypto.subtle.generateKey(
-          { name: "ECDH", namedCurve: "P-256" },
-          true,
-          ["deriveKey"],
-        );
-      const ecdsaKeyPair =
-        await window.crypto.subtle.generateKey(
-          { name: "ECDSA", namedCurve: "P-256" },
-          true,
-          ["sign", "verify"],
-        );
+      const ecdhKeyPair = await window.crypto.subtle.generateKey(
+        { name: "ECDH", namedCurve: "P-256" },
+        true,
+        ["deriveKey"],
+      );
+      const ecdsaKeyPair = await window.crypto.subtle.generateKey(
+        { name: "ECDSA", namedCurve: "P-256" },
+        true,
+        ["sign", "verify"],
+      );
       await saveKeysToEnclave("kauri_client", {
         ecdhPriv: ecdhKeyPair.privateKey,
         ecdsaPriv: ecdsaKeyPair.privateKey,
@@ -252,10 +223,7 @@ export function AccountTypeSelectionScreen() {
           // Redirection explicite vers le lien de vérification KYC
           redirectTo: `${window.location.origin}/kauri/kyc-verification?type=${accountType}`,
           queryParams: { account_type: accountType },
-          scopes:
-            provider === "facebook"
-              ? "email,public_profile"
-              : undefined,
+          scopes: provider === "facebook" ? "email,public_profile" : undefined,
         },
       });
       if (error) throw error;
@@ -273,18 +241,16 @@ export function AccountTypeSelectionScreen() {
     try {
       const supabase = getSupabase();
 
-      const ecdhKeyPair =
-        await window.crypto.subtle.generateKey(
-          { name: "ECDH", namedCurve: "P-256" },
-          true,
-          ["deriveKey"],
-        );
-      const ecdsaKeyPair =
-        await window.crypto.subtle.generateKey(
-          { name: "ECDSA", namedCurve: "P-256" },
-          true,
-          ["sign", "verify"],
-        );
+      const ecdhKeyPair = await window.crypto.subtle.generateKey(
+        { name: "ECDH", namedCurve: "P-256" },
+        true,
+        ["deriveKey"],
+      );
+      const ecdsaKeyPair = await window.crypto.subtle.generateKey(
+        { name: "ECDSA", namedCurve: "P-256" },
+        true,
+        ["sign", "verify"],
+      );
       await saveKeysToEnclave("kauri_client", {
         ecdhPriv: ecdhKeyPair.privateKey,
         ecdsaPriv: ecdsaKeyPair.privateKey,
@@ -313,21 +279,19 @@ export function AccountTypeSelectionScreen() {
               first_name: form.firstName.trim(),
               last_name: form.lastName.trim(),
               full_name: `${form.firstName.trim()} ${form.lastName.trim()}`,
-              phone: form.phone.trim() || null,
+              phone: form.phone.trim() || undefined,
               account_type: accountType,
               business_name:
-                accountType === "professionnel"
+                accountType === "professionnel" && form.businessName.trim()
                   ? form.businessName.trim()
-                  : null,
+                  : undefined,
               user_public_key: publicKeysJSON,
             },
           },
         });
 
       if (signUpError) {
-        if (
-          signUpError.message.toLowerCase().includes("already")
-        ) {
+        if (signUpError.message?.toLowerCase().includes("already")) {
           toast.error("Email déjà configuré. Connectez-vous.");
           navigate("/kauri/login");
           return;
@@ -335,8 +299,7 @@ export function AccountTypeSelectionScreen() {
         throw signUpError;
       }
 
-      if (!signUpData.user?.id)
-        throw new Error("ID d'enclave manquant.");
+      if (!signUpData.user?.id) throw new Error("ID d'enclave manquant.");
       setActiveUserId(signUpData.user.id);
 
       setStep("documents");
@@ -344,7 +307,9 @@ export function AccountTypeSelectionScreen() {
         "Compte créé ! Veuillez à présent ajouter vos pièces justificatives.",
       );
     } catch (e: any) {
-      toast.error(`Incident Infrastructure : ${e.message}`);
+      console.error("Signup exception:", e);
+      const msg = e?.message || JSON.stringify(e) || "Erreur serveur";
+      toast.error(`Incident Infrastructure : ${msg}`);
     } finally {
       setIsLoading(false);
     }
@@ -365,11 +330,7 @@ export function AccountTypeSelectionScreen() {
   };
 
   useEffect(() => {
-    if (
-      showCamera &&
-      videoRef.current &&
-      mediaStreamRef.current
-    ) {
+    if (showCamera && videoRef.current && mediaStreamRef.current) {
       videoRef.current.srcObject = mediaStreamRef.current;
       videoRef.current.play().catch(() => {});
     }
@@ -377,9 +338,7 @@ export function AccountTypeSelectionScreen() {
 
   const stopCamera = () => {
     if (mediaStreamRef.current)
-      mediaStreamRef.current
-        .getTracks()
-        .forEach((t) => t.stop());
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
     setShowCamera(false);
     setRecordingState("idle");
@@ -393,9 +352,7 @@ export function AccountTypeSelectionScreen() {
     const ctx = canvas.getContext("2d");
     if (ctx) {
       ctx.drawImage(videoRef.current, 0, 0, 100, 100);
-      keyframesRef.current.push(
-        ctx.getImageData(0, 0, 100, 100),
-      );
+      keyframesRef.current.push(ctx.getImageData(0, 0, 100, 100));
     }
   };
 
@@ -437,9 +394,7 @@ export function AccountTypeSelectionScreen() {
       videoChunksRef.current = [];
 
       if (!evaluateMotionVariance()) {
-        toast.error(
-          "Échec Anti-Fraude : Aucun mouvement physique détecté.",
-        );
+        toast.error("Échec Anti-Fraude : Aucun mouvement physique détecté.");
         setRecordingState("idle");
         return;
       }
@@ -477,10 +432,8 @@ export function AccountTypeSelectionScreen() {
 
     try {
       const supabase = getSupabase();
-      const enclaveKeys =
-        await getKeysFromEnclave("kauri_client");
-      if (!enclaveKeys)
-        throw new Error("Trousseau local corrompu.");
+      const enclaveKeys = await getKeysFromEnclave("kauri_client");
+      if (!enclaveKeys) throw new Error("Trousseau local corrompu.");
 
       const { data: dbProfile } = await supabase
         .from("profiles")
@@ -489,9 +442,7 @@ export function AccountTypeSelectionScreen() {
         .single();
       if (!dbProfile?.user_public_key)
         throw new Error("Clé distante introuvable.");
-      const userPublicKeys = JSON.parse(
-        dbProfile.user_public_key,
-      );
+      const userPublicKeys = JSON.parse(dbProfile.user_public_key);
 
       const fileBuffer = await fileData.arrayBuffer();
       const ephKey = await window.crypto.subtle.generateKey(
@@ -509,22 +460,14 @@ export function AccountTypeSelectionScreen() {
         true,
         ["encrypt"],
       );
-      const fileIV = window.crypto.getRandomValues(
-        new Uint8Array(12),
-      );
-      const encryptedFileContent =
-        await window.crypto.subtle.encrypt(
-          { name: "AES-GCM", iv: fileIV },
-          fek,
-          fileBuffer,
-        );
-      const exportedFek = await window.crypto.subtle.exportKey(
-        "raw",
+      const fileIV = window.crypto.getRandomValues(new Uint8Array(12));
+      const encryptedFileContent = await window.crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: fileIV },
         fek,
+        fileBuffer,
       );
-      const wrapIV = window.crypto.getRandomValues(
-        new Uint8Array(12),
-      );
+      const exportedFek = await window.crypto.subtle.exportKey("raw", fek);
+      const wrapIV = window.crypto.getRandomValues(new Uint8Array(12));
 
       const adminPubKey = await window.crypto.subtle.importKey(
         "spki",
@@ -607,10 +550,7 @@ export function AccountTypeSelectionScreen() {
       offset += userEncFEK.byteLength;
       packedBytes.set(new Uint8Array(signatureBuffer), offset);
       offset += signatureBuffer.byteLength;
-      packedBytes.set(
-        new Uint8Array(encryptedFileContent),
-        offset,
-      );
+      packedBytes.set(new Uint8Array(encryptedFileContent), offset);
 
       const { error: uploadError } = await supabase.storage
         .from("secure-kyc")
@@ -624,19 +564,16 @@ export function AccountTypeSelectionScreen() {
       if (uploadError) throw uploadError;
 
       const localUrl = URL.createObjectURL(
-        fileData instanceof Blob
-          ? fileData
-          : new Blob([fileData]),
+        fileData instanceof Blob ? fileData : new Blob([fileData]),
       );
       if (type === "identity") {
         setIdPreviewUrl(localUrl);
       } else {
         setSelfiePreviewUrl(localUrl);
       }
-      toast.success(
-        "Registre cryptographique scellé avec succès !",
-        { id: toastId },
-      );
+      toast.success("Registre cryptographique scellé avec succès !", {
+        id: toastId,
+      });
     } catch (err: any) {
       toast.error(`Incident Enclave : ${err.message}`, {
         id: toastId,
@@ -662,8 +599,8 @@ export function AccountTypeSelectionScreen() {
         .eq("id", activeUserId);
 
       const accessToken =
-        (await supabase.auth.getSession()).data.session
-          ?.access_token ?? publicAnonKey;
+        (await supabase.auth.getSession()).data.session?.access_token ??
+        publicAnonKey;
       await fetch(`${SERVER_URL}/wallet/init`, {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -673,9 +610,7 @@ export function AccountTypeSelectionScreen() {
         headers: { Authorization: `Bearer ${accessToken}` },
       }).catch(() => {});
 
-      toast.success(
-        "Dossier validé ! Redirection vers votre tableau de bord.",
-      );
+      toast.success("Dossier validé ! Redirection vers votre tableau de bord.");
       navigate("/kauri/normal-dashboard");
     } catch (e) {
       toast.error("Erreur de routage final.");
@@ -732,10 +667,7 @@ export function AccountTypeSelectionScreen() {
           type="file"
           ref={identityInputRef}
           onChange={(e) =>
-            handleUploadAndEncrypt(
-              "identity",
-              e.target.files?.[0],
-            )
+            handleUploadAndEncrypt("identity", e.target.files?.[0])
           }
           accept="image/*,application/pdf"
           className="hidden"
@@ -753,8 +685,7 @@ export function AccountTypeSelectionScreen() {
                 <span className="text-sm">Retour</span>
               </button>
               <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full">
-                Étape {currentStepIndex + 1} /{" "}
-                {stepsSequence.length}
+                Étape {currentStepIndex + 1} / {stepsSequence.length}
               </span>
             </div>
 
@@ -766,15 +697,12 @@ export function AccountTypeSelectionScreen() {
             </div>
 
             <h1 className="text-white text-2xl font-black tracking-tight">
-              {step === "name" &&
-                "Vos informations personnelles"}
-              {step === "business" &&
-                "Votre identité professionnelle"}
+              {step === "name" && "Vos informations personnelles"}
+              {step === "business" && "Votre identité professionnelle"}
               {step === "email" && "Votre adresse e-mail"}
               {step === "password" && "Sécurisez votre compte"}
               {step === "phone" && "Contact téléphonique"}
-              {step === "documents" &&
-                "Vérification Réglementaire"}
+              {step === "documents" && "Vérification Réglementaire"}
             </h1>
           </div>
         </div>
@@ -800,9 +728,7 @@ export function AccountTypeSelectionScreen() {
                     Apple
                   </button>
                   <button
-                    onClick={() =>
-                      handleSocialSignup("facebook")
-                    }
+                    onClick={() => handleSocialSignup("facebook")}
                     className="py-3 rounded-xl border-2 border-slate-100 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors"
                   >
                     Facebook
@@ -818,12 +744,7 @@ export function AccountTypeSelectionScreen() {
                 </div>
 
                 <div className="space-y-4">
-                  {renderInputField(
-                    "firstName",
-                    "Prénom légal",
-                    "Marie",
-                    User,
-                  )}
+                  {renderInputField("firstName", "Prénom légal", "Marie", User)}
                   {renderInputField(
                     "lastName",
                     "Nom de famille",
@@ -858,9 +779,7 @@ export function AccountTypeSelectionScreen() {
                 <div
                   className="relative rounded-xl border-2 px-4 py-3.5 bg-white flex items-center gap-2"
                   style={{
-                    borderColor: errors.password
-                      ? "#B05B3B"
-                      : "#E2E8F0",
+                    borderColor: errors.password ? "#B05B3B" : "#E2E8F0",
                   }}
                 >
                   <Lock className="w-4 h-4 text-gray-400 shrink-0" />
@@ -882,9 +801,7 @@ export function AccountTypeSelectionScreen() {
                   />
                   <button
                     type="button"
-                    onClick={() =>
-                      setShowPassword(!showPassword)
-                    }
+                    onClick={() => setShowPassword(!showPassword)}
                     className="text-gray-400 bg-transparent border-none cursor-pointer"
                   >
                     {showPassword ? (
@@ -897,8 +814,7 @@ export function AccountTypeSelectionScreen() {
                 {form.password.length > 0 &&
                   !isPasswordRobust(form.password) && (
                     <p className="text-[10px] text-red-500 mt-1 font-bold">
-                      ⚠️ Requis : 8 caractères, 1 Majuscule, 1
-                      Chiffre.
+                      ⚠️ Requis : 8 caractères, 1 Majuscule, 1 Chiffre.
                     </p>
                   )}
                 {errors.password && (
@@ -939,9 +855,8 @@ export function AccountTypeSelectionScreen() {
               <div className="space-y-5">
                 <div className="bg-teal-500/10 border border-teal-500/20 rounded-2xl p-4">
                   <p className="text-[11px] text-teal-800 font-bold">
-                    Étape finale : Importez votre pièce
-                    d'identité et validez le scan 3D pour
-                    soumettre votre dossier.
+                    Étape finale : Importez votre pièce d'identité et validez le
+                    scan 3D pour soumettre votre dossier.
                   </p>
                 </div>
 
@@ -950,9 +865,7 @@ export function AccountTypeSelectionScreen() {
                     1. Pièce d'identité officielle
                   </label>
                   <div
-                    onClick={() =>
-                      identityInputRef.current?.click()
-                    }
+                    onClick={() => identityInputRef.current?.click()}
                     className="flex items-center justify-between border-2 border-dashed border-slate-200 rounded-xl p-4 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
                   >
                     <div className="flex items-center gap-3">
@@ -1023,20 +936,14 @@ export function AccountTypeSelectionScreen() {
 
           <div className="mt-8 space-y-4">
             <button
-              onClick={
-                step === "documents"
-                  ? handleFinalize
-                  : handleNext
-              }
+              onClick={step === "documents" ? handleFinalize : handleNext}
               disabled={
                 isLoading ||
-                (step === "documents" &&
-                  (!idPreviewUrl || !selfiePreviewUrl))
+                (step === "documents" && (!idPreviewUrl || !selfiePreviewUrl))
               }
               className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 text-white text-sm font-bold shadow-xl cursor-pointer border-none transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                background:
-                  "linear-gradient(135deg, #006D77, #0D9488)",
+                background: "linear-gradient(135deg, #006D77, #0D9488)",
               }}
             >
               {isLoading ? (
@@ -1067,14 +974,10 @@ export function AccountTypeSelectionScreen() {
               <h2 className="text-white font-black text-xl tracking-tight">
                 {recordingState === "idle" &&
                   "Placez votre visage dans le cadre"}
-                {recordingState === "front" &&
-                  "Regardez l'objectif..."}
-                {recordingState === "left" &&
-                  "Tournez la tête à GAUCHE"}
-                {recordingState === "right" &&
-                  "Tournez la tête à DROITE"}
-                {recordingState === "processing" &&
-                  "Analyse en cours..."}
+                {recordingState === "front" && "Regardez l'objectif..."}
+                {recordingState === "left" && "Tournez la tête à GAUCHE"}
+                {recordingState === "right" && "Tournez la tête à DROITE"}
+                {recordingState === "processing" && "Analyse en cours..."}
               </h2>
             </div>
 
@@ -1096,13 +999,11 @@ export function AccountTypeSelectionScreen() {
               >
                 {recordingState === "idle" ? (
                   <>
-                    <Camera className="w-5 h-5" /> Démarrer la
-                    capture
+                    <Camera className="w-5 h-5" /> Démarrer la capture
                   </>
                 ) : (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />{" "}
-                    Analyse...
+                    <Loader2 className="w-5 h-5 animate-spin" /> Analyse...
                   </>
                 )}
               </button>
@@ -1119,10 +1020,7 @@ export function AccountTypeSelectionScreen() {
       <div className="flex-1 w-full max-w-md mx-auto px-6 py-12 flex flex-col justify-center">
         <div className="text-center mb-10">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#F59E0B] flex items-center justify-center shadow-2xl">
-            <svg
-              viewBox="0 0 100 100"
-              className="w-12 h-12 text-white"
-            >
+            <svg viewBox="0 0 100 100" className="w-12 h-12 text-white">
               <path
                 d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35"
                 fill="currentColor"
@@ -1133,8 +1031,7 @@ export function AccountTypeSelectionScreen() {
             KAURI
           </h1>
           <p className="text-[#E0F2FE] text-xs mt-2">
-            L'union de la communauté, la force de
-            l'investissement
+            L'union de la communauté, la force de l'investissement
           </p>
         </div>
 
@@ -1153,8 +1050,8 @@ export function AccountTypeSelectionScreen() {
               Compte Particulier
             </h3>
             <p className="text-[#4A4A4A] text-xs mb-3">
-              Rejoignez des tontines privées, investissez dans
-              des projets et gérez vos rendements.
+              Rejoignez des tontines privées, investissez dans des projets et
+              gérez vos rendements.
             </p>
           </button>
 
@@ -1172,8 +1069,8 @@ export function AccountTypeSelectionScreen() {
               Compte Professionnel
             </h3>
             <p className="text-white/90 text-xs mb-3">
-              Lancez des levées de fonds pour vos projets et
-              accédez à un réseau d'investisseurs.
+              Lancez des levées de fonds pour vos projets et accédez à un réseau
+              d'investisseurs.
             </p>
           </button>
         </div>
