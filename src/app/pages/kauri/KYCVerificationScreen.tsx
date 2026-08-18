@@ -574,6 +574,7 @@ export function KYCVerificationScreen() {
         await getKeysFromEnclave("kauri_client");
 
       if (!enclaveKeys) {
+        toast.info("Génération de nouvelles clés d'enclave sécurisée...");
         const ecdhKeyPair =
           await window.crypto.subtle.generateKey(
             { name: "ECDH", namedCurve: "P-256" },
@@ -592,12 +593,33 @@ export function KYCVerificationScreen() {
           ecdsaPriv: ecdsaKeyPair.privateKey,
         };
         await saveKeysToEnclave("kauri_client", enclaveKeys);
+        toast.success("Clés d'enclave sécurisée générées et sauvegardées !");
 
         const ecdhPubBuf = await window.crypto.subtle.exportKey(
           "spki",
           ecdhKeyPair.publicKey,
         );
-        const ecdsaPubBuf =
+        const ecdsaPubBuf = await window.crypto.subtle.exportKey(
+          "spki",
+          ecdsaKeyPair.publicKey,
+        );
+
+        // Mise à jour de la clé publique de l'utilisateur dans Supabase Auth
+        const publicKeysJSON = JSON.stringify({
+          ecdh: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`,
+          ecdsa: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`,
+        });
+
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: { user_public_key: publicKeysJSON },
+        });
+        if (updateError) throw updateError;
+        await refreshProfile(); // Rafraîchir le profil pour récupérer la nouvelle clé publique
+      }
+
+      if (!enclaveKeys) {
+        throw new Error("Clés d'enclave critiques introuvables ou échec de génération.");
+      }
           await window.crypto.subtle.exportKey(
             "spki",
             ecdsaKeyPair.publicKey,
