@@ -409,6 +409,23 @@ export function KYCVerificationScreen() {
 
   const hasAnyMutation = isAddressChanged || hasFileChanges;
 
+  // Modificateur de champ avec persistance dynamique + RÈGLE CHIFFRES UNIQUES SUR CODE POSTAL
+  const updateAddressField = (field: keyof typeof address, value: string) => {
+    // 🛡️ REJET STRICT DES LETTRES SUR LE CODE POSTAL
+    const sanitizedValue = field === "zip" ? value.replace(/\D/g, "") : value;
+
+    setAddress((prev) => {
+      const updated = { ...prev, [field]: sanitizedValue };
+      if (profile?.id) {
+        localStorage.setItem(
+          `kauri_address_draft_${profile.id}`,
+          JSON.stringify(updated),
+        );
+      }
+      return updated;
+    });
+  };
+
   const hasIdentity = !!identityPreviewUrl || hasExistingIdentity;
   const hasSelfie = !!selfiePreviewUrl || hasExistingSelfie;
 
