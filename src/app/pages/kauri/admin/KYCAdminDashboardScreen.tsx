@@ -429,9 +429,11 @@ export function KYCAdminDashboardScreen() {
 
     setIsDecrypting(true);
     try {
+      // Les fichiers KYC sont stockés sous 'kyc-vault/USER_ID/' dans le bucket 'secure-kyc'
+      const folderPath = `kyc-vault/${req.id}`;
       const { data: files, error: listError } = await supabase.storage
         .from("secure-kyc")
-        .list(req.id);
+        .list(folderPath);
 
       if (listError) throw listError;
 
@@ -446,7 +448,7 @@ export function KYCAdminDashboardScreen() {
 
         const { data: blob } = await supabase.storage
           .from("secure-kyc")
-          .download(`${req.id}/${identityFile.name}`);
+          .download(`${folderPath}/${identityFile.name}`);
 
         if (blob) {
           if (isEnc) {
@@ -481,7 +483,9 @@ export function KYCAdminDashboardScreen() {
           toast.error(
             "Fichier d'identité introuvable sur le stockage Supabase.",
           );
-          console.error(`Fichier ${req.id}/${identityFile.name} non trouvé.`);
+          console.error(
+            `Fichier ${folderPath}/${identityFile.name} non trouvé.`,
+          );
         }
       } else {
         toast.info(
@@ -495,7 +499,7 @@ export function KYCAdminDashboardScreen() {
 
         const { data: blob } = await supabase.storage
           .from("secure-kyc")
-          .download(`${req.id}/${selfieFile.name}`);
+          .download(`${folderPath}/${selfieFile.name}`);
 
         if (blob) {
           if (isEnc) {
@@ -528,7 +532,7 @@ export function KYCAdminDashboardScreen() {
           }
         } else {
           toast.error("Fichier selfie introuvable sur le stockage Supabase.");
-          console.error(`Fichier ${req.id}/${selfieFile.name} non trouvé.`);
+          console.error(`Fichier ${folderPath}/${selfieFile.name} non trouvé.`);
         }
       } else {
         toast.info(
