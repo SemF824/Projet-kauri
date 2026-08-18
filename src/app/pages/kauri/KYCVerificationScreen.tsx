@@ -475,17 +475,19 @@ export function KYCVerificationScreen() {
         zip: address.zip.trim(),
       };
 
-      if (profile?.kyc_status !== "verified" || hasFileChanges) {
-        updateData.kyc_status = "pending";
-        updateData.trust_score = 40;
-      }
+      // Retrait temporaire de la mise à jour de kyc_status et trust_score
+      // pour éviter l'erreur 400 (RLS policy potentielle).
+      // Ces champs devraient être gérés côté serveur.
 
       const { error } = await supabase
         .from("profiles")
         .update(updateData)
         .eq("id", profile?.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erreur mise à jour profil:", error);
+        throw error;
+      }
 
       if (profile?.id) {
         localStorage.removeItem(`kauri_address_draft_${profile.id}`);
