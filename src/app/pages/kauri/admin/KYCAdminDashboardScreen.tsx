@@ -73,9 +73,7 @@ async function saveKeyToEnclave(id: string, key: CryptoKey) {
   });
 }
 
-async function getKeyFromEnclave(
-  id: string,
-): Promise<CryptoKey | undefined> {
+async function getKeyFromEnclave(id: string): Promise<CryptoKey | undefined> {
   const db = await getDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
@@ -127,11 +125,7 @@ function detectMimeType(arrayBuffer: ArrayBuffer): string {
   ) {
     return "image/png";
   }
-  if (
-    bytes[0] === 0x47 &&
-    bytes[1] === 0x49 &&
-    bytes[2] === 0x46
-  ) {
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
     return "image/gif";
   }
   if (
@@ -156,16 +150,13 @@ function detectMimeType(arrayBuffer: ArrayBuffer): string {
 
 export function KYCAdminDashboardScreen() {
   const navigate = useNavigate();
-  const {
-    user,
-    profile,
-    loading: authContextLoading,
-  } = useAuth();
+  const { user, profile, loading: authContextLoading } = useAuth();
   const supabase = getSupabase();
 
   const [requests, setRequests] = useState<KYCRequest[]>([]);
-  const [selectedRequest, setSelectedRequest] =
-    useState<KYCRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<KYCRequest | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -174,20 +165,20 @@ export function KYCAdminDashboardScreen() {
   >("all");
 
   const [isKeyLoaded, setIsKeyActive] = useState(false);
-  const [importedCryptoKey, setImportedCryptoKey] =
-    useState<CryptoKey | null>(null);
+  const [importedCryptoKey, setImportedCryptoKey] = useState<CryptoKey | null>(
+    null,
+  );
 
-  const [decryptedIdentityUrl, setDecryptedIdentityUrl] =
-    useState<string | null>(null);
-  const [decryptedSelfieUrl, setDecryptedSelfieUrl] = useState<
+  const [decryptedIdentityUrl, setDecryptedIdentityUrl] = useState<
     string | null
   >(null);
+  const [decryptedSelfieUrl, setDecryptedSelfieUrl] = useState<string | null>(
+    null,
+  );
   const [isDecrypting, setIsDecrypting] = useState(false);
 
-  const [isIdentityEncrypted, setIsIdentityEncrypted] =
-    useState(false);
-  const [isSelfieEncrypted, setIsSelfieEncrypted] =
-    useState(false);
+  const [isIdentityEncrypted, setIsIdentityEncrypted] = useState(false);
+  const [isSelfieEncrypted, setIsSelfieEncrypted] = useState(false);
 
   const [identityFileType, setIdentityFileType] = useState<
     "image" | "pdf" | "video"
@@ -196,15 +187,12 @@ export function KYCAdminDashboardScreen() {
     "image" | "pdf" | "video"
   >("image");
 
-  const [lightbox, setLightbox] =
-    useState<LightboxState | null>(null);
+  const [lightbox, setLightbox] = useState<LightboxState | null>(null);
 
   useEffect(() => {
     const initializeSavedKey = async () => {
       try {
-        const enclaveKey = await getKeyFromEnclave(
-          "kauri_admin_ecdh",
-        );
+        const enclaveKey = await getKeyFromEnclave("kauri_admin_ecdh");
         if (enclaveKey) {
           setImportedCryptoKey(enclaveKey);
           setIsKeyActive(true);
@@ -226,34 +214,27 @@ export function KYCAdminDashboardScreen() {
 
       if (error) throw error;
 
-      const formatted: KYCRequest[] = (data || []).map(
-        (p: any) => ({
-          id: p.id,
-          fullName:
-            p.full_name ||
-            `${p.first_name || ""} ${p.last_name || ""}`.trim() ||
-            "Non renseigné",
-          email: p.email || "Inconnu",
-          phone: p.phone_number || "Non communiqué",
-          accountType: p.account_type || "particulier",
-          kycStatus: p.kyc_status || "unverified",
-          street: p.street || "Non renseigné",
-          city: p.city || "Non renseigné",
-          zip: p.zip || "Non renseigné",
-          userPublicKeysJSON: p.user_public_key,
-          createdAt:
-            p.created_at ||
-            p.updated_at ||
-            new Date().toISOString(),
-        }),
-      );
+      const formatted: KYCRequest[] = (data || []).map((p: any) => ({
+        id: p.id,
+        fullName:
+          p.full_name ||
+          `${p.first_name || ""} ${p.last_name || ""}`.trim() ||
+          "Non renseigné",
+        email: p.email || "Inconnu",
+        phone: p.phone_number || "Non communiqué",
+        accountType: p.account_type || "particulier",
+        kycStatus: p.kyc_status || "unverified",
+        street: p.street || "Non renseigné",
+        city: p.city || "Non renseigné",
+        zip: p.zip || "Non renseigné",
+        userPublicKeysJSON: p.user_public_key,
+        createdAt: p.created_at || p.updated_at || new Date().toISOString(),
+      }));
 
       setRequests(formatted);
     } catch (err: any) {
       console.error("[KYC Fetch Error]:", err);
-      toast.error(
-        "Erreur de synchronisation du registre des comptes.",
-      );
+      toast.error("Erreur de synchronisation du registre des comptes.");
     } finally {
       setIsLoading(false);
     }
@@ -290,9 +271,7 @@ export function KYCAdminDashboardScreen() {
       await saveKeyToEnclave("kauri_admin_ecdh", cryptoKey);
       setImportedCryptoKey(cryptoKey);
       setIsKeyActive(true);
-      toast.success(
-        "Enclave ECC armée. Clé scellée avec succès.",
-      );
+      toast.success("Enclave ECC armée. Clé scellée avec succès.");
 
       if (selectedRequest) {
         handleViewAndDecryptDocs(selectedRequest, cryptoKey);
@@ -334,25 +313,17 @@ export function KYCAdminDashboardScreen() {
     const fileIV = packedBytes.slice(89, 101);
 
     let offset = 101;
-    const adminEncFek = packedBytes.slice(
-      offset,
-      offset + adminFekLen,
-    );
+    const adminEncFek = packedBytes.slice(offset, offset + adminFekLen);
     offset += adminFekLen;
     offset += userFekLen;
 
-    const signature = packedBytes.slice(
-      offset,
-      offset + sigLen,
-    );
+    const signature = packedBytes.slice(offset, offset + sigLen);
     offset += sigLen;
 
     const ciphertext = packedBytes.slice(offset);
 
     if (!userKeysJSON) {
-      throw new Error(
-        "Trousseau public ECC manquant sur le profil.",
-      );
+      throw new Error("Trousseau public ECC manquant sur le profil.");
     }
 
     let userKeys;
@@ -362,8 +333,7 @@ export function KYCAdminDashboardScreen() {
       throw new Error("Corruption du trousseau de clés JSON.");
     }
 
-    if (!userKeys.ecdsa)
-      throw new Error("Clé ECDSA manquante.");
+    if (!userKeys.ecdsa) throw new Error("Clé ECDSA manquante.");
 
     const verifyKey = await window.crypto.subtle.importKey(
       "spki",
@@ -374,15 +344,10 @@ export function KYCAdminDashboardScreen() {
     );
 
     const dataToVerify = new Uint8Array(
-      ephPubRaw.byteLength +
-        fileIV.byteLength +
-        ciphertext.byteLength,
+      ephPubRaw.byteLength + fileIV.byteLength + ciphertext.byteLength,
     );
     dataToVerify.set(new Uint8Array(ephPubRaw), 0);
-    dataToVerify.set(
-      new Uint8Array(fileIV),
-      ephPubRaw.byteLength,
-    );
+    dataToVerify.set(new Uint8Array(fileIV), ephPubRaw.byteLength);
     dataToVerify.set(
       new Uint8Array(ciphertext),
       ephPubRaw.byteLength + fileIV.byteLength,
@@ -431,12 +396,11 @@ export function KYCAdminDashboardScreen() {
       ["decrypt"],
     );
 
-    const decryptedFileBuffer =
-      await window.crypto.subtle.decrypt(
-        { name: "AES-GCM", iv: fileIV },
-        fek,
-        ciphertext,
-      );
+    const decryptedFileBuffer = await window.crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: fileIV },
+      fek,
+      ciphertext,
+    );
 
     const exactMime = detectMimeType(decryptedFileBuffer);
     const finalBlob = new Blob([decryptedFileBuffer], {
@@ -465,19 +429,16 @@ export function KYCAdminDashboardScreen() {
 
     setIsDecrypting(true);
     try {
-      const { data: files, error: listError } =
-        await supabase.storage.from("secure-kyc").list(req.id);
+      const { data: files, error: listError } = await supabase.storage
+        .from("secure-kyc")
+        .list(req.id);
 
       if (listError) throw listError;
 
       const activeKey = forcedKey || importedCryptoKey;
 
-      const identityFile = files?.find((f) =>
-        f.name.startsWith("identity"),
-      );
-      const selfieFile = files?.find((f) =>
-        f.name.startsWith("selfie"),
-      );
+      const identityFile = files?.find((f) => f.name.startsWith("identity"));
+      const selfieFile = files?.find((f) => f.name.startsWith("selfie"));
 
       if (identityFile) {
         const isEnc = identityFile.name.endsWith(".enc");
@@ -498,6 +459,13 @@ export function KYCAdminDashboardScreen() {
               );
               setIdentityFileType(result.type);
               setDecryptedIdentityUrl(result.url);
+            } else {
+              toast.error(
+                "Clé administrative manquante pour déchiffrer le document d'identité.",
+              );
+              console.error(
+                "Admin private key not loaded for identity decryption.",
+              );
             }
           } else {
             setIdentityFileType(
@@ -509,7 +477,16 @@ export function KYCAdminDashboardScreen() {
             );
             setDecryptedIdentityUrl(URL.createObjectURL(blob));
           }
+        } else {
+          toast.error(
+            "Fichier d'identité introuvable sur le stockage Supabase.",
+          );
+          console.error(`Fichier ${req.id}/${identityFile.name} non trouvé.`);
         }
+      } else {
+        toast.info(
+          "Aucun fichier d'identité n'a été téléversé pour cet utilisateur.",
+        );
       }
 
       if (selfieFile) {
@@ -531,6 +508,13 @@ export function KYCAdminDashboardScreen() {
               );
               setSelfieFileType(result.type);
               setDecryptedSelfieUrl(result.url);
+            } else {
+              toast.error(
+                "Clé administrative manquante pour déchiffrer la vidéo selfie.",
+              );
+              console.error(
+                "Admin private key not loaded for selfie decryption.",
+              );
             }
           } else {
             setSelfieFileType(
@@ -542,22 +526,26 @@ export function KYCAdminDashboardScreen() {
             );
             setDecryptedSelfieUrl(URL.createObjectURL(blob));
           }
+        } else {
+          toast.error("Fichier selfie introuvable sur le stockage Supabase.");
+          console.error(`Fichier ${req.id}/${selfieFile.name} non trouvé.`);
         }
+      } else {
+        toast.info(
+          "Aucun fichier selfie n'a été téléversé pour cet utilisateur.",
+        );
       }
     } catch (err: any) {
       console.error("[Decryption Crash]:", err);
       toast.error(
-        err.message ||
-          "Erreur de décodage du package cryptographique.",
+        err.message || "Erreur de décodage du package cryptographique.",
       );
     } finally {
       setIsDecrypting(false);
     }
   };
 
-  const handleUpdateStatus = async (
-    status: "verified" | "rejected",
-  ) => {
+  const handleUpdateStatus = async (status: "verified" | "rejected") => {
     if (!selectedRequest) return;
 
     if (!isKeyLoaded || !importedCryptoKey) {
@@ -580,9 +568,7 @@ export function KYCAdminDashboardScreen() {
 
       if (error) throw error;
 
-      toast.success(
-        `Statut mis à jour : ${status.toUpperCase()}`,
-      );
+      toast.success(`Statut mis à jour : ${status.toUpperCase()}`);
       setSelectedRequest(null);
       fetchAllProfiles();
     } catch (err: any) {
@@ -612,29 +598,23 @@ export function KYCAdminDashboardScreen() {
 
     try {
       // 1. Lister tous les fichiers présents dans le dossier de l'utilisateur
-      const { data: userFiles, error: listError } =
-        await supabase.storage
-          .from("secure-kyc")
-          .list(selectedRequest.id);
+      const { data: userFiles, error: listError } = await supabase.storage
+        .from("secure-kyc")
+        .list(selectedRequest.id);
 
-      if (listError)
-        console.warn("Erreur listing Storage:", listError);
+      if (listError) console.warn("Erreur listing Storage:", listError);
 
       // 2. Construction de la liste exacte des chemins à supprimer
       if (userFiles && userFiles.length > 0) {
         const filePaths = userFiles.map(
           (f) => `${selectedRequest.id}/${f.name}`,
         );
-        const { error: deleteStorageErr } =
-          await supabase.storage
-            .from("secure-kyc")
-            .remove(filePaths);
+        const { error: deleteStorageErr } = await supabase.storage
+          .from("secure-kyc")
+          .remove(filePaths);
 
         if (deleteStorageErr) {
-          console.error(
-            "Storage Delete Error:",
-            deleteStorageErr,
-          );
+          console.error("Storage Delete Error:", deleteStorageErr);
           toast.error(
             "Erreur RLS Storage : Vérifiez vos permissions de suppression dans Supabase.",
           );
@@ -656,10 +636,9 @@ export function KYCAdminDashboardScreen() {
 
       if (dbError) throw dbError;
 
-      toast.success(
-        "Dossier intégralement détruit et réinitialisé.",
-        { id: toastId },
-      );
+      toast.success("Dossier intégralement détruit et réinitialisé.", {
+        id: toastId,
+      });
 
       // 4. Nettoyage de l'interface
       setDecryptedIdentityUrl(null);
@@ -670,10 +649,9 @@ export function KYCAdminDashboardScreen() {
       await fetchAllProfiles();
     } catch (err: any) {
       console.error("[Purge Crash]:", err);
-      toast.error(
-        `Erreur de purge : ${err.message || String(err)}`,
-        { id: toastId },
-      );
+      toast.error(`Erreur de purge : ${err.message || String(err)}`, {
+        id: toastId,
+      });
     } finally {
       setIsActionLoading(false);
     }
@@ -681,9 +659,7 @@ export function KYCAdminDashboardScreen() {
 
   const filteredRequests = requests.filter((r) => {
     const matchesSearch =
-      r.fullName
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
+      r.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus =
       statusFilter === "all" || r.kycStatus === statusFilter;
@@ -711,9 +687,7 @@ export function KYCAdminDashboardScreen() {
           onClick={fetchAllProfiles}
           className="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl transition-all cursor-pointer border-none text-white"
         >
-          <RefreshCw
-            className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
-          />
+          <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
         </button>
       </div>
 
@@ -733,13 +707,7 @@ export function KYCAdminDashboardScreen() {
 
           <div className="flex border-b border-slate-800 text-xs font-bold gap-2">
             {(
-              [
-                "all",
-                "unverified",
-                "pending",
-                "verified",
-                "rejected",
-              ] as const
+              ["all", "unverified", "pending", "verified", "rejected"] as const
             ).map((status) => (
               <button
                 key={status}
@@ -778,16 +746,10 @@ export function KYCAdminDashboardScreen() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-800 bg-[#1E293B]/40 text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                    <th className="py-3 px-4">
-                      Titulaire / Identifiants
-                    </th>
+                    <th className="py-3 px-4">Titulaire / Identifiants</th>
                     <th className="py-3 px-4">Type</th>
-                    <th className="py-3 px-4">
-                      État de conformité
-                    </th>
-                    <th className="py-3 px-4 text-right">
-                      Action
-                    </th>
+                    <th className="py-3 px-4">État de conformité</th>
+                    <th className="py-3 px-4 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-xs">
@@ -832,13 +794,10 @@ export function KYCAdminDashboardScreen() {
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <button
-                          onClick={() =>
-                            handleViewAndDecryptDocs(req)
-                          }
+                          onClick={() => handleViewAndDecryptDocs(req)}
                           className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold text-[11px] transition-all inline-flex items-center gap-1 cursor-pointer border-none shadow-md"
                         >
-                          Inspecter{" "}
-                          <ChevronRight className="w-3 h-3" />
+                          Inspecter <ChevronRight className="w-3 h-3" />
                         </button>
                       </td>
                     </tr>
@@ -862,8 +821,8 @@ export function KYCAdminDashboardScreen() {
                   Clef Administrative ECC
                 </h3>
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                  Glissez le fichier de la clé privée ECDH
-                  (.pem) pour dériver les secrets.
+                  Glissez le fichier de la clé privée ECDH (.pem) pour dériver
+                  les secrets.
                 </p>
               </div>
               <label className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10 border-none">
@@ -930,8 +889,7 @@ export function KYCAdminDashboardScreen() {
                       Adresse physique déclarée :
                     </span>
                     <strong className="text-slate-200 block bg-[#0F172A] p-3 rounded-xl border border-slate-800 mt-1 leading-normal">
-                      {selectedRequest.street},{" "}
-                      {selectedRequest.zip}{" "}
+                      {selectedRequest.street}, {selectedRequest.zip}{" "}
                       {selectedRequest.city}
                     </strong>
                   </div>
@@ -1100,9 +1058,7 @@ export function KYCAdminDashboardScreen() {
                           <span
                             className={`text-[9px] font-bold block absolute bottom-2 right-2 px-2 py-0.5 rounded ${isSelfieEncrypted ? "bg-amber-500 text-slate-950" : "bg-emerald-500 text-white"}`}
                           >
-                            {isSelfieEncrypted
-                              ? "SIGNATURE ECDSA OK"
-                              : "BRUT"}
+                            {isSelfieEncrypted ? "SIGNATURE ECDSA OK" : "BRUT"}
                           </span>
                         </div>
                       ) : (
@@ -1125,27 +1081,15 @@ export function KYCAdminDashboardScreen() {
               <div className="flex flex-col gap-3 pt-4 border-t border-slate-800">
                 <div className="flex gap-3">
                   <button
-                    onClick={() =>
-                      handleUpdateStatus("rejected")
-                    }
-                    disabled={
-                      isActionLoading ||
-                      isDecrypting ||
-                      !isKeyLoaded
-                    }
+                    onClick={() => handleUpdateStatus("rejected")}
+                    disabled={isActionLoading || isDecrypting || !isKeyLoaded}
                     className="flex-1 py-4 border border-red-500/30 hover:border-red-500 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed border-none cursor-pointer"
                   >
                     <UserX className="w-4 h-4" /> Rejeter
                   </button>
                   <button
-                    onClick={() =>
-                      handleUpdateStatus("verified")
-                    }
-                    disabled={
-                      isActionLoading ||
-                      isDecrypting ||
-                      !isKeyLoaded
-                    }
+                    onClick={() => handleUpdateStatus("verified")}
+                    disabled={isActionLoading || isDecrypting || !isKeyLoaded}
                     className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed border-none cursor-pointer"
                   >
                     <UserCheck className="w-4 h-4" /> Confirmer
@@ -1156,8 +1100,8 @@ export function KYCAdminDashboardScreen() {
                   disabled={isActionLoading || isDecrypting}
                   className="w-full py-3.5 border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-30 cursor-pointer"
                 >
-                  <Trash2 className="w-4 h-4" /> Purger les
-                  fichiers & Réinitialiser le compte
+                  <Trash2 className="w-4 h-4" /> Purger les fichiers &
+                  Réinitialiser le compte
                 </button>
               </div>
             </div>
@@ -1168,8 +1112,8 @@ export function KYCAdminDashboardScreen() {
                 Station d'inspection vide
               </h3>
               <p className="text-xs text-slate-500 max-w-[240px] mt-1">
-                Sélectionnez une ligne du tableau de gauche pour
-                initier le déchiffrement local du dossier.
+                Sélectionnez une ligne du tableau de gauche pour initier le
+                déchiffrement local du dossier.
               </p>
             </div>
           )}
