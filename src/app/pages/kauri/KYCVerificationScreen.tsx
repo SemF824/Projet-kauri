@@ -18,7 +18,7 @@ import {
 import { useNavigate, useSearchParams } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { getSupabase } from "../../../utils/supabase";
+import { getSupabase, uploadKYCDocument } from "../../../utils/supabase";
 import { toast } from "sonner";
 
 // ── 🔒 CLÉ PUBLIQUE ADMINISTRATIVE ECC (P-256) ENREGISTRÉE ──
