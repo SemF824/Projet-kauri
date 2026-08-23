@@ -140,7 +140,7 @@ function KauriKYCGuardLayout() {
     profile?.kycStatus || profile?.kycStatus || "pending";
   const isKycVerified =
     currentKycStatus === "verified" ||
-    profile?.kyc_completed === true ||
+    profile?.kycCompleted === true ||
     profile?.kycCompleted === true;
   const isKycRejected = currentKycStatus === "rejected";
 

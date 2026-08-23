@@ -47,16 +47,16 @@ export function NormalDashboardScreen() {
     useState<number>(0);
 
   const rawScore =
-    profile?.trust_score !== undefined
-      ? profile.trust_score
+    profile?.trustScore !== undefined
+      ? profile.trustScore
       : profile?.trustScore !== undefined
         ? profile.trustScore
         : 0;
   const trustScore = Math.round(Number(rawScore) || 0);
 
   const calculateStreak = () => {
-    if (!profile?.created_at) return 0;
-    const createdDate = new Date(profile.created_at);
+    if (!profile?.createdAt) return 0;
+    const createdDate = new Date(profile.createdAt);
     const now = new Date();
     const diffMonths =
       (now.getFullYear() - createdDate.getFullYear()) * 12 +
@@ -72,17 +72,17 @@ export function NormalDashboardScreen() {
         ? "Membre Actif"
         : "Nouveau Membre";
   const firstName =
-    profile?.firstName ?? profile?.first_name ?? "Vous";
+    profile?.firstName ?? profile?.firstName ?? "Vous";
 
   const availableLiquidity = Number(profile?.balance ?? 0);
   const totalCombinedWealth =
     availableLiquidity + rwaTotalAmount + tontinesTotalAmount;
 
   const currentKycStatus =
-    profile?.kyc_status || profile?.kycStatus || "pending";
+    profile?.kycStatus || profile?.kycStatus || "pending";
   const isKycVerified =
     currentKycStatus === "verified" ||
-    profile?.kyc_completed === true ||
+    profile?.kycCompleted === true ||
     profile?.kycCompleted === true;
   const isKycRejected = currentKycStatus === "rejected";
 
@@ -92,14 +92,14 @@ export function NormalDashboardScreen() {
     user?.user_metadata?.picture;
   const avatarUrl =
     profile?.avatar_url ||
-    profile?.avatarUrl ||
+    profile?.avatar_url ||
     socialAvatarUrl;
 
   const initials =
     profile?.firstName && profile?.lastName
       ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
-      : profile?.first_name && profile?.last_name
-        ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
+      : profile?.firstName && profile?.lastName
+        ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
         : "KA";
 
   const circumference = 2 * Math.PI * 28;

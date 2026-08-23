@@ -16,13 +16,13 @@ export function KYCGuardOverlay({
 
   // 🎯 VERROU ABSOLU : Si le compte est validé, on affiche normalement les fonctionnalités financières
   if (
-    profile?.kyc_status === "verified" ||
-    profile?.kyc_completed === true
+    profile?.kycStatus === "verified" ||
+    profile?.kycCompleted === true
   ) {
     return <>{children}</>;
   }
 
-  const isRejected = profile?.kyc_status === "rejected";
+  const isRejected = profile?.kycStatus === "rejected";
 
   return (
     <div className="relative w-full h-full min-h-[70vh]">

@@ -44,7 +44,7 @@ export default function ModerationAdminDashboard() {
     try {
       const supabase = getSupabase();
       let query = supabase
-        .from<any, any>("moderation_reports")
+        .from<any>("moderation_reports")
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -54,7 +54,7 @@ export default function ModerationAdminDashboard() {
 
       const { data, error } = await query;
       if (error) throw error;
-      setReports(data || []);
+      setReports(data as unknown as ModerationReport[] || []);
     } catch (err: any) {
       console.error("Erreur chargement signalements:", err);
       toast.error("Impossible de charger les signalements de modération.");
@@ -80,7 +80,7 @@ export default function ModerationAdminDashboard() {
       } = await supabase.auth.getUser();
 
       const { error } = await supabase
-        .from<any, any>("moderation_reports")
+        .from<any>("moderation_reports")
         .update({
           status: newStatus,
           moderator_notes: adminNote.trim() || actionDesc,

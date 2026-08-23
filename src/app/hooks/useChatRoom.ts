@@ -42,7 +42,7 @@ export function useChatRoom(roomId: string | undefined) {
 
     const supabase = getSupabase();
     const { data, error: fetchErr } = await supabase
-      .from<any, any>("chat_messages")
+      .from<any>("chat_messages")
       .select(`
         id,
         room_id,
@@ -60,7 +60,7 @@ export function useChatRoom(roomId: string | undefined) {
       console.error("Erreur récupération messages:", fetchErr);
       setError(fetchErr.message);
     } else {
-      setMessages(data || []);
+      setMessages(data as unknown as ChatMessage[] || []);
     }
     setIsLoading(false);
   }, [roomId]);
@@ -119,7 +119,7 @@ export function useChatRoom(roomId: string | undefined) {
       throw new Error("Vous devez être connecté pour envoyer un message.");
     }
 
-    const { error: insertErr } = await supabase.from<any, any>("chat_messages").insert({
+    const { error: insertErr } = await supabase.from<any>("chat_messages").insert({
       room_id: roomId,
       sender_id: user.id,
       content: content.trim(),

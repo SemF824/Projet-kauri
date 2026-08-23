@@ -383,20 +383,20 @@ export function ProDashboardScreen() {
   const displayName =
     profile?.businessName ||
     profile?.firstName ||
-    profile?.first_name ||
+    profile?.firstName ||
     "Professionnel";
 
   const currentKycStatus =
-    profile?.kyc_status || profile?.kycStatus || "pending";
+    profile?.kycStatus || profile?.kycStatus || "pending";
   const isKycVerified =
     currentKycStatus === "verified" ||
-    profile?.kyc_completed === true ||
+    profile?.kycCompleted === true ||
     profile?.kycCompleted === true;
   const isKycRejected = currentKycStatus === "rejected";
 
   const initials = profile?.businessName
     ? profile.businessName.slice(0, 2).toUpperCase()
-    : `${profile?.firstName?.[0] ?? profile?.first_name?.[0] ?? "P"}${profile?.lastName?.[0] ?? profile?.last_name?.[0] ?? ""}`.toUpperCase();
+    : `${profile?.firstName?.[0] ?? profile?.firstName?.[0] ?? "P"}${profile?.lastName?.[0] ?? profile?.lastName?.[0] ?? ""}`.toUpperCase();
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);

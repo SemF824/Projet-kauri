@@ -1,20 +1,20 @@
 import { createClient } from "@supabase/supabase-js";
+import { Database } from "../types/supabase";
 
 const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  "https://vikuvrkhxxwigoyoihlf.supabase.co";
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
 export const projectId =
-  process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID || "vikuvrkhxxwigoyoihlf";
+  process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID || "";
 export const publicAnonKey = SUPABASE_ANON_KEY;
 export const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-3612691c`;
 
-let supabaseInstance: ReturnType<typeof createClient> | null = null;
+let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
 
 export function getSupabase() {
   if (!supabaseInstance) {
-    supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseInstance = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
   return supabaseInstance;
 }
@@ -157,7 +157,7 @@ export async function addComment(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  return supabase.from<any, any>("social_comments").insert({
+  return supabase.from<any>("social_comments").insert({
     post_id: postId,
     user_id: user?.id ?? null,
     author,
@@ -169,7 +169,7 @@ export async function addComment(
 export async function getComments(postId: string) {
   const supabase = getSupabase();
   return supabase
-    .from<any, any>("social_comments")
+    .from<any>("social_comments")
     .select("id, post_id, author, initials, text, created_at")
     .eq("post_id", postId)
     .order("created_at", { ascending: true });
@@ -183,11 +183,11 @@ export async function setFollowPro(proId: string, follow: boolean) {
   if (!user) return;
   if (follow) {
     await supabase
-      .from<any, any>("social_follows")
+      .from<any>("social_follows")
       .upsert({ user_id: user.id, pro_id: proId });
   } else {
     await supabase
-      .from<any, any>("social_follows")
+      .from<any>("social_follows")
       .delete()
       .match({ user_id: user.id, pro_id: proId });
   }
@@ -200,7 +200,7 @@ export async function checkFollowingPro(proId: string): Promise<boolean> {
   } = await supabase.auth.getUser();
   if (!user) return false;
   const { data } = await supabase
-    .from<any, any>("social_follows")
+    .from<any>("social_follows")
     .select("pro_id")
     .eq("user_id", user.id)
     .eq("pro_id", proId)

@@ -25,7 +25,7 @@ export class SocialDiscoveryService {
 
     const supabase = getSupabase();
     const { data, error } = await supabase
-      .from("profiles")
+      .from<any>("profiles")
       .select("id, full_name, avatar_url, profession, account_type")
       .ilike("full_name", `%${query.trim()}%`)
       .limit(15);
@@ -34,7 +34,7 @@ export class SocialDiscoveryService {
       console.error("Erreur recherche utilisateurs:", error);
       throw error;
     }
-    return (data || []) as UserProfile[];
+    return (data as unknown as UserProfile[]);
   }
 
   /**
@@ -52,7 +52,7 @@ export class SocialDiscoveryService {
 
     // 1. Chercher si une room directe existe déjà entre ces 2 utilisateurs
     const { data: memberRooms, error: memberError } = await supabase
-      .from<any, any>("chat_room_members")
+      .from<any>("chat_room_members")
       .select("room_id, user_id")
       .in("user_id", [currentUserId, targetUserId]);
 
@@ -74,7 +74,7 @@ export class SocialDiscoveryService {
 
     if (commonRoomIds.length > 0) {
       const { data: directRoom } = await supabase
-        .from<any, any>("chat_rooms")
+        .from<any>("chat_rooms")
         .select("id")
         .in("id", commonRoomIds)
         .eq("type", "direct")
@@ -87,7 +87,7 @@ export class SocialDiscoveryService {
 
     // 2. Si aucune room n'existe, création d'une nouvelle room
     const { data: newRoom, error: createError } = await supabase
-      .from<any, any>("chat_rooms")
+      .from<any>("chat_rooms")
       .insert({
         type: "direct",
         created_by: currentUserId,
@@ -102,7 +102,7 @@ export class SocialDiscoveryService {
 
     // 3. Ajouter les deux membres
     const { error: addMembersError } = await supabase
-      .from<any, any>("chat_room_members")
+      .from<any>("chat_room_members")
       .insert([
         { room_id: newRoom.id, user_id: currentUserId, role: "member" },
         { room_id: newRoom.id, user_id: targetUserId, role: "member" },
@@ -122,7 +122,7 @@ export class SocialDiscoveryService {
   public static async listPublicRooms(): Promise<ChatRoom[]> {
     const supabase = getSupabase();
     const { data, error } = await supabase
-      .from<any, any>("chat_rooms")
+      .from<any>("chat_rooms")
       .select("id, name, description, avatar_url, type")
       .eq("type", "public_forum")
       .order("created_at", { ascending: false });
@@ -131,6 +131,6 @@ export class SocialDiscoveryService {
       console.error("Erreur liste salons publics:", error);
       throw error;
     }
-    return (data || []) as ChatRoom[];
+    return (data as unknown as ChatRoom[]);
   }
 }

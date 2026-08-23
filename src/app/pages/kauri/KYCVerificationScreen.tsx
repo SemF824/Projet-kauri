@@ -481,7 +481,7 @@ export function KYCVerificationScreen() {
 
       const { error } = await supabase
         .from("profiles")
-        .update(updateData)
+        .update(updateData as any)
         .eq("id", profile?.id);
 
       if (error) {

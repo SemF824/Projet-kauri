@@ -621,7 +621,7 @@ export function InvestissementsPortefeuilleScreen() {
                     <span
                       style={{
                         fontSize: 10,
-                        fontBold: "900",
+                        fontWeight: "900",
                         color: isCurrentlyActiveInProfile
                           ? "#0F172A"
                           : "#CBD5E1",

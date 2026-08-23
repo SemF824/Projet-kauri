@@ -31,7 +31,7 @@ export function TrustScoreIntroScreen() {
   const [score, setScore] = useState(0);
 
   // Détermination de la cible réelle : Soit le score officiel de la DB (85), soit les 40 pts cumulés localement
-  const dbScore = profile?.trust_score ?? 0;
+  const dbScore = profile?.trustScore ?? 0;
   const TARGET_SCORE = dbScore > 0 ? dbScore : 40;
 
   useEffect(() => {

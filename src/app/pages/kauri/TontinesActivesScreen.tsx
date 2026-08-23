@@ -124,7 +124,7 @@ export function TontinesActivesScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   const rawScore =
-    profile?.trust_score ?? profile?.trustScore ?? 0;
+    profile?.trustScore ?? profile?.trustScore ?? 0;
   const trustScore = Math.round(Number(rawScore) || 0);
 
   useEffect(() => {

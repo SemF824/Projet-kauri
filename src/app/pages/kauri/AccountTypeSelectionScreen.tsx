@@ -432,7 +432,7 @@ export function AccountTypeSelectionScreen() {
       if (!enclaveKeys) throw new Error("Trousseau local corrompu.");
 
       const { data: dbProfile } = await supabase
-        .from<any, any>("profiles")
+        .from<any>("profiles")
         .select("user_public_key")
         .eq("id", activeUserId)
         .single();
@@ -590,7 +590,7 @@ export function AccountTypeSelectionScreen() {
     try {
       const supabase = getSupabase();
       await supabase
-        .from<any, any>("profiles")
+        .from<any>("profiles")
         .update({ kyc_status: "pending" })
         .eq("id", activeUserId);
 

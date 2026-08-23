@@ -49,12 +49,12 @@ export function ProfilParticulierScreen() {
   const trustScore =
     profile?.trustScore !== undefined
       ? Math.round(profile.trustScore)
-      : profile?.trust_score !== undefined
-        ? Math.round(Number(profile.trust_score))
+      : profile?.trustScore !== undefined
+        ? Math.round(Number(profile.trustScore))
         : 40;
 
   const fullName = profile
-    ? `${profile.firstName ?? profile.first_name ?? ""} ${profile.lastName ?? profile.last_name ?? ""}`.trim()
+    ? `${profile.firstName ?? profile.firstName ?? ""} ${profile.lastName ?? profile.lastName ?? ""}`.trim()
     : "Utilisateur";
 
   // ── 🎯 EXTRACTION DYNAMIQUE DE LA PHOTO DE PROFIL OAUTH (GOOGLE / FACEBOOK / APPLE) ──
@@ -63,20 +63,20 @@ export function ProfilParticulierScreen() {
     user?.user_metadata?.picture;
   const avatarUrl =
     profile?.avatar_url ||
-    profile?.avatarUrl ||
+    profile?.avatar_url ||
     socialAvatarUrl;
 
   const initials =
     profile?.firstName && profile?.lastName
       ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
-      : profile?.first_name && profile?.last_name
-        ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
+      : profile?.firstName && profile?.lastName
+        ? `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase()
         : "KA";
 
   const memberSince =
-    profile?.createdAt || profile?.created_at
+    profile?.createdAt || profile?.createdAt
       ? new Date(
-          profile.createdAt || profile.created_at,
+          profile.createdAt || profile.createdAt,
         ).toLocaleDateString("fr-FR", {
           month: "long",
           year: "numeric",
