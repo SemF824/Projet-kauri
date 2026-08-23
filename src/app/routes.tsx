@@ -137,7 +137,7 @@ function KauriKYCGuardLayout() {
   }
 
   const currentKycStatus =
-    profile?.kyc_status || profile?.kycStatus || "pending";
+    profile?.kycStatus || profile?.kycStatus || "pending";
   const isKycVerified =
     currentKycStatus === "verified" ||
     profile?.kyc_completed === true ||
@@ -204,7 +204,7 @@ function KauriKYCGuardLayout() {
               onClick={() =>
                 navigate(
                   profile?.accountType === "professionnel" ||
-                    profile?.account_type === "professionnel"
+                    profile?.accountType === "professionnel"
                     ? "/kauri/profil-pro"
                     : "/kauri/profil-particulier",
                 )

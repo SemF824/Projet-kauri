@@ -44,7 +44,7 @@ export default function ModerationAdminDashboard() {
     try {
       const supabase = getSupabase();
       let query = supabase
-        .from("moderation_reports")
+        .from<any, any>("moderation_reports")
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -80,7 +80,7 @@ export default function ModerationAdminDashboard() {
       } = await supabase.auth.getUser();
 
       const { error } = await supabase
-        .from("moderation_reports")
+        .from<any, any>("moderation_reports")
         .update({
           status: newStatus,
           moderator_notes: adminNote.trim() || actionDesc,

@@ -39,7 +39,7 @@ export class SecureInvitationService {
     expiresAt.setHours(expiresAt.getHours() + expiresInHours);
 
     const { data, error } = await supabase
-      .from("secure_invitations")
+      .from<any, any>("secure_invitations")
       .insert({
         token,
         target_type: targetType,
@@ -84,7 +84,7 @@ export class SecureInvitationService {
 
     // 1. Récupérer l'invitation
     const { data: invite, error } = await supabase
-      .from("secure_invitations")
+      .from<any, any>("secure_invitations")
       .select("*")
       .eq("token", token)
       .maybeSingle();
@@ -110,7 +110,7 @@ export class SecureInvitationService {
 
     // 3. Consommation du lien (Incrémentation atomique côté DB)
     const { error: updateError } = await supabase
-      .from("secure_invitations")
+      .from<any, any>("secure_invitations")
       .update({
         use_count: invite.use_count + 1,
       })

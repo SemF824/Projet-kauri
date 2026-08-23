@@ -88,7 +88,7 @@ export function ReportModal({
         return;
       }
 
-      const { error } = await supabase.from("moderation_reports").insert({
+      const { error } = await supabase.from<any, any>("moderation_reports").insert({
         reporter_id: user.id,
         content_type: contentType,
         content_id: contentId,

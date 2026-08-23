@@ -157,7 +157,7 @@ export async function addComment(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  return supabase.from("social_comments").insert({
+  return supabase.from<any, any>("social_comments").insert({
     post_id: postId,
     user_id: user?.id ?? null,
     author,
@@ -169,7 +169,7 @@ export async function addComment(
 export async function getComments(postId: string) {
   const supabase = getSupabase();
   return supabase
-    .from("social_comments")
+    .from<any, any>("social_comments")
     .select("id, post_id, author, initials, text, created_at")
     .eq("post_id", postId)
     .order("created_at", { ascending: true });
@@ -183,11 +183,11 @@ export async function setFollowPro(proId: string, follow: boolean) {
   if (!user) return;
   if (follow) {
     await supabase
-      .from("social_follows")
+      .from<any, any>("social_follows")
       .upsert({ user_id: user.id, pro_id: proId });
   } else {
     await supabase
-      .from("social_follows")
+      .from<any, any>("social_follows")
       .delete()
       .match({ user_id: user.id, pro_id: proId });
   }
@@ -200,7 +200,7 @@ export async function checkFollowingPro(proId: string): Promise<boolean> {
   } = await supabase.auth.getUser();
   if (!user) return false;
   const { data } = await supabase
-    .from("social_follows")
+    .from<any, any>("social_follows")
     .select("pro_id")
     .eq("user_id", user.id)
     .eq("pro_id", proId)

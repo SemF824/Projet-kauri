@@ -52,7 +52,7 @@ export class SocialDiscoveryService {
 
     // 1. Chercher si une room directe existe déjà entre ces 2 utilisateurs
     const { data: memberRooms, error: memberError } = await supabase
-      .from("chat_room_members")
+      .from<any, any>("chat_room_members")
       .select("room_id, user_id")
       .in("user_id", [currentUserId, targetUserId]);
 
@@ -74,7 +74,7 @@ export class SocialDiscoveryService {
 
     if (commonRoomIds.length > 0) {
       const { data: directRoom } = await supabase
-        .from("chat_rooms")
+        .from<any, any>("chat_rooms")
         .select("id")
         .in("id", commonRoomIds)
         .eq("type", "direct")
@@ -87,7 +87,7 @@ export class SocialDiscoveryService {
 
     // 2. Si aucune room n'existe, création d'une nouvelle room
     const { data: newRoom, error: createError } = await supabase
-      .from("chat_rooms")
+      .from<any, any>("chat_rooms")
       .insert({
         type: "direct",
         created_by: currentUserId,
@@ -102,7 +102,7 @@ export class SocialDiscoveryService {
 
     // 3. Ajouter les deux membres
     const { error: addMembersError } = await supabase
-      .from("chat_room_members")
+      .from<any, any>("chat_room_members")
       .insert([
         { room_id: newRoom.id, user_id: currentUserId, role: "member" },
         { room_id: newRoom.id, user_id: targetUserId, role: "member" },
@@ -122,7 +122,7 @@ export class SocialDiscoveryService {
   public static async listPublicRooms(): Promise<ChatRoom[]> {
     const supabase = getSupabase();
     const { data, error } = await supabase
-      .from("chat_rooms")
+      .from<any, any>("chat_rooms")
       .select("id, name, description, avatar_url, type")
       .eq("type", "public_forum")
       .order("created_at", { ascending: false });

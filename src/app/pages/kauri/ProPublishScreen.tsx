@@ -1029,7 +1029,7 @@ export function ProPublishScreen() {
                     {form.music ? (
                       <div className="flex items-center gap-2 mb-3 bg-black/40 rounded-full pl-1 pr-3 py-1 w-fit max-w-full overflow-hidden">
                         <img
-                          src={form.music.artwork}
+                          src={form.music.coverUrl}
                           alt=""
                           className="w-5 h-5 rounded-full object-cover flex-shrink-0"
                         />
