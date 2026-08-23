@@ -109,7 +109,9 @@ import { ProCreerTontineScreen } from "./pages/kauri/ProCreerTontineScreen";
 import { BadgesScreen } from "./pages/kauri/BadgesScreen";
 import { Setup2FAScreen } from "./pages/kauri/Setup2FAScreen";
 import { KYCAdminDashboardScreen } from "./pages/kauri/admin/KYCAdminDashboardScreen";
+import ModerationAdminDashboard from "./pages/kauri/admin/ModerationAdminDashboard";
 import { useAuth } from "./contexts/AuthContext";
+import { useInactivitySecurityTimeout } from "./hooks/useInactivitySecurityTimeout";
 import {
   Lock,
   ShieldAlert,
@@ -122,6 +124,9 @@ function KauriKYCGuardLayout() {
   const { profile, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Verrouillage proactif contre le vol d'appareil ou l'inactivité prolongée
+  useInactivitySecurityTimeout();
 
   if (loading) {
     return (
@@ -668,5 +673,9 @@ export const router = createBrowserRouter([
   {
     path: "/kauri/admin/kyc",
     element: <KYCAdminDashboardScreen />,
+  },
+  {
+    path: "/kauri/admin/moderation",
+    element: <ModerationAdminDashboard />,
   },
 ]);

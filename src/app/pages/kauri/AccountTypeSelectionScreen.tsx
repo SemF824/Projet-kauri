@@ -15,11 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useNavigate } from "react-router";
-import {
-  getSupabase,
-  SERVER_URL,
-  publicAnonKey,
-} from "../../../utils/supabase";
+import { getSupabase, SERVER_URL } from "../../../utils/supabase";
 import { toast } from "sonner";
 
 type Step =
@@ -600,7 +596,7 @@ export function AccountTypeSelectionScreen() {
 
       const accessToken =
         (await supabase.auth.getSession()).data.session?.access_token ??
-        publicAnonKey;
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
       await fetch(`${SERVER_URL}/wallet/init`, {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },

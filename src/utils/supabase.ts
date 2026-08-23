@@ -1,34 +1,31 @@
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = "https://vikuvrkhxxwigoyoihlf.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpa3V2cmtoeHh3aWdveW9paGxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMjExMzgsImV4cCI6MjA5NzY5NzEzOH0.Nl4dq7IBJRv_0eoZeYnWJI3kIB8tt7DFhfrJT73oSUs";
+const SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  "https://vikuvrkhxxwigoyoihlf.supabase.co";
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-export const projectId = "vikuvrkhxxwigoyoihlf";
+export const projectId =
+  process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID || "vikuvrkhxxwigoyoihlf";
 export const publicAnonKey = SUPABASE_ANON_KEY;
 export const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-3612691c`;
 
-let supabaseInstance: ReturnType<typeof createClient> | null =
-  null;
+let supabaseInstance: ReturnType<typeof createClient> | null = null;
 
 export function getSupabase() {
   if (!supabaseInstance) {
-    supabaseInstance = createClient(
-      SUPABASE_URL,
-      SUPABASE_ANON_KEY,
-    );
+    supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
   return supabaseInstance;
 }
 
-export async function authHeaders(): Promise<
-  Record<string, string>
-> {
+export async function authHeaders(): Promise<Record<string, string>> {
   const supabase = getSupabase();
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const token = session?.access_token ?? publicAnonKey;
+  const token =
+    session?.access_token ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   return {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
@@ -72,9 +69,7 @@ function base64ToArrayBuffer(b64: string): ArrayBuffer {
  * Chiffre localement un document en utilisant le mécanisme d'enveloppe hybride :
  * Clé de session éphémère AES-GCM 256 + Clé publique RSA-OAEP 2048 Kauri.
  */
-export async function encryptFileAsymmetric(
-  file: File,
-): Promise<Blob> {
+export async function encryptFileAsymmetric(file: File): Promise<Blob> {
   // 1. Génération d'une clé symétrique éphémère AES-GCM
   const aesKey = await window.crypto.subtle.generateKey(
     { name: "AES-GCM", length: 256 },
@@ -83,15 +78,10 @@ export async function encryptFileAsymmetric(
   );
 
   // 2. Exportation de la clé AES brute pour pouvoir la chiffrer en RSA
-  const rawAesKey = await window.crypto.subtle.exportKey(
-    "raw",
-    aesKey,
-  );
+  const rawAesKey = await window.crypto.subtle.exportKey("raw", aesKey);
 
   // 3. Importation de la clé publique de Kauri
-  const publicKeyBuffer = base64ToArrayBuffer(
-    KAURI_RSA_PUBLIC_KEY_B64,
-  );
+  const publicKeyBuffer = base64ToArrayBuffer(KAURI_RSA_PUBLIC_KEY_B64);
   const rsaPublicKey = await window.crypto.subtle.importKey(
     "spki",
     publicKeyBuffer,
@@ -110,12 +100,11 @@ export async function encryptFileAsymmetric(
   // 5. Chiffrement du fichier avec la clé AES
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
   const fileBuffer = await file.arrayBuffer();
-  const encryptedFileContent =
-    await window.crypto.subtle.encrypt(
-      { name: "AES-GCM", iv: iv },
-      aesKey,
-      fileBuffer,
-    );
+  const encryptedFileContent = await window.crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: iv },
+    aesKey,
+    fileBuffer,
+  );
 
   // 6. Assemblage de l'enveloppe : [Clé AES Chiffrée (256 octets)] + [IV (12 octets)] + [Fichier Chiffré]
   return new Blob([encryptedAesKey, iv, encryptedFileContent], {
@@ -186,10 +175,7 @@ export async function getComments(postId: string) {
     .order("created_at", { ascending: true });
 }
 
-export async function setFollowPro(
-  proId: string,
-  follow: boolean,
-) {
+export async function setFollowPro(proId: string, follow: boolean) {
   const supabase = getSupabase();
   const {
     data: { user },
@@ -207,9 +193,7 @@ export async function setFollowPro(
   }
 }
 
-export async function checkFollowingPro(
-  proId: string,
-): Promise<boolean> {
+export async function checkFollowingPro(proId: string): Promise<boolean> {
   const supabase = getSupabase();
   const {
     data: { user },

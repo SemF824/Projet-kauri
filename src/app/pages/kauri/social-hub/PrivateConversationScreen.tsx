@@ -8,6 +8,9 @@ import {
   Lock, UserPlus, Settings,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useChatRoom } from "../../../hooks/useChatRoom";
+import { SocialDiscoveryService } from "../../../services/socialDiscoveryService";
+import { getSupabase } from "../../../../utils/supabase";
 
 // ── Tokens ────────────────────────────────────────────────────────────────────
 const TERRA  = '#B05B3B';
@@ -237,8 +240,54 @@ function Avatar({ initials, color, size = 30, photo }: { initials: string; color
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function PrivateConversationScreen() {
-  const navigate  = useNavigate();
-  const { id }    = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { id: interlocutorId } = useParams<{ id: string }>(); // L'ID dans l'URL est maintenant l'ID de l'utilisateur
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [roomId, setRoomId] = useState<string | null>(null);
+  const [loadingRoom, setLoadingRoom] = useState(true);
+
+  // 1. Récupérer l'ID de l'utilisateur connecté
+  useEffect(() => {
+    const supabase = getSupabase();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        setCurrentUserId(data.user.id);
+      }
+    });
+  }, []);
+
+  // 2. Trouver ou créer le roomId
+  useEffect(() => {
+    const setupRoom = async () => {
+      if (!currentUserId || !interlocutorId) return;
+      if (interlocutorId.startsWith('group-') || interlocutorId.startsWith('d') || interlocutorId.startsWith('match-')) {
+        // C'est un fallback pour les anciennes URLs statiques du design (d1, d2, group-...)
+        setRoomId(interlocutorId);
+        setLoadingRoom(false);
+        return;
+      }
+      setLoadingRoom(true);
+      try {
+        const directRoomId = await SocialDiscoveryService.getOrCreateDirectChatRoom(
+          currentUserId,
+          interlocutorId
+        );
+        setRoomId(directRoomId);
+      } catch (error: any) {
+        console.error("Erreur création/récupération du chat 1-to-1:", error);
+        toast.error("Impossible d'établir la conversation.");
+        navigate(-1);
+      } finally {
+        setLoadingRoom(false);
+      }
+    };
+    setupRoom();
+  }, [currentUserId, interlocutorId, navigate]);
+
+  // Utiliser le hook de chatRoom une fois que le roomId est prêt
+  const { messages: dbMessages, isLoading: loadingMessages, sendMessage } = useChatRoom(roomId || undefined);
+
+  // Gestion des anciens états statiques pour l'UI
   const location  = useLocation();
   const state     = location.state as {
     isNewMatch?: boolean;
@@ -249,30 +298,29 @@ export default function PrivateConversationScreen() {
   } | null;
 
   const isNewMatch = state?.isNewMatch === true;
-  const isGroup    = state?.isGroup === true || (id ?? '').startsWith('group-');
+  const isGroup    = state?.isGroup === true || (roomId ?? '').startsWith('group-');
   const groupName  = state?.groupName ?? 'Groupe privé';
   const isNew      = state?.isNew === true;
   const matchProfile = state?.matchProfile;
 
-  // Build conversation data
+  // Build conversation data (Fallback UI temporaire)
   const baseConv = (() => {
     if (isNewMatch && matchProfile) return {
       name: matchProfile.name,
-      initials: matchProfile.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
+      initials: matchProfile.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase(),
       photo: matchProfile.photo, avatar: '', color: TEAL,
       isOnline: true, role: matchProfile.profession,
       isGroup: false, members: [],
       messages: [] as Message[],
     };
     if (isGroup) return buildGroupConv(groupName, isNew);
-    return { ...(DM_CONVS[id ?? 'd1'] ?? DM_CONVS['d1']), isGroup: false, members: [] };
+    return { ...(DM_CONVS[roomId ?? 'd1'] ?? DM_CONVS['d1']), isGroup: false, members: [] };
   })();
 
   const defaultMsg = isNewMatch && matchProfile
     ? buildDefaultMessage(matchProfile.name, matchProfile.profession, matchProfile.tags)
     : '';
 
-  const [messages,      setMessages]      = useState<Message[]>(baseConv.messages.map(m => ({ ...m, read: true })));
   const [message,       setMessage]       = useState('');
   const [menuOpen,      setMenuOpen]      = useState(false);
   const [showEmoji,     setShowEmoji]     = useState(false);
@@ -290,20 +338,40 @@ export default function PrivateConversationScreen() {
   const inputRef       = useRef<HTMLTextAreaElement>(null);
   const longTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Combinaison des messages DB et statiques pour la transition
+  const displayMessages = roomId && !roomId.startsWith('d') && !roomId.startsWith('group-') && !roomId.startsWith('match-')
+    ? dbMessages.map(m => ({
+        id: m.id,
+        text: m.content,
+        time: new Date(m.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+        isMine: m.sender_id === currentUserId,
+        read: true,
+        authorInitials: "JD" // À lier au vrai profil
+      }))
+    : baseConv.messages.map(m => ({ ...m, read: true }));
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [displayMessages]);
 
   // ── Send ────────────────────────────────────────────────────────────────
-  const send = (txt?: string) => {
+  const send = async (txt?: string) => {
     const text = (txt ?? message).trim();
     if (!text || blocked) return;
-    const newMsg: Message = {
-      id: `m${Date.now()}`, text,
-      time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-      isMine: true, read: false,
-      replyTo: replyTo ? { id: replyTo.id, text: replyTo.text, author: replyTo.author ?? 'Eux' } : undefined,
-    };
+    
+    try {
+      if (roomId && !roomId.startsWith('d') && !roomId.startsWith('group-') && !roomId.startsWith('match-')) {
+        await sendMessage(text);
+      } else {
+        // Fallback statique
+        toast.success("Simulation envoi (Mode Design)");
+      }
+      setMessage(''); setReplyTo(null); setShowEmoji(false); setMessageSent(true);
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 60);
+    } catch (e) {
+      toast.error("Échec de l'envoi");
+    }
+  };
     setMessages(prev => [...prev, newMsg]);
     setMessage(''); setReplyTo(null); setShowEmoji(false); setMessageSent(true);
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 60);
@@ -521,7 +589,7 @@ export default function PrivateConversationScreen() {
         )}
 
         {/* New group intro */}
-        {isGroup && isNew && messages.length === 0 && (
+        {isGroup && isNew && displayMessages.length === 0 && (
           <div style={{ textAlign: 'center', padding: '20px 16px' }}>
             <div style={{ fontSize: 40, marginBottom: 10 }}>🔐</div>
             <p style={{ color: '#6B7280', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
@@ -533,7 +601,7 @@ export default function PrivateConversationScreen() {
         )}
 
         {/* Messages */}
-        {messages.map(msg => (
+        {displayMessages.map(msg => (
           <div key={msg.id} data-msg={msg.id}
             onMouseDown={e => handlePressStart(msg, e)}
             onMouseUp={handlePressEnd}
