@@ -13,7 +13,7 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react";
-import { getSupabase } from "../../../utils/supabase";
+import { getSupabase } from "../../../../utils/supabase";
 import { toast } from "sonner";
 
 interface ModerationReport {

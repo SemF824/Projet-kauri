@@ -372,21 +372,6 @@ export default function PrivateConversationScreen() {
       toast.error("Échec de l'envoi");
     }
   };
-    setMessages(prev => [...prev, newMsg]);
-    setMessage(''); setReplyTo(null); setShowEmoji(false); setMessageSent(true);
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 60);
-
-    // Simulate reply for demo (DM only)
-    if (!isGroup && !isNewMatch) {
-      setTimeout(() => {
-        setMessages(prev => [...prev, {
-          id: `r${Date.now()}`, text: '👍 Reçu ! Je te réponds dès que possible.',
-          time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-          isMine: false, read: true,
-        }]);
-      }, 1800 + Math.random() * 1200);
-    }
-  };
 
   // ── Reactions ──────────────────────────────────────────────────────────
   const toggleReaction = (msgId: string, emoji: string) => {
@@ -837,4 +822,6 @@ export default function PrivateConversationScreen() {
       </AnimatePresence>
     </div>
   );
+
+
 }
