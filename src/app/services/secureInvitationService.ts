@@ -23,23 +23,27 @@ export class SecureInvitationService {
     targetType: InvitationTargetType,
     targetId: string,
     expiresInHours: number = 24,
-    maxUses: number = 1
+    maxUses: number = 1,
   ): Promise<{ link: string; expiresAt: Date; token: string }> {
     const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) throw new Error("Utilisateur non authentifié");
 
     // Génération d'un token cryptographiquement sécurisé
     const array = new Uint8Array(24);
     window.crypto.getRandomValues(array);
-    const token = Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    const token = Array.from(array, (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
 
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + expiresInHours);
 
-    const { data, error } = await supabase
-      .from<any>("secure_invitations")
+    const { data, error } = await (supabase as any)
+      .from("secure_invitations")
       .insert({
         token,
         target_type: targetType,
@@ -78,24 +82,36 @@ export class SecureInvitationService {
     targetId?: string;
   }> {
     const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!user) return { isValid: false, reason: "Veuillez vous connecter pour accepter l'invitation." };
+    if (!user)
+      return {
+        isValid: false,
+        reason: "Veuillez vous connecter pour accepter l'invitation.",
+      };
 
     // 1. Récupérer l'invitation
-    const { data: invite, error } = await supabase
-      .from<any>("secure_invitations")
+    const { data: invite, error } = await (supabase as any)
+      .from("secure_invitations")
       .select("*")
       .eq("token", token)
       .maybeSingle();
 
     if (error || !invite) {
-      return { isValid: false, reason: "Lien d'invitation invalide ou introuvable." };
+      return {
+        isValid: false,
+        reason: "Lien d'invitation invalide ou introuvable.",
+      };
     }
 
     // 2. Vérifications de sécurité
     if (invite.is_revoked) {
-      return { isValid: false, reason: "Cette invitation a été révoquée par son émetteur." };
+      return {
+        isValid: false,
+        reason: "Cette invitation a été révoquée par son émetteur.",
+      };
     }
 
     const now = new Date();
@@ -105,12 +121,16 @@ export class SecureInvitationService {
     }
 
     if (invite.use_count >= invite.max_uses) {
-      return { isValid: false, reason: "Ce lien d'invitation a déjà atteint son nombre maximal d'utilisations." };
+      return {
+        isValid: false,
+        reason:
+          "Ce lien d'invitation a déjà atteint son nombre maximal d'utilisations.",
+      };
     }
 
     // 3. Consommation du lien (Incrémentation atomique côté DB)
-    const { error: updateError } = await supabase
-      .from<any>("secure_invitations")
+    const { error: updateError } = await (supabase as any)
+      .from("secure_invitations")
       .update({
         use_count: invite.use_count + 1,
       })

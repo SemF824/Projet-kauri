@@ -10,7 +10,7 @@ const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes d'inactivité avant 
  */
 export function useInactivitySecurityTimeout() {
   const navigate = useNavigate();
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const resetTimer = () => {
     if (timerRef.current) {
@@ -20,11 +20,14 @@ export function useInactivitySecurityTimeout() {
     timerRef.current = setTimeout(async () => {
       // Déconnexion ou verrouillage de sécurité
       const supabase = getSupabase();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (user) {
         toast.error("Session verrouillée pour cause d'inactivité.", {
-          description: "Pour votre sécurité financière, veuillez vous réauthentifier.",
+          description:
+            "Pour votre sécurité financière, veuillez vous réauthentifier.",
         });
         await supabase.auth.signOut();
         navigate("/kauri/login");
@@ -33,7 +36,13 @@ export function useInactivitySecurityTimeout() {
   };
 
   useEffect(() => {
-    const events = ["mousedown", "mousemove", "keypress", "scroll", "touchstart"];
+    const events = [
+      "mousedown",
+      "mousemove",
+      "keypress",
+      "scroll",
+      "touchstart",
+    ];
 
     const handleUserActivity = () => {
       resetTimer();

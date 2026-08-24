@@ -35,7 +35,9 @@ export default function ModerationAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedReport, setSelectedReport] = useState<ModerationReport | null>(null);
+  const [selectedReport, setSelectedReport] = useState<ModerationReport | null>(
+    null,
+  );
   const [adminNote, setAdminNote] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
 
@@ -43,8 +45,8 @@ export default function ModerationAdminDashboard() {
     setLoading(true);
     try {
       const supabase = getSupabase();
-      let query = supabase
-        .from<any>("moderation_reports")
+      let query = (supabase as any)
+        .from("moderation_reports")
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -54,7 +56,7 @@ export default function ModerationAdminDashboard() {
 
       const { data, error } = await query;
       if (error) throw error;
-      setReports(data as unknown as ModerationReport[] || []);
+      setReports((data as unknown as ModerationReport[]) || []);
     } catch (err: any) {
       console.error("Erreur chargement signalements:", err);
       toast.error("Impossible de charger les signalements de modération.");
@@ -70,7 +72,7 @@ export default function ModerationAdminDashboard() {
   const handleUpdateStatus = async (
     reportId: string,
     newStatus: "resolved_sanctioned" | "dismissed",
-    actionDesc: string
+    actionDesc: string,
   ) => {
     setProcessingId(reportId);
     try {
@@ -79,8 +81,8 @@ export default function ModerationAdminDashboard() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      const { error } = await supabase
-        .from<any>("moderation_reports")
+      const { error } = await (supabase as any)
+        .from("moderation_reports")
         .update({
           status: newStatus,
           moderator_notes: adminNote.trim() || actionDesc,
@@ -126,7 +128,8 @@ export default function ModerationAdminDashboard() {
                 Centre de Modération & Sécurité
               </h1>
               <p className="text-xs text-slate-500">
-                Gestion des abus, fraudes financières et signalements de la communauté Kauri
+                Gestion des abus, fraudes financières et signalements de la
+                communauté Kauri
               </p>
             </div>
           </div>
@@ -134,7 +137,9 @@ export default function ModerationAdminDashboard() {
             onClick={fetchReports}
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 rounded-xl transition-all w-fit"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}
+            />
             Actualiser
           </button>
         </div>
@@ -145,7 +150,11 @@ export default function ModerationAdminDashboard() {
             {[
               { id: "pending", label: "En attente", icon: Clock },
               { id: "in_review", label: "En cours", icon: AlertTriangle },
-              { id: "resolved_sanctioned", label: "Sanctionnés", icon: CheckCircle2 },
+              {
+                id: "resolved_sanctioned",
+                label: "Sanctionnés",
+                icon: CheckCircle2,
+              },
               { id: "dismissed", label: "Rejetés", icon: XCircle },
               { id: "all", label: "Tous", icon: Filter },
             ].map((f) => {
@@ -183,12 +192,16 @@ export default function ModerationAdminDashboard() {
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-slate-200">
             <Loader2 className="w-8 h-8 text-slate-400 animate-spin mb-2" />
-            <p className="text-xs text-slate-500 font-medium">Chargement des signalements...</p>
+            <p className="text-xs text-slate-500 font-medium">
+              Chargement des signalements...
+            </p>
           </div>
         ) : filteredReports.length === 0 ? (
           <div className="text-center p-12 bg-white rounded-3xl border border-slate-200">
             <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2 opacity-80" />
-            <h3 className="text-sm font-bold text-slate-800">Aucun signalement</h3>
+            <h3 className="text-sm font-bold text-slate-800">
+              Aucun signalement
+            </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               Tous les dossiers dans cette catégorie ont été traités.
             </p>
@@ -215,7 +228,8 @@ export default function ModerationAdminDashboard() {
 
                   <div>
                     <p className="text-xs font-bold text-slate-900">
-                      Type : <span className="capitalize">{report.content_type}</span>
+                      Type :{" "}
+                      <span className="capitalize">{report.content_type}</span>
                     </p>
                     {report.details && (
                       <p className="text-xs text-slate-600 mt-1 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
@@ -242,8 +256,8 @@ export default function ModerationAdminDashboard() {
                       report.status === "pending"
                         ? "bg-amber-100 text-amber-800"
                         : report.status === "resolved_sanctioned"
-                        ? "bg-red-100 text-red-800"
-                        : "bg-slate-100 text-slate-700"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-slate-100 text-slate-700"
                     }`}
                   >
                     Statut: {report.status}
@@ -258,7 +272,7 @@ export default function ModerationAdminDashboard() {
                             handleUpdateStatus(
                               report.id,
                               "dismissed",
-                              "Signalement sans suite (Non justifié)"
+                              "Signalement sans suite (Non justifié)",
                             )
                           }
                           className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors"
@@ -271,7 +285,7 @@ export default function ModerationAdminDashboard() {
                             handleUpdateStatus(
                               report.id,
                               "resolved_sanctioned",
-                              "Sanction appliquée (Avertissement ou Bannissement)"
+                              "Sanction appliquée (Avertissement ou Bannissement)",
                             )
                           }
                           className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
