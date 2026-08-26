@@ -37,13 +37,21 @@ vsrPLUye3cZWTtALPQ9WxSSqwJMmPbp0U04+PdgAqICBBLg4OfuXrvMpCw==
 const DB_NAME = "KauriSecureEnclave";
 const STORE_NAME = "client_keys";
 
+interface StoredEnclaveKeys {
+  ecdhPriv: CryptoKey;
+  ecdsaPriv: CryptoKey;
+  ecdhPubPEM?: string;
+  ecdsaPubPEM?: string;
+}
+
 function getDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 2);
     req.onupgradeneeded = (e: any) => {
       const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME))
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -52,7 +60,7 @@ function getDB(): Promise<IDBDatabase> {
 
 async function saveKeysToEnclave(
   id: string,
-  keys: { ecdhPriv: CryptoKey; ecdsaPriv: CryptoKey },
+  keys: StoredEnclaveKeys,
 ) {
   const db = await getDB();
   return new Promise<void>((resolve, reject) => {
@@ -65,7 +73,7 @@ async function saveKeysToEnclave(
 
 async function getKeysFromEnclave(
   id: string,
-): Promise<{ ecdhPriv: CryptoKey; ecdsaPriv: CryptoKey } | undefined> {
+): Promise<StoredEnclaveKeys | undefined> {
   const db = await getDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
@@ -78,8 +86,9 @@ async function getKeysFromEnclave(
 function arrayBufferToBase64(blob: ArrayBuffer): string {
   const bytes = new Uint8Array(blob);
   let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++)
+  for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
+  }
   return window.btoa(binary);
 }
 
@@ -90,8 +99,9 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
     .replace(/\s/g, "");
   const binaryString = window.atob(b64Lines);
   const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++)
+  for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
+  }
   return bytes.buffer;
 }
 
@@ -160,24 +170,32 @@ export function AccountTypeSelectionScreen() {
       step === "business" &&
       accountType === "professionnel" &&
       !form.businessName.trim()
-    )
+    ) {
       e.businessName = "Nom d'entreprise requis";
-    if (step === "email" && !validateEmail(form.email))
+    }
+    if (step === "email" && !validateEmail(form.email)) {
       e.email = "Adresse e-mail invalide";
-    if (step === "password" && !isPasswordRobust(form.password))
+    }
+    if (step === "password" && !isPasswordRobust(form.password)) {
       e.password = "Mot de passe non conforme";
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleNext = () => {
     if (!validateCurrentStep()) return;
-    if (step === "name")
+    if (step === "name") {
       setStep(accountType === "professionnel" ? "business" : "email");
-    else if (step === "business") setStep("email");
-    else if (step === "email") setStep("password");
-    else if (step === "password") setStep("phone");
-    else if (step === "phone") handleCreateAccount();
+    } else if (step === "business") {
+      setStep("email");
+    } else if (step === "email") {
+      setStep("password");
+    } else if (step === "password") {
+      setStep("phone");
+    } else if (step === "phone") {
+      handleCreateAccount();
+    }
   };
 
   const handleBack = () => {
@@ -191,7 +209,6 @@ export function AccountTypeSelectionScreen() {
     else if (step === "documents") setStep("phone");
   };
 
-  // ── 🎯 CORRECTION MAJEURE : REDIRECTION OAUTH VERS LA PAGE KYC ──
   const handleSocialSignup = async (
     provider: "google" | "apple" | "facebook",
   ) => {
@@ -208,15 +225,29 @@ export function AccountTypeSelectionScreen() {
         true,
         ["sign", "verify"],
       );
+
+      const ecdhPubBuf = await window.crypto.subtle.exportKey(
+        "spki",
+        ecdhKeyPair.publicKey,
+      );
+      const ecdsaPubBuf = await window.crypto.subtle.exportKey(
+        "spki",
+        ecdsaKeyPair.publicKey,
+      );
+
+      const ecdhPubPEM = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`;
+      const ecdsaPubPEM = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`;
+
       await saveKeysToEnclave("kauri_client", {
         ecdhPriv: ecdhKeyPair.privateKey,
         ecdsaPriv: ecdsaKeyPair.privateKey,
+        ecdhPubPEM,
+        ecdsaPubPEM,
       });
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          // Redirection explicite vers le lien de vérification KYC
           redirectTo: `${window.location.origin}/kauri/kyc-verification?type=${accountType}`,
           queryParams: { account_type: accountType },
           scopes: provider === "facebook" ? "email,public_profile" : undefined,
@@ -237,6 +268,7 @@ export function AccountTypeSelectionScreen() {
     try {
       const supabase = getSupabase();
 
+      // 1. Génération des clés asymétriques pour l'enclave locale
       const ecdhKeyPair = await window.crypto.subtle.generateKey(
         { name: "ECDH", namedCurve: "P-256" },
         true,
@@ -247,10 +279,6 @@ export function AccountTypeSelectionScreen() {
         true,
         ["sign", "verify"],
       );
-      await saveKeysToEnclave("kauri_client", {
-        ecdhPriv: ecdhKeyPair.privateKey,
-        ecdsaPriv: ecdsaKeyPair.privateKey,
-      });
 
       const ecdhPubBuf = await window.crypto.subtle.exportKey(
         "spki",
@@ -261,11 +289,22 @@ export function AccountTypeSelectionScreen() {
         ecdsaKeyPair.publicKey,
       );
 
-      const publicKeysJSON = JSON.stringify({
-        ecdh: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`,
-        ecdsa: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`,
+      const ecdhPubPEM = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`;
+      const ecdsaPubPEM = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`;
+
+      await saveKeysToEnclave("kauri_client", {
+        ecdhPriv: ecdhKeyPair.privateKey,
+        ecdsaPriv: ecdsaKeyPair.privateKey,
+        ecdhPubPEM,
+        ecdsaPubPEM,
       });
 
+      const publicKeysJSON = JSON.stringify({
+        ecdh: ecdhPubPEM,
+        ecdsa: ecdsaPubPEM,
+      });
+
+      // 2. Création de l'utilisateur Auth
       const { data: signUpData, error: signUpError } =
         await supabase.auth.signUp({
           email: form.email.trim(),
@@ -295,8 +334,30 @@ export function AccountTypeSelectionScreen() {
         throw signUpError;
       }
 
-      if (!signUpData.user?.id) throw new Error("ID d'enclave manquant.");
+      if (!signUpData.user?.id) throw new Error("ID de compte introuvable.");
       setActiveUserId(signUpData.user.id);
+
+      // ── 🔥 CORRECTION MAJEURE : FORCER L'UPDATE DU PROFIL 🔥 ──
+      // Le trigger PostgreSQL 'on_auth_user_created' de Supabase ignore les champs complexes.
+      // On force l'insertion des clés et des données pros directement après la création.
+      const { error: profileUpdateError } = await (supabase as any)
+        .from("profiles")
+        .update({
+          first_name: form.firstName.trim(),
+          last_name: form.lastName.trim(),
+          full_name: `${form.firstName.trim()} ${form.lastName.trim()}`,
+          phone_number: form.phone.trim() || null,
+          business_name:
+            accountType === "professionnel" && form.businessName.trim()
+              ? form.businessName.trim()
+              : null,
+          user_public_key: publicKeysJSON,
+        })
+        .eq("id", signUpData.user.id);
+
+      if (profileUpdateError) {
+        console.warn("Avertissement update profil:", profileUpdateError);
+      }
 
       setStep("documents");
       toast.success(
@@ -333,8 +394,9 @@ export function AccountTypeSelectionScreen() {
   }, [showCamera]);
 
   const stopCamera = () => {
-    if (mediaStreamRef.current)
+    if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+    }
     mediaStreamRef.current = null;
     setShowCamera(false);
     setRecordingState("idle");
@@ -359,16 +421,13 @@ export function AccountTypeSelectionScreen() {
     for (let i = 0; i < frames.length - 1; i++) {
       const curr = frames[i].data;
       const next = frames[i + 1].data;
-      let frameDiff = 0;
-      for (let j = 0; j < curr.length; j += 4) {
-        frameDiff +=
-          Math.abs(curr[j] - next[j]) +
-          Math.abs(curr[j + 1] - next[j + 1]) +
-          Math.abs(curr[j + 2] - next[j + 2]);
+      let diff = 0;
+      for (let j = 0; j < curr.length; j += 16) {
+        diff += Math.abs(curr[j] - next[j]);
       }
-      totalDiff += frameDiff / (curr.length / 4);
+      totalDiff += diff;
     }
-    return totalDiff > 15;
+    return totalDiff > 80000;
   };
 
   const startVideoLivenessSequence = () => {
@@ -376,32 +435,35 @@ export function AccountTypeSelectionScreen() {
     videoChunksRef.current = [];
     keyframesRef.current = [];
 
-    const recorder = new MediaRecorder(mediaStreamRef.current);
+    const recorder = new MediaRecorder(mediaStreamRef.current, {
+      mimeType: "video/webm",
+    });
     mediaRecorderRef.current = recorder;
 
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) videoChunksRef.current.push(e.data);
     };
+
     recorder.onstop = async () => {
       setRecordingState("processing");
-      const videoBlob = new Blob(videoChunksRef.current, {
-        type: recorder.mimeType || "video/mp4",
-      });
-      videoChunksRef.current = [];
-
-      if (!evaluateMotionVariance()) {
-        toast.error("Échec Anti-Fraude : Aucun mouvement physique détecté.");
-        setRecordingState("idle");
+      const isMotionValid = evaluateMotionVariance();
+      if (!isMotionValid) {
+        toast.error("Échec de la preuve de vie : mouvement insuffisant.");
+        stopCamera();
         return;
       }
 
+      const videoBlob = new Blob(videoChunksRef.current, {
+        type: "video/webm",
+      });
       stopCamera();
       await handleUploadAndEncrypt("selfie", videoBlob);
     };
 
-    recorder.start();
+    recorder.start(500);
     setRecordingState("front");
     captureKeyframe();
+
     setTimeout(() => {
       setRecordingState("left");
       captureKeyframe();
@@ -431,14 +493,27 @@ export function AccountTypeSelectionScreen() {
       const enclaveKeys = await getKeysFromEnclave("kauri_client");
       if (!enclaveKeys) throw new Error("Trousseau local corrompu.");
 
-      const { data: dbProfile } = await supabase
-        .from<any>("profiles")
-        .select("user_public_key")
-        .eq("id", activeUserId)
-        .single();
-      if (!dbProfile?.user_public_key)
-        throw new Error("Clé distante introuvable.");
-      const userPublicKeys = JSON.parse(dbProfile.user_public_key);
+      // Récupération prioritaire depuis l'enclave locale pour éviter tout 401 REST
+      let userEcdhPubPEM = enclaveKeys.ecdhPubPEM;
+
+      if (!userEcdhPubPEM) {
+        const { data: dbProfile } = await (supabase as any)
+          .from("profiles")
+          .select("user_public_key")
+          .eq("id", activeUserId)
+          .maybeSingle();
+
+        if (dbProfile?.user_public_key) {
+          try {
+            const parsed = JSON.parse(dbProfile.user_public_key);
+            userEcdhPubPEM = parsed.ecdh;
+          } catch (_) {}
+        }
+      }
+
+      if (!userEcdhPubPEM) {
+        throw new Error("Clé de chiffrement publique introuvable.");
+      }
 
       const fileBuffer = await fileData.arrayBuffer();
       const ephKey = await window.crypto.subtle.generateKey(
@@ -487,7 +562,7 @@ export function AccountTypeSelectionScreen() {
 
       const userPubKey = await window.crypto.subtle.importKey(
         "spki",
-        pemToArrayBuffer(userPublicKeys.ecdh),
+        pemToArrayBuffer(userEcdhPubPEM),
         { name: "ECDH", namedCurve: "P-256" },
         false,
         [],
@@ -589,22 +664,23 @@ export function AccountTypeSelectionScreen() {
     setIsLoading(true);
     try {
       const supabase = getSupabase();
-      await supabase
-        .from<any>("profiles")
+      await (supabase as any)
+        .from("profiles")
         .update({ kyc_status: "pending" })
         .eq("id", activeUserId);
 
-      const accessToken =
-        (await supabase.auth.getSession()).data.session?.access_token ??
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      await fetch(`${SERVER_URL}/wallet/init`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }).catch(() => {});
-      await fetch(`${SERVER_URL}/seed`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }).catch(() => {});
+      const sessionData = (await supabase.auth.getSession()).data.session;
+      const accessToken = sessionData?.access_token;
+      if (accessToken) {
+        await fetch(`${SERVER_URL}/wallet/init`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }).catch(() => {});
+        await fetch(`${SERVER_URL}/seed`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }).catch(() => {});
+      }
 
       toast.success("Dossier validé ! Redirection vers votre tableau de bord.");
       navigate("/kauri/normal-dashboard");
@@ -960,7 +1036,7 @@ export function AccountTypeSelectionScreen() {
               <button
                 onClick={stopCamera}
                 disabled={recordingState !== "idle"}
-                className="bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer border-none font-bold"
+                className="bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer border-none"
               >
                 <ChevronLeft className="w-4 h-4" /> Annuler
               </button>
@@ -1049,39 +1125,46 @@ export function AccountTypeSelectionScreen() {
               Rejoignez des tontines privées, investissez dans des projets et
               gérez vos rendements.
             </p>
+            <span className="text-[10px] font-bold text-[#006D77] bg-[#006D77]/10 px-3 py-1 rounded-full uppercase tracking-wider">
+              Accès Immédiat
+            </span>
           </button>
 
           <button
             onClick={() => selectType("professionnel")}
-            className="w-full bg-gradient-to-br from-[#D4AF37] to-[#F59E0B] rounded-3xl p-6 shadow-2xl text-left cursor-pointer border-none outline-none active:scale-[0.98] transition-transform"
+            className="w-full bg-white rounded-3xl p-6 shadow-2xl text-left cursor-pointer border-none outline-none active:scale-[0.98] transition-transform"
           >
             <div className="flex items-start justify-between mb-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#F59E0B] flex items-center justify-center">
                 <Briefcase className="w-6 h-6 text-white" />
               </div>
-              <ArrowRight className="w-5 h-5 text-white" />
+              <ArrowRight className="w-5 h-5 text-[#D4AF37]" />
             </div>
-            <h3 className="text-white text-lg font-bold mb-1">
+            <h3 className="text-[#0F172A] text-lg font-bold mb-1">
               Compte Professionnel
             </h3>
-            <p className="text-white/90 text-xs mb-3">
-              Lancez des levées de fonds pour vos projets et accédez à un réseau
-              d'investisseurs.
+            <p className="text-[#4A4A4A] text-xs mb-3">
+              Levez des fonds, pilotez vos campagnes participatives et créez vos
+              tontines d'entreprise.
             </p>
+            <span className="text-[10px] font-bold text-[#D4AF37] bg-[#D4AF37]/10 px-3 py-1 rounded-full uppercase tracking-wider">
+              Vérification KYB Requise
+            </span>
           </button>
         </div>
 
         <div className="mt-8 text-center">
-          <button
-            onClick={() => navigate("/kauri/login")}
-            className="text-[#D4AF37] text-sm font-bold bg-transparent border-none cursor-pointer"
-          >
-            Déjà un compte ? Se connecter
-          </button>
+          <p className="text-white/80 text-xs">
+            Vous avez déjà un compte ?{" "}
+            <button
+              onClick={() => navigate("/kauri/login")}
+              className="text-[#D4AF37] font-bold underline bg-transparent border-none cursor-pointer"
+            >
+              Se connecter
+            </button>
+          </p>
         </div>
       </div>
     </div>
   );
 }
-
-export default AccountTypeSelectionScreen;
