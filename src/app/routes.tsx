@@ -7,6 +7,7 @@ import {
 } from "react-router";
 import { MainLayout } from "./layouts/MainLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AccountTypeGuard } from "./components/AccountTypeGuard";
 import { OnboardingWrapper } from "./components/OnboardingWrapper";
 import { DashboardScreen } from "./components/lyann/DashboardScreen";
 import { TontineDetailScreen } from "./components/lyann/TontineDetailScreen";
@@ -329,11 +330,19 @@ export const router = createBrowserRouter([
           },
           {
             path: "normal-dashboard",
-            element: <NormalDashboardScreen />,
+            element: (
+              <AccountTypeGuard allowedType="particulier">
+                <NormalDashboardScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "pro-dashboard",
-            element: <ProDashboardScreen />,
+            element: (
+              <AccountTypeGuard allowedType="professionnel">
+                <ProDashboardScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "social-feed",
@@ -349,15 +358,27 @@ export const router = createBrowserRouter([
           },
           {
             path: "pro-project-form",
-            element: <ProProjectFormScreen />,
+            element: (
+              <AccountTypeGuard allowedType="professionnel">
+                <ProProjectFormScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "pro-publish",
-            element: <ProPublishScreen />,
+            element: (
+              <AccountTypeGuard allowedType="professionnel">
+                <ProPublishScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "pro-publication-stats",
-            element: <ProPublicationStatsScreen />,
+            element: (
+              <AccountTypeGuard allowedType="professionnel">
+                <ProPublicationStatsScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "suspended",
@@ -401,7 +422,11 @@ export const router = createBrowserRouter([
           },
           {
             path: "pro-notifications",
-            element: <ProNotificationsScreen />,
+            element: (
+              <AccountTypeGuard allowedType="professionnel">
+                <ProNotificationsScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "manage-account",
@@ -409,7 +434,11 @@ export const router = createBrowserRouter([
           },
           {
             path: "pro-manage-account",
-            element: <ProManageAccountScreen />,
+            element: (
+              <AccountTypeGuard allowedType="professionnel">
+                <ProManageAccountScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "send-money",
@@ -465,19 +494,35 @@ export const router = createBrowserRouter([
           },
           {
             path: "pro-portefeuille",
-            element: <ProPortefeuilleScreen />,
+            element: (
+              <AccountTypeGuard allowedType="professionnel">
+                <ProPortefeuilleScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "pro-leves",
-            element: <ProLevesScreen />,
+            element: (
+              <AccountTypeGuard allowedType="professionnel">
+                <ProLevesScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "pro-investisseurs",
-            element: <ProInvestisseursScreen />,
+            element: (
+              <AccountTypeGuard allowedType="professionnel">
+                <ProInvestisseursScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "pro-projets",
-            element: <ProProjetsScreen />,
+            element: (
+              <AccountTypeGuard allowedType="professionnel">
+                <ProProjetsScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "portefeuille-tontines",
@@ -497,11 +542,19 @@ export const router = createBrowserRouter([
           },
           {
             path: "profil-particulier",
-            element: <ProfilParticulierScreen />,
+            element: (
+              <AccountTypeGuard allowedType="particulier">
+                <ProfilParticulierScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "profil-pro",
-            element: <ProfilProScreen />,
+            element: (
+              <AccountTypeGuard allowedType="professionnel">
+                <ProfilProScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "viral-feed",
@@ -569,7 +622,11 @@ export const router = createBrowserRouter([
           },
           {
             path: "pro-creer-tontine",
-            element: <ProCreerTontineScreen />,
+            element: (
+              <AccountTypeGuard allowedType="professionnel">
+                <ProCreerTontineScreen />
+              </AccountTypeGuard>
+            ),
           },
           {
             path: "badges",
