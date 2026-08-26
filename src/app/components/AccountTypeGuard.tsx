@@ -26,17 +26,20 @@ export function AccountTypeGuard({
     return <Navigate to="/kauri/login" state={{ from: location }} replace />;
   }
 
-  // Type effectif depuis le profil synchronisé Supabase ou localStorage de secours
-  const userAccountType =
-    profile?.accountType ||
-    (localStorage.getItem("kauri_account_type") as
-      | "particulier"
-      | "professionnel"
-      | null) ||
-    "particulier";
+  // Type de compte garanti et vérifié depuis l'enregistrement BDD Supabase lié à l'ID utilisateur (user.id)
+  const userAccountType = profile?.accountType;
+
+  // Si le profil n'a pas encore pu être chargé ou est indéfini
+  if (!userAccountType) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0F172A]">
+        <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+      </div>
+    );
+  }
 
   if (userAccountType !== allowedType) {
-    // Redirection automatique vers l'environnement approprié
+    // Redirection automatique stricte basée sur la valeur en BDD pour cet ID
     const redirectPath =
       userAccountType === "professionnel"
         ? "/kauri/pro-dashboard"
