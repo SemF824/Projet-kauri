@@ -132,6 +132,11 @@ function KauriKYCGuardLayout() {
     );
   }
 
+  // Si l'utilisateur n'est pas connecté, on ne bloque pas avec le KYC Guard (on laisse les ProtectedRoute ou pages gérer l'auth)
+  if (!profile) {
+    return <Outlet />;
+  }
+
   const currentKycStatus = profile?.kycCompleted ? "verified" : "pending";
   const isKycVerified = profile?.kycCompleted === true;
   const isKycRejected = false; // Par défaut à false car pas de statut 'rejected' explicite dans KauriUserProfile

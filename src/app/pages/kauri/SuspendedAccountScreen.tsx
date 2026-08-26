@@ -1,8 +1,10 @@
 import { AlertTriangle, FileText, Calendar, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router';
+import { useAuth } from '../../contexts/AuthContext';
 
 export function SuspendedAccountScreen() {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   const suspensionDetails = {
     reason: 'Non-Respect des Politiques de Paiement',
@@ -117,11 +119,12 @@ export function SuspendedAccountScreen() {
 
           <div className="mt-8 text-center">
             <button
-              onClick={() => {
+              onClick={async () => {
                 localStorage.removeItem('kauri_account_type');
+                await signOut();
                 navigate('/kauri');
               }}
-              className="text-white/60 text-sm underline"
+              className="text-white/60 text-sm underline cursor-pointer"
             >
               Déconnexion
             </button>
