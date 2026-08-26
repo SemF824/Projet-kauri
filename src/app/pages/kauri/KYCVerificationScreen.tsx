@@ -359,16 +359,23 @@ export function KYCVerificationScreen() {
           ecdsaKeyPair.publicKey,
         );
 
-        // Mise à jour de la clé publique de l'utilisateur dans Supabase Auth
+        // Mise à jour de la clé publique de l'utilisateur dans Supabase Auth et dans la table profiles
         const publicKeysJSON = JSON.stringify({
           ecdh: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`,
           ecdsa: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`,
         });
 
-        const { error: updateError } = await supabase.auth.updateUser({
+        await supabase.auth.updateUser({
           data: { user_public_key: publicKeysJSON },
         });
-        if (updateError) throw updateError;
+
+        if (profile?.id) {
+          await supabase
+            .from("profiles")
+            .update({ user_public_key: publicKeysJSON })
+            .eq("id", profile.id);
+        }
+
         await refreshProfile(); // Rafraîchir le profil pour récupérer la nouvelle clé publique
       }
 
