@@ -45,20 +45,24 @@ function profileFromMeta(
   const m = user.user_metadata ?? {};
   return {
     id: user.id,
-    phone: dbProfile?.phone_number ?? m.phone ?? "",
+    phone: dbProfile?.phone_number ?? m.phone ?? m.phone_number ?? "",
     firstName:
+      dbProfile?.first_name ??
       dbProfile?.full_name?.split(" ")[0] ??
+      m.first_name ??
       m.firstName ??
       m.full_name?.split(" ")[0] ??
       "Utilisateur",
     lastName:
+      dbProfile?.last_name ??
       dbProfile?.full_name?.split(" ").slice(1).join(" ") ??
+      m.last_name ??
       m.lastName ??
       m.full_name?.split(" ").slice(1).join(" ") ??
       "",
     accountType:
-      dbProfile?.account_type ?? m.accountType ?? "particulier",
-    businessName: dbProfile?.business_name ?? m.businessName,
+      dbProfile?.account_type ?? m.accountType ?? m.account_type ?? "particulier",
+    businessName: dbProfile?.business_name ?? m.businessName ?? m.business_name,
     trustScore: dbProfile?.trust_score
       ? Number(dbProfile.trust_score)
       : 100,
