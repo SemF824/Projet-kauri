@@ -112,12 +112,7 @@ import { KYCAdminDashboardScreen } from "./pages/kauri/admin/KYCAdminDashboardSc
 import ModerationAdminDashboard from "./pages/kauri/admin/ModerationAdminDashboard";
 import { useAuth } from "./contexts/AuthContext";
 import { useInactivitySecurityTimeout } from "./hooks/useInactivitySecurityTimeout";
-import {
-  Lock,
-  ShieldAlert,
-  ArrowRight,
-  User as UserIcon,
-} from "lucide-react";
+import { Lock, ShieldAlert, ArrowRight, User as UserIcon } from "lucide-react";
 
 // ── 🎯 ECOUTEUR ET BARRIÈRE DE PROTECTION FINANCIÈRE GLOBAL ──
 function KauriKYCGuardLayout() {
@@ -136,13 +131,9 @@ function KauriKYCGuardLayout() {
     );
   }
 
-  const currentKycStatus =
-    profile?.kycStatus || profile?.kycStatus || "pending";
-  const isKycVerified =
-    currentKycStatus === "verified" ||
-    profile?.kycCompleted === true ||
-    profile?.kycCompleted === true;
-  const isKycRejected = currentKycStatus === "rejected";
+  const currentKycStatus = profile?.kycCompleted ? "verified" : "pending";
+  const isKycVerified = profile?.kycCompleted === true;
+  const isKycRejected = false; // Par défaut à false car pas de statut 'rejected' explicite dans KauriUserProfile
 
   // Exclusion stricte : Les écrans d'authentification, de dépôt de pièces et les profils restent ouverts
   const isPageExcluded =
@@ -184,8 +175,7 @@ function KauriKYCGuardLayout() {
           {!isKycRejected && (
             <div className="bg-[#E6F4F5] border border-[#006D77]/10 rounded-2xl p-4">
               <p className="text-[#006D77] text-xs font-semibold leading-relaxed text-center">
-                ⏳ Activation de vos accès financiers sous 24
-                heures maximum.
+                ⏳ Activation de vos accès financiers sous 24 heures maximum.
               </p>
             </div>
           )}
@@ -203,8 +193,7 @@ function KauriKYCGuardLayout() {
             <button
               onClick={() =>
                 navigate(
-                  profile?.accountType === "professionnel" ||
-                    profile?.accountType === "professionnel"
+                  profile?.accountType === "professionnel"
                     ? "/kauri/profil-pro"
                     : "/kauri/profil-particulier",
                 )
@@ -214,14 +203,10 @@ function KauriKYCGuardLayout() {
               <UserIcon className="w-3.5 h-3.5" /> Profil
             </button>
             <button
-              onClick={() =>
-                navigate("/kauri/kyc-verification")
-              }
+              onClick={() => navigate("/kauri/kyc-verification")}
               className={`flex-1 py-3 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer border-none flex items-center justify-center gap-1.5 ${isKycRejected ? "bg-red-500 hover:bg-red-600" : "bg-[#006D77] hover:bg-[#00525a]"}`}
             >
-              <span>
-                {isKycRejected ? "Réessayer" : "Mes pièces"}
-              </span>
+              <span>{isKycRejected ? "Réessayer" : "Mes pièces"}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

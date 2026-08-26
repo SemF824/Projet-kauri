@@ -5,18 +5,60 @@ declare const process: {
   env: Record<string, string | undefined>;
 };
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const getEnv = (key: string): string => {
+  if (
+    typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    import.meta.env[key]
+  ) {
+    return import.meta.env[key];
+  }
+  if (typeof process !== "undefined" && process.env && process.env[key]) {
+    return process.env[key]!;
+  }
+  return "";
+};
 
-export const projectId = process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID || "";
+export const projectId =
+  getEnv("NEXT_PUBLIC_SUPABASE_PROJECT_ID") ||
+  getEnv("VITE_SUPABASE_PROJECT_ID") ||
+  getEnv("SUPABASE_PROJECT_ID") ||
+  "";
+
+const SUPABASE_URL =
+  getEnv("NEXT_PUBLIC_SUPABASE_URL") ||
+  getEnv("VITE_SUPABASE_URL") ||
+  getEnv("SUPABASE_URL") ||
+  (projectId ? `https://${projectId}.supabase.co` : "");
+
+const SUPABASE_ANON_KEY =
+  getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY") ||
+  getEnv("VITE_SUPABASE_ANON_KEY") ||
+  getEnv("SUPABASE_ANON_KEY") ||
+  "";
+
 export const publicAnonKey = SUPABASE_ANON_KEY;
-export const SERVER_URL = `https://${projectId}.supabase.co/functions/v1/make-server-3612691c`;
+export const SERVER_URL = projectId
+  ? `https://${projectId}.supabase.co/functions/v1/make-server-3612691c`
+  : "";
 
 let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
 
 export function getSupabase() {
   if (!supabaseInstance) {
-    supabaseInstance = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const url = SUPABASE_URL.trim();
+    const key = SUPABASE_ANON_KEY.trim();
+
+    if (!url || !key) {
+      console.warn(
+        "Variables d'environnement Supabase manquantes : veuillez configurer NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+      );
+    }
+
+    supabaseInstance = createClient<Database>(
+      url || "https://unconfigured-supabase-url.invalid",
+      key || "unconfigured-supabase-key",
+    );
   }
   return supabaseInstance;
 }
