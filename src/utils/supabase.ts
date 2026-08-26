@@ -5,36 +5,41 @@ declare const process: {
   env: Record<string, string | undefined>;
 };
 
-const getEnv = (key: string): string => {
-  if (
-    typeof import.meta !== "undefined" &&
-    import.meta.env &&
-    import.meta.env[key]
-  ) {
-    return import.meta.env[key];
-  }
-  if (typeof process !== "undefined" && process.env && process.env[key]) {
-    return process.env[key]!;
-  }
-  return "";
-};
+const env =
+  typeof import.meta !== "undefined" && import.meta.env
+    ? import.meta.env
+    : ({} as Record<string, string>);
+
+const procEnv =
+  typeof process !== "undefined" && process.env
+    ? process.env
+    : ({} as Record<string, string | undefined>);
 
 export const projectId =
-  getEnv("NEXT_PUBLIC_SUPABASE_PROJECT_ID") ||
-  getEnv("VITE_SUPABASE_PROJECT_ID") ||
-  getEnv("SUPABASE_PROJECT_ID") ||
+  env.NEXT_PUBLIC_SUPABASE_PROJECT_ID ||
+  env.VITE_SUPABASE_PROJECT_ID ||
+  env.SUPABASE_PROJECT_ID ||
+  procEnv.NEXT_PUBLIC_SUPABASE_PROJECT_ID ||
+  procEnv.VITE_SUPABASE_PROJECT_ID ||
+  procEnv.SUPABASE_PROJECT_ID ||
   "";
 
 const SUPABASE_URL =
-  getEnv("NEXT_PUBLIC_SUPABASE_URL") ||
-  getEnv("VITE_SUPABASE_URL") ||
-  getEnv("SUPABASE_URL") ||
+  env.NEXT_PUBLIC_SUPABASE_URL ||
+  env.VITE_SUPABASE_URL ||
+  env.SUPABASE_URL ||
+  procEnv.NEXT_PUBLIC_SUPABASE_URL ||
+  procEnv.VITE_SUPABASE_URL ||
+  procEnv.SUPABASE_URL ||
   (projectId ? `https://${projectId}.supabase.co` : "");
 
 const SUPABASE_ANON_KEY =
-  getEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY") ||
-  getEnv("VITE_SUPABASE_ANON_KEY") ||
-  getEnv("SUPABASE_ANON_KEY") ||
+  env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  env.VITE_SUPABASE_ANON_KEY ||
+  env.SUPABASE_ANON_KEY ||
+  procEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  procEnv.VITE_SUPABASE_ANON_KEY ||
+  procEnv.SUPABASE_ANON_KEY ||
   "";
 
 export const publicAnonKey = SUPABASE_ANON_KEY;
