@@ -303,9 +303,18 @@ export function AccountTypeSelectionScreen() {
         });
 
       if (signUpError) {
-        if (signUpError.message?.toLowerCase().includes("already")) {
-          toast.error("Email déjà configuré. Connectez-vous.");
+        const errorMsg = (signUpError.message || "").toLowerCase();
+        if (errorMsg.includes("already") || errorMsg.includes("email")) {
+          toast.error("Cette adresse e-mail est déjà utilisée. Connectez-vous.");
           navigate("/kauri/login");
+          return;
+        }
+        if (
+          errorMsg.includes("phone") ||
+          errorMsg.includes("profiles_phone_number_key") ||
+          errorMsg.includes("duplicate key")
+        ) {
+          toast.error("Ce numéro de téléphone est déjà associé à un autre compte.");
           return;
         }
         throw signUpError;
@@ -331,6 +340,14 @@ export function AccountTypeSelectionScreen() {
         .eq("id", signUpData.user.id);
 
       if (profileUpdateError) {
+        const pMsg = (profileUpdateError.message || "").toLowerCase();
+        if (
+          pMsg.includes("profiles_phone_number_key") ||
+          (pMsg.includes("duplicate key") && pMsg.includes("phone"))
+        ) {
+          toast.error("Ce numéro de téléphone est déjà associé à un autre compte.");
+          return;
+        }
         console.warn("Avertissement update profil:", profileUpdateError);
       }
 
@@ -340,8 +357,18 @@ export function AccountTypeSelectionScreen() {
       );
     } catch (e: any) {
       console.error("Signup exception:", e);
-      const msg = e?.message || JSON.stringify(e) || "Erreur serveur";
-      toast.error(`Incident Infrastructure : ${msg}`);
+      const msg = (e?.message || JSON.stringify(e) || "").toLowerCase();
+      if (
+        msg.includes("profiles_phone_number_key") ||
+        (msg.includes("duplicate key") && msg.includes("phone"))
+      ) {
+        toast.error("Ce numéro de téléphone est déjà associé à un autre compte. Veuillez en saisir un autre.");
+      } else if (msg.includes("already") || msg.includes("email")) {
+        toast.error("Cette adresse e-mail est déjà utilisée. Connectez-vous.");
+        navigate("/kauri/login");
+      } else {
+        toast.error("Une erreur est survenue lors de la création du compte. Vérifiez vos informations.");
+      }
     } finally {
       setIsLoading(false);
     }
