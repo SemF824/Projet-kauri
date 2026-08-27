@@ -1,7 +1,8 @@
 import { useNavigate, useSearchParams } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowRight,
+  ArrowLeft,
   CheckCircle2,
   Loader2,
 } from "lucide-react";
@@ -25,8 +26,7 @@ const CATEGORIES: Category[] = [
     id: "agriculture",
     emoji: "🌱",
     label: "Agriculture & Alimentation",
-    description:
-      "Coopératives, circuits courts, élevage durable",
+    description: "Coopératives, circuits courts, élevage durable",
     color: "#16A34A",
     bg: "#D1FAE5",
   },
@@ -82,8 +82,7 @@ const CATEGORIES: Category[] = [
     id: "international",
     emoji: "🌍",
     label: "International & Diaspora",
-    description:
-      "Projets transfrontaliers, développement local",
+    description: "Projets transfrontaliers, développement local",
     color: TEAL,
     bg: "#CCFBF1",
   },
@@ -131,10 +130,23 @@ export function PreferencesContentScreen() {
   const { profile } = useAuth();
   const supabase = getSupabase();
 
-  const [selected, setSelected] = useState<Set<string>>(
-    new Set(),
-  );
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
+
+  // Pré-chargement des préférences déjà enregistrées
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("kauri_preferences");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSelected(new Set(parsed));
+        }
+      }
+    } catch {
+      // Ignorer les erreurs de parsing
+    }
+  }, []);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -150,15 +162,11 @@ export function PreferencesContentScreen() {
     const prefsArray = Array.from(selected);
 
     // 1. Sauvegarde locale (Tolérance aux pannes & Cache rapide)
-    localStorage.setItem(
-      "kauri_preferences",
-      JSON.stringify(prefsArray),
-    );
+    localStorage.setItem("kauri_preferences", JSON.stringify(prefsArray));
 
-    // 2. Persistance Cloud (Vraie souveraineté des données)
+    // 2. Persistance Cloud
     if (profile?.id) {
       try {
-        // Tentative d'écriture dans la colonne 'preferences' (format JSONB ou text[])
         const { error } = await supabase
           .from("profiles")
           .update({ preferences: prefsArray })
@@ -171,15 +179,25 @@ export function PreferencesContentScreen() {
           );
         }
       } catch (err) {
-        console.error(
-          "Échec de la synchronisation des préférences",
-          err,
-        );
+        console.error("Échec de la synchronisation des préférences", err);
       }
     }
 
     setIsSaving(false);
-    navigate(`/kauri/wallet-creation?type=${accountType}`);
+
+    // Si l'utilisateur a déjà finalisé son onboarding ou vient du profil, retour au dashboard
+    const isAlreadyOnboarded =
+      profile?.kycCompleted || Boolean(localStorage.getItem("kauri_account_type"));
+
+    if (isAlreadyOnboarded) {
+      const targetDashboard =
+        profile?.accountType === "professionnel" || accountType === "professionnel"
+          ? "/kauri/pro-dashboard"
+          : "/kauri/normal-dashboard";
+      navigate(targetDashboard);
+    } else {
+      navigate(`/kauri/wallet-creation?type=${accountType}`);
+    }
   };
 
   const remaining = Math.max(0, MIN_SELECTION - selected.size);
@@ -193,8 +211,22 @@ export function PreferencesContentScreen() {
           background: `linear-gradient(150deg, ${TEAL} 0%, #064E4A 100%)`,
           borderRadius: "0 0 32px 32px",
         }}
-        className="px-6 pt-16 pb-8 shadow-xl"
+        className="px-6 pt-12 pb-8 shadow-xl"
       >
+        {/* Navigation / Retour */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border-none cursor-pointer transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <span className="text-white/70 text-xs font-semibold uppercase tracking-wider">
+            Personnalisation
+          </span>
+          <div className="w-9" />
+        </div>
+
         {/* Step indicator */}
         <div className="flex items-center gap-2 mb-5">
           {[1, 2, 3, 4].map((s) => (
@@ -203,26 +235,24 @@ export function PreferencesContentScreen() {
               className="h-1 rounded-full flex-1 transition-all"
               style={{
                 backgroundColor:
-                  s <= 4
-                    ? "rgba(255,255,255,0.85)"
-                    : "rgba(255,255,255,0.25)",
+                  s <= 4 ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.25)",
               }}
             />
           ))}
         </div>
 
         <p className="text-white/60 text-xs uppercase tracking-widest mb-1 font-bold">
-          Étape finale
+          Centres d'intérêt
         </p>
         <h1 className="text-white text-2xl font-black mb-2 tracking-tight">
-          Vos centres d'intérêt
+          Vos préférences de contenu
         </h1>
         <p className="text-white/80 text-sm leading-relaxed">
           Sélectionnez{" "}
           <span className="text-white font-bold">
             au moins {MIN_SELECTION} thèmes
           </span>{" "}
-          pour personnaliser vos recommandations de projets.
+          pour adapter vos recommandations de tontines et projets.
         </p>
 
         {/* Selection counter */}
@@ -244,13 +274,10 @@ export function PreferencesContentScreen() {
               <span
                 className="text-xs font-bold"
                 style={{
-                  color: ready
-                    ? "#4ADE80"
-                    : "rgba(255,255,255,0.9)",
+                  color: ready ? "#4ADE80" : "rgba(255,255,255,0.9)",
                 }}
               >
-                {selected.size} sélectionné
-                {selected.size > 1 ? "s" : ""}
+                {selected.size} sélectionné{selected.size > 1 ? "s" : ""}
                 {!ready && ` · encore ${remaining}`}
               </span>
             </div>
@@ -269,16 +296,13 @@ export function PreferencesContentScreen() {
                 onClick={() => toggle(cat.id)}
                 className="text-left rounded-3xl p-4 transition-all active:scale-[0.96] relative overflow-hidden border-none cursor-pointer"
                 style={{
-                  backgroundColor: isSelected
-                    ? cat.bg
-                    : "#ffffff",
+                  backgroundColor: isSelected ? cat.bg : "#ffffff",
                   border: `2px solid ${isSelected ? cat.color : "#F1F5F9"}`,
                   boxShadow: isSelected
                     ? `0 8px 24px ${cat.color}25`
                     : "0 2px 8px rgba(15,23,42,0.04)",
                 }}
               >
-                {/* Checkmark absolu */}
                 {isSelected && (
                   <div
                     className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center shadow-sm"
@@ -305,9 +329,7 @@ export function PreferencesContentScreen() {
                 <p
                   className="text-[10px] leading-relaxed font-medium"
                   style={{
-                    color: isSelected
-                      ? cat.color + "D0"
-                      : "#64748B",
+                    color: isSelected ? cat.color + "D0" : "#64748B",
                   }}
                 >
                   {cat.description}
@@ -318,8 +340,7 @@ export function PreferencesContentScreen() {
         </div>
 
         <p className="text-center text-xs mt-6 text-slate-400 font-medium">
-          Vous pourrez modifier vos préférences à tout moment
-          dans votre profil.
+          Vous pourrez modifier vos préférences à tout moment depuis votre profil.
         </p>
       </div>
 
@@ -327,8 +348,7 @@ export function PreferencesContentScreen() {
       <div
         className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-6 pb-8 pt-6"
         style={{
-          background:
-            "linear-gradient(to top, #F8FAFC 80%, transparent)",
+          background: "linear-gradient(to top, #F8FAFC 80%, transparent)",
         }}
       >
         <button
@@ -341,16 +361,14 @@ export function PreferencesContentScreen() {
               : "#E2E8F0",
             color: ready ? "#ffffff" : "#94A3B8",
             boxShadow: ready ? `0 10px 25px ${TEAL}40` : "none",
-            cursor:
-              ready && !isSaving ? "pointer" : "not-allowed",
+            cursor: ready && !isSaving ? "pointer" : "not-allowed",
           }}
         >
           {isSaving ? (
             <Loader2 className="w-5 h-5 animate-spin" />
           ) : ready ? (
             <>
-              Accéder à mon espace KAURI{" "}
-              <ArrowRight className="w-5 h-5" />
+              Enregistrer mes préférences <ArrowRight className="w-5 h-5" />
             </>
           ) : (
             `Choisissez encore ${remaining} thème${remaining > 1 ? "s" : ""}`
