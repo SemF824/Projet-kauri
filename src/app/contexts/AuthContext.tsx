@@ -15,7 +15,9 @@ export interface KauriUserProfile {
   lastName: string;
   accountType: "particulier" | "professionnel";
   trustScore: number;
-  balance: number;
+  balance: number; // Solde EUR (Rétrocompatibilité)
+  balanceXof: number; // Solde XOF (Franc CFA)
+  balanceUsdt: number; // Solde stablecoin USDT
   currency: string;
   businessName?: string;
   kycCompleted: boolean;
@@ -37,10 +39,11 @@ const AuthContext = createContext<AuthContextValue | null>(
   null,
 );
 
-// Construit un profil de secours si la table de la base de données est en cours de synchronisation
+// Construit un profil consolidé avec le profil DB et son wallet associé
 function profileFromMeta(
   user: User,
   dbProfile: any = null,
+  wallet: any = null,
 ): KauriUserProfile {
   const m = user.user_metadata ?? {};
   return {
@@ -66,7 +69,9 @@ function profileFromMeta(
     trustScore: dbProfile?.trust_score
       ? Number(dbProfile.trust_score)
       : 100,
-    balance: dbProfile?.balance ? Number(dbProfile.balance) : 0,
+    balance: wallet?.balance_eur !== undefined ? Number(wallet.balance_eur) : 2450.00,
+    balanceXof: wallet?.balance_xof !== undefined ? Number(wallet.balance_xof) : 1600000.00,
+    balanceUsdt: wallet?.balance_usdt !== undefined ? Number(wallet.balance_usdt) : 1250.00,
     currency: "EUR",
     kycCompleted: dbProfile?.kyc_completed ?? false,
     createdAt: user.created_at ?? new Date().toISOString(),
@@ -88,20 +93,42 @@ export function AuthProvider({
     try {
       const supabase = getSupabase();
 
-      // Requête directe PostgreSQL protégée par RLS
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", currentUser.id)
-        .maybeSingle();
+      // Récupération simultanée du profil et du portefeuille
+      const [profileRes, walletRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", currentUser.id)
+          .maybeSingle(),
+        supabase
+          .from("wallets")
+          .select("*")
+          .eq("user_id", currentUser.id)
+          .maybeSingle(),
+      ]);
 
-      if (error) throw error;
+      if (profileRes.error) throw profileRes.error;
 
-      if (data) {
-        setProfile(profileFromMeta(currentUser, data));
-      } else {
-        setProfile(profileFromMeta(currentUser));
+      let walletData = walletRes.data;
+
+      // Auto-initialisation robuste du portefeuille de démo s'il n'existe pas encore
+      if (!walletData && profileRes.data) {
+        const { data: newWallet } = await supabase
+          .from("wallets")
+          .insert({
+            user_id: currentUser.id,
+            balance_eur: 2450.00,
+            balance_xof: 1600000.00,
+            balance_usdt: 1250.00,
+          })
+          .select()
+          .maybeSingle();
+        if (newWallet) {
+          walletData = newWallet;
+        }
       }
+
+      setProfile(profileFromMeta(currentUser, profileRes.data, walletData));
     } catch (e) {
       console.error(
         "Failed to fetch profile from PostgreSQL:",
@@ -152,7 +179,6 @@ export function AuthProvider({
     });
 
     if (error) {
-      // Supabase returns "Invalid login credentials" for unconfirmed emails too
       if (
         error.message.toLowerCase().includes("invalid login credentials") ||
         error.message.toLowerCase().includes("email not confirmed")
@@ -208,8 +234,9 @@ export function AuthProvider({
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx)
-    throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }

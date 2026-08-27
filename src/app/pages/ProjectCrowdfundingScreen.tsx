@@ -1,13 +1,20 @@
-import { ArrowLeft, TrendingUp, Users, MapPin, FileText, Star, Globe, DollarSign, Calendar } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Users, MapPin, FileText, Star, Globe, DollarSign, Calendar, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
+import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { getSupabase } from '../../utils/supabase';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 
 export function ProjectCrowdfundingScreen() {
   const navigate = useNavigate();
+  const { user, profile, refreshProfile } = useAuth();
+  const [isInvesting, setIsInvesting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
 
   const project = {
+    id: 'lolo-modern-chain',
     name: 'Modern Lolo Restaurant Chain',
-    category: 'Hospitality',
+    category: 'Restauration',
     location: 'Martinique & Guadeloupe',
     fundingGoal: 100000,
     currentFunding: 45000,
@@ -20,24 +27,73 @@ export function ProjectCrowdfundingScreen() {
     leaderRating: 5,
     thumbnail: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800',
     description:
-      'A chain of modern "Lolo" (traditional Caribbean street food) restaurants bringing authentic island flavors to urban centers across the French Caribbean. Combining tradition with contemporary dining experiences.',
+      'Une chaîne moderne de restaurants de type "Lolo" (cuisine créole traditionnelle) apportant les saveurs caribéennes authentiques aux centres urbains des Antilles françaises. Alliant tradition et expériences contemporaines.',
   };
 
   const diasporaBackers = [
-    { region: 'France', count: 42, amount: 21000, flag: '🇫🇷', percentage: 47 },
+    { region: 'France (Diaspora)', count: 42, amount: 21000, flag: '🇫🇷', percentage: 47 },
     { region: 'Canada', count: 28, amount: 14000, flag: '🇨🇦', percentage: 31 },
-    { region: 'Caribbean', count: 17, amount: 10000, flag: '🌴', percentage: 22 },
+    { region: 'Antilles', count: 17, amount: 10000, flag: '🌴', percentage: 22 },
   ];
 
   const milestones = [
-    { title: 'Initial Funding Secured', date: 'Aug 2026', status: 'completed' },
-    { title: 'First Location Lease Signed', date: 'Oct 2026', status: 'in-progress' },
-    { title: 'Kitchen Equipment & Setup', date: 'Nov 2026', status: 'upcoming' },
-    { title: 'Grand Opening', date: 'Jan 2027', status: 'upcoming' },
-    { title: 'Second Location Launch', date: 'Apr 2027', status: 'upcoming' },
+    { title: 'Financement initial sécurisé', date: 'Août 2026', status: 'completed' },
+    { title: 'Bail commercial signé (1er site)', date: 'Oct 2026', status: 'in-progress' },
+    { title: 'Équipement de cuisine & Setup', date: 'Nov 2026', status: 'upcoming' },
+    { title: 'Inauguration officielle', date: 'Jan 2027', status: 'upcoming' },
   ];
 
   const fundingPercentage = Math.round((project.currentFunding / project.fundingGoal) * 100);
+
+  // LOGIQUE D'INVESTISSEMENT AVEC INTERACTION SUPABASE
+  const handleInvestNow = async () => {
+    if (!user || !profile) return;
+
+    if (profile.balance < project.minInvestment) {
+      alert(`Solde insuffisant pour investir le montant minimum de ${project.minInvestment} €. Veuillez recharger votre portefeuille.`);
+      return;
+    }
+
+    setIsInvesting(true);
+    try {
+      const supabase = getSupabase();
+
+      // 1. Débiter le wallet de l'utilisateur
+      const { error: walletErr } = await supabase
+        .from('wallets')
+        .update({
+          balance_eur: profile.balance - project.minInvestment,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id);
+
+      if (walletErr) throw walletErr;
+
+      // 2. Enregistrer la transaction de type 'withdrawal' avec libellé investissement
+      const { error: txErr } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id,
+          amount: project.minInvestment,
+          currency: 'EUR',
+          type: 'withdrawal',
+          description: `Investissement RWA - ${project.name}`,
+          status: 'completed',
+        });
+
+      if (txErr) throw txErr;
+
+      // 3. Rafraîchir les données de session du profile
+      await refreshProfile();
+
+      setSuccessMsg(`Félicitations ! Vous avez investi ${project.minInvestment} € dans le projet ${project.name} avec succès.`);
+    } catch (err) {
+      console.error("Erreur d'investissement:", err);
+      alert("Une erreur s'est produite lors de l'enregistrement de l'investissement.");
+    } finally {
+      setIsInvesting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#E2E8F0] pb-24">
@@ -51,14 +107,14 @@ export function ProjectCrowdfundingScreen() {
 
         <button
           onClick={() => navigate(-1)}
-          className="absolute top-12 left-6 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white"
+          className="absolute top-12 left-6 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white border-none cursor-pointer"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
 
         <div className="absolute bottom-6 left-6 right-6">
           <div className="flex items-center gap-2 mb-2">
-            <span className="px-3 py-1 bg-[#D4AF37]/90 backdrop-blur-sm text-white text-xs rounded-full">
+            <span className="px-3 py-1 bg-[#D4A373]/90 backdrop-blur-sm text-white text-xs rounded-full">
               {project.category}
             </span>
             <span className="px-3 py-1 bg-black/40 backdrop-blur-sm text-white text-xs rounded-full flex items-center gap-1">
@@ -66,57 +122,64 @@ export function ProjectCrowdfundingScreen() {
               {project.location}
             </span>
           </div>
-          <h1 className="text-white text-2xl">{project.name}</h1>
+          <h1 className="text-white text-2xl font-black tracking-tight">{project.name}</h1>
         </div>
       </div>
 
       <div className="px-6 py-6 space-y-6">
-        <div className="bg-gradient-to-br from-[#0A5C7A] to-[#0D9488] rounded-2xl p-6 text-white shadow-xl">
+        {successMsg && (
+          <div className="bg-emerald-50 border border-emerald-300 rounded-xl p-4">
+            <p className="text-emerald-700 text-sm font-bold">{successMsg}</p>
+          </div>
+        )}
+
+        <div className="bg-gradient-to-br from-[#0A847E] to-[#0D9488] rounded-2xl p-6 text-white shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-white/80 text-sm mb-1">Funding Progress</p>
-              <h2 className="text-white text-3xl">{fundingPercentage}%</h2>
+              <p className="text-white/80 text-sm mb-1">Financement atteint</p>
+              <h2 className="text-white text-3xl font-black">{fundingPercentage}%</h2>
             </div>
             <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
-              <TrendingUp className="w-8 h-8 text-[#D4AF37]" />
+              <TrendingUp className="w-8 h-8 text-[#D4A373]" />
             </div>
           </div>
 
           <div className="h-3 bg-white/20 rounded-full overflow-hidden mb-4">
             <div
-              className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F59E0B] transition-all duration-500"
+              className="h-full bg-gradient-to-r from-[#D4A373] to-[#F59E0B] transition-all duration-500"
               style={{ width: `${fundingPercentage}%` }}
             ></div>
           </div>
 
           <div className="flex items-center justify-between text-sm">
-            <span className="text-white">€{project.currentFunding.toLocaleString()}</span>
-            <span className="text-white/80">of €{project.fundingGoal.toLocaleString()}</span>
+            <span className="text-white font-bold">€{project.currentFunding.toLocaleString()}</span>
+            <span className="text-white/80 font-medium">sur €{project.fundingGoal.toLocaleString()}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-xl p-4 text-center shadow-md">
+          <div className="bg-white rounded-xl p-4 text-center shadow-md border border-[#E2E8F0]">
             <DollarSign className="w-6 h-6 text-[#0D9488] mx-auto mb-2" />
-            <p className="text-[#0F172A] mb-1">{project.roi}</p>
-            <p className="text-[#64748B] text-xs">Expected ROI</p>
+            <p className="text-[#0F172A] font-bold mb-1">{project.roi}</p>
+            <p className="text-[#64748B] text-xs font-medium">ROI attendu</p>
           </div>
-          <div className="bg-white rounded-xl p-4 text-center shadow-md">
-            <Users className="w-6 h-6 text-[#D4AF37] mx-auto mb-2" />
-            <p className="text-[#0F172A] mb-1">{project.backers}</p>
-            <p className="text-[#64748B] text-xs">Backers</p>
+          <div className="bg-white rounded-xl p-4 text-center shadow-md border border-[#E2E8F0]">
+            <Users className="w-6 h-6 text-[#D4A373] mx-auto mb-2" />
+            <p className="text-[#0F172A] font-bold mb-1">{project.backers}</p>
+            <p className="text-[#64748B] text-xs font-medium">Investisseurs</p>
           </div>
-          <div className="bg-white rounded-xl p-4 text-center shadow-md">
+          <div className="bg-white rounded-xl p-4 text-center shadow-md border border-[#E2E8F0]">
             <TrendingUp className="w-6 h-6 text-[#475569] mx-auto mb-2" />
-            <p className="text-[#0F172A] mb-1">€{project.minInvestment}</p>
-            <p className="text-[#64748B] text-xs">Min. Amount</p>
+            <p className="text-[#0F172A] font-bold mb-1">€{project.minInvestment}</p>
+            <p className="text-[#64748B] text-xs font-medium">Montant Min.</p>
           </div>
         </div>
 
+        {/* DIASPORA SECTOR */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-[#E2E8F0]">
           <div className="flex items-center gap-2 mb-4">
-            <Globe className="w-5 h-5 text-[#0A5C7A]" />
-            <h3 className="text-[#0F172A]">Diaspora Backers</h3>
+            <Globe className="w-5 h-5 text-[#0A847E]" />
+            <h3 className="text-[#0F172A] font-bold">Co-investisseurs de la Diaspora</h3>
           </div>
 
           <div className="space-y-4">
@@ -126,52 +189,48 @@ export function ProjectCrowdfundingScreen() {
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{region.flag}</span>
                     <div>
-                      <p className="text-[#0F172A] text-sm">{region.region}</p>
-                      <p className="text-[#64748B] text-xs">{region.count} investors</p>
+                      <p className="text-[#0F172A] text-sm font-bold">{region.region}</p>
+                      <p className="text-[#64748B] text-xs font-medium">{region.count} membres</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-[#0F172A] text-sm">€{region.amount.toLocaleString()}</p>
-                    <p className="text-[#0D9488] text-xs">{region.percentage}%</p>
+                    <p className="text-[#0F172A] text-sm font-bold">€{region.amount.toLocaleString()}</p>
+                    <p className="text-[#0D9488] text-xs font-bold">{region.percentage}%</p>
                   </div>
                 </div>
                 <div className="h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-[#0A5C7A] to-[#0D9488]"
+                    className="h-full bg-gradient-to-r from-[#0A847E] to-[#0D9488]"
                     style={{ width: `${region.percentage}%` }}
                   ></div>
                 </div>
               </div>
             ))}
           </div>
-
-          <div className="mt-4 pt-4 border-t border-[#E2E8F0]">
-            <p className="text-[#64748B] text-sm text-center">
-              Building unity through investment across the diaspora
-            </p>
-          </div>
         </div>
 
+        {/* DESCRIPTION */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-[#E2E8F0]">
-          <h3 className="text-[#0F172A] mb-3">About This Project</h3>
+          <h3 className="text-[#0F172A] font-bold mb-3">À propos de ce projet</h3>
           <p className="text-[#64748B] text-sm leading-relaxed mb-4">{project.description}</p>
 
-          <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-2 gap-3 text-sm font-bold">
             <div className="bg-[#F8FAFC] rounded-lg p-3">
               <p className="text-[#64748B] text-xs mb-1">Timeline</p>
               <p className="text-[#0F172A]">{project.timeline}</p>
             </div>
             <div className="bg-[#F8FAFC] rounded-lg p-3">
-              <p className="text-[#64748B] text-xs mb-1">Category</p>
+              <p className="text-[#64748B] text-xs mb-1">Catégorie</p>
               <p className="text-[#0F172A]">{project.category}</p>
             </div>
           </div>
         </div>
 
+        {/* MILESTONES */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-[#E2E8F0]">
           <div className="flex items-center gap-2 mb-4">
-            <Calendar className="w-5 h-5 text-[#0A5C7A]" />
-            <h3 className="text-[#0F172A]">Project Milestones</h3>
+            <Calendar className="w-5 h-5 text-[#0A847E]" />
+            <h3 className="text-[#0F172A] font-bold">Jalons & Road-map</h3>
           </div>
 
           <div className="space-y-0">
@@ -187,7 +246,7 @@ export function ProjectCrowdfundingScreen() {
                       milestone.status === 'completed'
                         ? 'bg-[#D1FAE5] text-[#0D9488]'
                         : milestone.status === 'in-progress'
-                        ? 'bg-[#FEF3C7] text-[#D4AF37]'
+                        ? 'bg-[#FEF3C7] text-[#D4A373]'
                         : 'bg-[#F1F5F9] text-[#94A3B8]'
                     }`}
                   >
@@ -195,8 +254,8 @@ export function ProjectCrowdfundingScreen() {
                   </div>
 
                   <div className="flex-1 pt-1">
-                    <p className="text-[#0F172A] text-sm mb-1">{milestone.title}</p>
-                    <p className="text-[#64748B] text-xs">{milestone.date}</p>
+                    <p className="text-[#0F172A] text-sm font-bold mb-1">{milestone.title}</p>
+                    <p className="text-[#64748B] text-xs font-medium">{milestone.date}</p>
                   </div>
                 </div>
               </div>
@@ -204,23 +263,24 @@ export function ProjectCrowdfundingScreen() {
           </div>
         </div>
 
+        {/* LEADER */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-[#E2E8F0]">
-          <h3 className="text-[#0F172A] mb-4">Project Leader</h3>
+          <h3 className="text-[#0F172A] font-bold mb-4">Porteur de Projet</h3>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#0A5C7A] to-[#0D9488] flex items-center justify-center text-white text-xl shadow-lg">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#0A847E] to-[#0D9488] flex items-center justify-center text-white text-xl font-bold shadow-lg">
                 {project.leaderAvatar}
               </div>
               <div>
-                <p className="text-[#0F172A] mb-1">{project.leaderName}</p>
-                <p className="text-[#64748B] text-sm">Hospitality Expert</p>
+                <p className="text-[#0F172A] font-bold mb-1">{project.leaderName}</p>
+                <p className="text-[#64748B] text-sm">Expert en Restauration & Hôtellerie</p>
                 <div className="flex items-center gap-1 mt-1">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
                       className={`w-4 h-4 ${
                         i < project.leaderRating
-                          ? 'fill-[#D4AF37] text-[#D4AF37]'
+                          ? 'fill-[#D4A373] text-[#D4A373]'
                           : 'text-[#E2E8F0]'
                       }`}
                     />
@@ -230,18 +290,22 @@ export function ProjectCrowdfundingScreen() {
             </div>
           </div>
 
-          <button className="w-full bg-[#F8FAFC] border border-[#E2E8F0] text-[#0A5C7A] py-3 rounded-xl flex items-center justify-center gap-2">
+          <button className="w-full bg-[#F8FAFC] border border-[#E2E8F0] text-[#0A847E] py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer font-bold">
             <FileText className="w-4 h-4" />
-            <span className="text-sm">View Contract Terms</span>
+            <span className="text-sm">Consulter le pacte d'associés</span>
           </button>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <button className="border-2 border-[#0A5C7A] text-[#0A5C7A] py-4 rounded-xl">
-            Save Project
+          <button className="border-2 border-[#0A847E] text-[#0A847E] py-4 rounded-xl font-bold bg-transparent cursor-pointer">
+            Sauvegarder
           </button>
-          <button className="bg-gradient-to-r from-[#0A5C7A] to-[#0D9488] text-white py-4 rounded-xl shadow-lg">
-            Invest Now
+          <button
+            onClick={handleInvestNow}
+            disabled={isInvesting}
+            className="bg-gradient-to-r from-[#0A847E] to-[#0D9488] text-white py-4 rounded-xl shadow-lg border-none font-bold cursor-pointer transition-transform hover:scale-[1.02] flex items-center justify-center"
+          >
+            {isInvesting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Investir Maintenant"}
           </button>
         </div>
       </div>

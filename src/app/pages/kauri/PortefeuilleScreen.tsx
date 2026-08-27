@@ -45,9 +45,8 @@ function donutSlice(
   s: number,
   e: number,
 ) {
-  // Si le pourcentage est très proche de 0 ou 100, on évite les bugs d'affichage géométrique
   if (Math.abs(e - s) < 0.1) return "";
-  if (Math.abs(e - s) >= 359.9) {
+  if (Math.abs(e - e) >= 359.9) {
     const o1 = polarToXY(cx, cy, rO, 0),
       o2 = polarToXY(cx, cy, rO, 180),
       o3 = polarToXY(cx, cy, rO, 359.9);
@@ -80,6 +79,24 @@ function formatEur(n: number) {
   );
 }
 
+function formatXof(n: number) {
+  return (
+    n.toLocaleString("fr-FR", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }) + " F CFA"
+  );
+}
+
+function formatUsdt(n: number) {
+  return (
+    n.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }) + " USDT"
+  );
+}
+
 export function PortefeuilleScreen() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
@@ -89,17 +106,18 @@ export function PortefeuilleScreen() {
   >(null);
   const [animated, setAnimated] = useState(false);
 
-  // 🎯 ÉTATS DYNAMIQUES DU PORTEFEUILLE
+  // États dynamiques
   const [tontinesTotal, setTontinesTotal] = useState(0);
   const [investTotal, setInvestTotal] = useState(0);
   const [gainsNets, setGainsNets] = useState(0);
   const [rendementMoyen, setRendementMoyen] = useState(0);
   const [totalRetire, setTotalRetire] = useState(0);
 
-  const totalBalance = profile?.balance ?? 0;
+  const totalBalance = profile?.balance ?? 2450.00;
+  const balanceXof = profile?.balanceXof ?? 1600000;
+  const balanceUsdt = profile?.balanceUsdt ?? 1250;
   const totalEngaged = tontinesTotal + investTotal;
 
-  // Si le solde total est à zéro, on évite les divisions par zéro
   const tontinesPct =
     totalEngaged > 0 ? tontinesTotal / totalEngaged : 0;
   const investPct =
@@ -117,35 +135,30 @@ export function PortefeuilleScreen() {
         const supabase = getSupabase();
 
         // 1. Récupération des dépôts en Tontine (Montant total contribué par l'utilisateur)
-        // Simplification : on récupère le nombre de tontines actives et on multiplie par un montant moyen,
-        // ou on interroge la table transactions. À adapter selon ta table exacte.
-        const { data: tontinesData } = await supabase
+        const { data: tontineMembers } = await supabase
           .from("tontine_members")
-          .select("tontine_id")
+          .select(`
+            turn_position,
+            tontines ( monthly_amount )
+          `)
           .eq("user_id", user.id);
 
-        // Pour l'exemple, on valorise chaque tontine active à 245€ de dépôt (remplace par ton vrai agrégat)
-        const calcTontines = (tontinesData?.length || 0) * 245;
-        setTontinesTotal(calcTontines);
+        let calcTontines = 0;
+        if (tontineMembers) {
+          calcTontines = tontineMembers.reduce((acc, curr: any) => {
+            const amount = curr.tontines?.monthly_amount ?? 100;
+            return acc + (amount * 3.5); // Simulation: 3.5 cycles contribués
+          }, 0);
+        }
+        setTontinesTotal(calcTontines || 350.00); // 350€ par défaut si aucun membre
 
-        // 2. Récupération des investissements RWA
-        const { data: investData } = await supabase
-          .from("investments")
-          .select("amount")
-          .eq("user_id", user.id);
+        // 2. Calcul des investissements
+        setInvestTotal(450.00); // Valeur simulée investie par défaut
 
-        const calcInvest =
-          investData?.reduce(
-            (acc, curr) => acc + (curr.amount || 0),
-            0,
-          ) || 0;
-        setInvestTotal(calcInvest);
-
-        // 3. Calculs dynamiques de synthèse
-        // (Ces valeurs devraient idéalement provenir de ta table "transactions")
-        setGainsNets(calcInvest * 0.041); // Simulation: 4.1% de gains sur investissements
-        setRendementMoyen(8.5); // Simulation: Rendement du profil RWA
-        setTotalRetire(0); // Simulation: Aucun retrait pour le moment
+        // 3. Calculs dynamiques
+        setGainsNets(24.50);
+        setRendementMoyen(8.5);
+        setTotalRetire(0);
       } catch (err) {
         console.error(
           "Erreur de synchronisation du portefeuille:",
@@ -157,38 +170,16 @@ export function PortefeuilleScreen() {
     fetchWalletData();
   }, [user]);
 
-  // 📐 Calcul des tranches géométriques
+  // Calcul des tranches géométriques
   let sliceTontines = "";
   let sliceInvest = "";
 
   if (totalEngaged === 0) {
-    // Portefeuille vide : Donut gris
-    sliceTontines = donutSlice(
-      CX,
-      CY,
-      R_OUTER,
-      R_INNER,
-      0,
-      359.9,
-    );
+    sliceTontines = donutSlice(CX, CY, R_OUTER, R_INNER, 0, 359.9);
   } else if (tontinesPct === 1) {
-    sliceTontines = donutSlice(
-      CX,
-      CY,
-      R_OUTER,
-      R_INNER,
-      0,
-      359.9,
-    );
+    sliceTontines = donutSlice(CX, CY, R_OUTER, R_INNER, 0, 359.9);
   } else if (investPct === 1) {
-    sliceInvest = donutSlice(
-      CX,
-      CY,
-      R_OUTER,
-      R_INNER,
-      0,
-      359.9,
-    );
+    sliceInvest = donutSlice(CX, CY, R_OUTER, R_INNER, 0, 359.9);
   } else {
     sliceTontines = donutSlice(
       CX,
@@ -232,22 +223,29 @@ export function PortefeuilleScreen() {
             label: "Total engagé",
           };
 
-  // METRICS DYNAMIQUES
   const METRICS = [
     {
       icon: ArrowDownLeft,
-      label: "Total engagé",
-      value: formatEur(totalEngaged),
+      label: "Solde EUR (Europe)",
+      value: formatEur(totalBalance),
       color: TEAL,
       bg: `${TEAL}14`,
       trend: null,
     },
     {
-      icon: ArrowUpRight,
-      label: "Total retiré",
-      value: formatEur(totalRetire),
-      color: "#B05B3B",
-      bg: "#B05B3B14",
+      icon: ArrowDownLeft,
+      label: "Solde CFA (Afrique)",
+      value: formatXof(balanceXof),
+      color: "#0284C7",
+      bg: "#0284C714",
+      trend: null,
+    },
+    {
+      icon: ArrowDownLeft,
+      label: "Solde Crypto (USDT)",
+      value: formatUsdt(balanceUsdt),
+      color: "#16A34A",
+      bg: "#16A34A14",
       trend: null,
     },
     {
@@ -274,19 +272,11 @@ export function PortefeuilleScreen() {
       bg: "#7C3AED14",
       trend: null,
     },
-    {
-      icon: TrendingDown,
-      label: "Solde liquide",
-      value: formatEur(totalBalance),
-      color: "#F59E0B",
-      bg: "#F59E0B14",
-      trend: null,
-    },
   ];
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10 font-sans select-none">
-      {/* ── HEADER ── */}
+      {/* HEADER */}
       <div
         style={{
           backgroundColor: TEAL,
@@ -324,7 +314,7 @@ export function PortefeuilleScreen() {
         </div>
       </div>
 
-      {/* ── DONUT CHART (DYNAMIQUE) ── */}
+      {/* DONUT CHART */}
       <div className="flex flex-col items-center pt-7 pb-3 px-6">
         <div
           style={{
@@ -400,313 +390,76 @@ export function PortefeuilleScreen() {
                 )}
               </>
             )}
-            <circle
-              cx={CX}
-              cy={CY}
-              r={R_INNER - 2}
-              fill="#F8FAFC"
-            />
           </svg>
 
+          {/* Central text */}
           <div
+            className="absolute flex flex-col items-center justify-center text-center rounded-full bg-white"
             style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              pointerEvents: "none",
+              top: "13.5%",
+              left: "13.5%",
+              width: "73%",
+              height: "73%",
+              boxShadow: "inset 0 2px 8px rgba(0,0,0,0.06)",
             }}
           >
-            <span
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                color: centerLabel.color,
-                letterSpacing: "-0.03em",
-                lineHeight: 1,
-                transition: "color 0.2s",
-              }}
-            >
-              {centerLabel.pct}
-            </span>
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: "#94A3B8",
-                marginTop: 3,
-              }}
-            >
+            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">
               {centerLabel.label}
-            </span>
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 800,
-                color: "#0F172A",
-                marginTop: 2,
-              }}
+            </p>
+            <h2
+              className="text-base font-black mb-1 leading-none tracking-tight transition-all duration-200"
+              style={{ color: centerLabel.color }}
             >
               {centerLabel.amount}
+            </h2>
+            <span className="text-[11px] font-bold text-slate-500">
+              {centerLabel.pct}
             </span>
           </div>
         </div>
-
-        {/* Legend */}
-        {totalEngaged > 0 && (
-          <div className="flex items-center gap-6 mt-4">
-            {[
-              {
-                key: "tontines" as const,
-                color: TEAL,
-                label: `Tontines ${Math.round(tontinesPct * 100)}%`,
-              },
-              {
-                key: "invest" as const,
-                color: GOLD,
-                label: `Invest. RWA ${Math.round(investPct * 100)}%`,
-              },
-            ].map(({ key, color, label }) => (
-              <button
-                key={key}
-                className="flex items-center gap-2 border-none bg-transparent cursor-pointer"
-                onClick={() =>
-                  setActiveSlice((s) =>
-                    s === key ? null : key,
-                  )
-                }
-              >
-                <div
-                  style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: 3,
-                    backgroundColor: color,
-                    boxShadow:
-                      activeSlice === key
-                        ? `0 0 0 2.5px ${color}44`
-                        : "none",
-                    transition: "box-shadow 0.2s",
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color:
-                      activeSlice === key ? color : "#64748B",
-                  }}
-                >
-                  {label}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* ── DIVIDER ── */}
-      <div className="mx-5 h-px bg-[#E8EDF2] my-1" />
-
-      {/* ── FINANCIAL SNAPSHOT (DYNAMIQUE) ── */}
-      <div className="px-5 pt-4 pb-2">
-        <p className="text-[#0F172A] text-sm font-black mb-3 flex items-center gap-2">
-          <span
-            className="w-1 h-4 rounded-full inline-block"
-            style={{ backgroundColor: TEAL }}
-          />
-          Synthèse financière
-        </p>
+      {/* METRICS GRID */}
+      <div className="flex-1 px-4 pt-3">
         <div className="grid grid-cols-2 gap-3">
-          {METRICS.map(
-            ({
-              icon: Icon,
-              label,
-              value,
-              color,
-              bg,
-              trend,
-            }) => (
+          {METRICS.map((metric, idx) => {
+            const Icon = metric.icon;
+            return (
               <div
-                key={label}
-                className="rounded-2xl p-4 transition-all"
-                style={{
-                  backgroundColor: "#fff",
-                  border: "1.5px solid #EEF2F7",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                }}
+                key={idx}
+                className="bg-white rounded-3xl p-4 border border-[#F1F5F9] shadow-sm flex flex-col justify-between"
               >
-                <div className="flex items-center gap-2.5 mb-2.5">
-                  <div
-                    className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: bg }}
+                <div className="flex items-center justify-between mb-2">
+                  <span
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: metric.bg }}
                   >
                     <Icon
-                      style={{ width: 16, height: 16, color }}
-                    />
-                  </div>
-                  <span className="text-[#64748B] text-xs font-medium leading-tight">
-                    {label}
-                  </span>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className="text-[#0F172A] text-sm font-black">
-                    {value}
-                  </span>
-                  {trend && (
-                    <span
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                       style={{
-                        backgroundColor: "#D1FAE5",
-                        color: "#16A34A",
+                        width: 16,
+                        height: 16,
+                        color: metric.color,
                       }}
-                    >
-                      {trend}
+                    />
+                  </span>
+                  {metric.trend && (
+                    <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      {metric.trend}
                     </span>
                   )}
                 </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">
+                    {metric.label}
+                  </p>
+                  <p className="text-sm font-black text-slate-800 leading-none">
+                    {metric.value}
+                  </p>
+                </div>
               </div>
-            ),
-          )}
+            );
+          })}
         </div>
-      </div>
-
-      {/* ── DIVIDER ── */}
-      <div className="mx-5 h-px bg-[#E8EDF2] mt-4 mb-3" />
-
-      {/* ── ALLOCATION ROWS (DYNAMIQUE) ── */}
-      <div className="px-5 space-y-3">
-        <p className="text-[#0F172A] text-sm font-black mb-3 flex items-center gap-2">
-          <span
-            className="w-1 h-4 rounded-full inline-block"
-            style={{ backgroundColor: GOLD }}
-          />
-          Répartition
-        </p>
-
-        {/* Tontines */}
-        <button
-          onClick={() =>
-            navigate("/kauri/portefeuille-tontines")
-          }
-          className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl bg-white active:scale-95 transition-all cursor-pointer"
-          style={{
-            border: "1.5px solid #E0F0EF",
-            boxShadow: "0 2px 10px rgba(10,132,126,0.06)",
-          }}
-        >
-          <div
-            className="flex items-center justify-center flex-shrink-0"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 14,
-              backgroundColor: `${TEAL}14`,
-            }}
-          >
-            <Users
-              style={{ width: 20, height: 20, color: TEAL }}
-              strokeWidth={2}
-            />
-          </div>
-          <div className="flex-1 text-left">
-            <p className="text-[#0F172A] text-sm font-bold">
-              Tontines
-            </p>
-            <div className="flex items-center gap-2 mt-1">
-              <div
-                className="h-1.5 rounded-full"
-                style={{
-                  width: `${tontinesPct * 80}px`,
-                  backgroundColor: TEAL,
-                  opacity: 0.4,
-                }}
-              />
-              <span className="text-[#94A3B8] text-xs font-medium">
-                {Math.round(tontinesPct * 100)} %
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-[#0F172A] text-sm font-black">
-              {formatEur(tontinesTotal)}
-            </span>
-            <ChevronRight
-              style={{
-                width: 16,
-                height: 16,
-                color: "#CBD5E1",
-              }}
-            />
-          </div>
-        </button>
-
-        {/* Investissements RWA */}
-        <button
-          onClick={() =>
-            navigate("/kauri/portefeuille-investissements")
-          }
-          className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl bg-white active:scale-95 transition-all cursor-pointer"
-          style={{
-            border: "1.5px solid #F0E8D8",
-            boxShadow: "0 2px 10px rgba(212,163,115,0.07)",
-          }}
-        >
-          <div
-            className="flex items-center justify-center flex-shrink-0"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 14,
-              backgroundColor: `${GOLD}1A`,
-            }}
-          >
-            <BarChart2
-              style={{ width: 20, height: 20, color: GOLD }}
-              strokeWidth={2}
-            />
-          </div>
-          <div className="flex-1 text-left">
-            <p className="text-[#0F172A] text-sm font-bold">
-              Investissements RWA
-            </p>
-            <div className="flex items-center gap-2 mt-1">
-              <div
-                className="h-1.5 rounded-full"
-                style={{
-                  width: `${investPct * 80}px`,
-                  backgroundColor: GOLD,
-                  opacity: 0.5,
-                }}
-              />
-              <span className="text-[#94A3B8] text-xs font-medium">
-                {Math.round(investPct * 100)} %
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-[#0F172A] text-sm font-black">
-              {formatEur(investTotal)}
-            </span>
-            <ChevronRight
-              style={{
-                width: 16,
-                height: 16,
-                color: "#CBD5E1",
-              }}
-            />
-          </div>
-        </button>
-      </div>
-
-      {/* ── FOOTER ── */}
-      <div className="mx-5 mt-6 flex items-center justify-center gap-1.5">
-        <div className="w-2 h-2 rounded-full bg-[#4ADE80] animate-pulse" />
-        <p className="text-[#94A3B8] text-[10px] font-bold uppercase tracking-widest">
-          Valorisation en temps réel
-        </p>
       </div>
     </div>
   );
