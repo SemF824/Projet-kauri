@@ -132,14 +132,13 @@ function KauriKYCGuardLayout() {
     );
   }
 
-  // Si l'utilisateur n'est pas connecté, on ne bloque pas avec le KYC Guard (on laisse les ProtectedRoute ou pages gérer l'auth)
+  // Si l'utilisateur n'est pas connecté, ProtectedRoute intercepte et redirige vers /kauri/login
   if (!profile) {
     return <Outlet />;
   }
 
-  const currentKycStatus = profile?.kycCompleted ? "verified" : "pending";
   const isKycVerified = profile?.kycCompleted === true;
-  const isKycRejected = false; // Par défaut à false car pas de statut 'rejected' explicite dans KauriUserProfile
+  const isKycRejected = false;
 
   // Exclusion stricte : Les écrans d'authentification, de dépôt de pièces et les profils restent ouverts
   const isPageExcluded =
@@ -156,7 +155,9 @@ function KauriKYCGuardLayout() {
       <div className="min-h-screen flex items-center justify-center bg-[#0F172A] p-6 font-sans">
         <div className="w-full max-w-md bg-white rounded-3xl border border-slate-100 shadow-2xl p-6 text-center space-y-5">
           <div
-            className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-lg ${isKycRejected ? "bg-red-500/10 text-red-500" : "bg-amber-500/10 text-amber-500"}`}
+            className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-lg ${
+              isKycRejected ? "bg-red-500/10 text-red-500" : "bg-amber-500/10 text-amber-500"
+            }`}
           >
             {isKycRejected ? (
               <ShieldAlert className="w-7 h-7" />
@@ -210,7 +211,9 @@ function KauriKYCGuardLayout() {
             </button>
             <button
               onClick={() => navigate("/kauri/kyc-verification")}
-              className={`flex-1 py-3 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer border-none flex items-center justify-center gap-1.5 ${isKycRejected ? "bg-red-500 hover:bg-red-600" : "bg-[#006D77] hover:bg-[#00525a]"}`}
+              className={`flex-1 py-3 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer border-none flex items-center justify-center gap-1.5 ${
+                isKycRejected ? "bg-red-500 hover:bg-red-600" : "bg-[#006D77] hover:bg-[#00525a]"
+              }`}
             >
               <span>{isKycRejected ? "Réessayer" : "Mes pièces"}</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -235,7 +238,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "/onboarding",
-    element: <OnboardingWrapper />,
+    element: (
+      <ProtectedRoute>
+        <OnboardingWrapper />
+      </ProtectedRoute>
+    ),
   },
   {
     element: <KauriKYCGuardLayout />,
@@ -313,416 +320,745 @@ export const router = createBrowserRouter([
       {
         path: "/kauri",
         children: [
+          // ── Pages publiques d'inscription et de connexion ──
           {
             index: true,
             element: <AccountTypeSelectionScreen />,
           },
           {
+            path: "login",
+            element: <KauriLoginScreen />,
+          },
+
+          // ── Parcours Onboarding / KYC / Sécurité (Connecté requis) ──
+          {
             path: "kyc-verification",
-            element: <KYCVerificationScreen />,
+            element: (
+              <ProtectedRoute>
+                <KYCVerificationScreen />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "biometric-setup",
-            element: <BiometricSetupScreen />,
+            element: (
+              <ProtectedRoute>
+                <BiometricSetupScreen />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "pro-verification",
-            element: <ProBusinessVerificationScreen />,
+            element: (
+              <ProtectedRoute>
+                <ProBusinessVerificationScreen />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "wallet-creation",
-            element: <WalletCreationScreen />,
+            element: (
+              <ProtectedRoute>
+                <WalletCreationScreen />
+              </ProtectedRoute>
+            ),
           },
+          {
+            path: "setup-2fa",
+            element: (
+              <ProtectedRoute>
+                <Setup2FAScreen />
+              </ProtectedRoute>
+            ),
+          },
+
+          // ── Tableaux de bord protégés par profil ──
           {
             path: "normal-dashboard",
             element: (
-              <AccountTypeGuard allowedType="particulier">
-                <NormalDashboardScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="particulier">
+                  <NormalDashboardScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
             ),
           },
           {
             path: "pro-dashboard",
             element: (
-              <AccountTypeGuard allowedType="professionnel">
-                <ProDashboardScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="professionnel">
+                  <ProDashboardScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
+            ),
+          },
+
+          // ── Social Hub & Communication ──
+          {
+            path: "social-feed",
+            element: (
+              <ProtectedRoute>
+                <SocialFeedScreen />
+              </ProtectedRoute>
             ),
           },
           {
-            path: "social-feed",
-            element: <SocialFeedScreen />,
-          },
-          {
             path: "community-matching",
-            element: <CommunityMatchingScreen />,
+            element: (
+              <ProtectedRoute>
+                <CommunityMatchingScreen />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "pot-commun",
-            element: <PotCommunScreen />,
+            element: (
+              <ProtectedRoute>
+                <PotCommunScreen />
+              </ProtectedRoute>
+            ),
           },
+          {
+            path: "viral-feed",
+            element: (
+              <ProtectedRoute>
+                <ViralFeedScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "content-sauvegardes",
+            element: (
+              <ProtectedRoute>
+                <ContentSauvegardesScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "rencontres-communautaires",
+            element: (
+              <ProtectedRoute>
+                <RencontresCommunautairesScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "community-chat",
+            element: (
+              <ProtectedRoute>
+                <CommunityChatScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub",
+            element: (
+              <ProtectedRoute>
+                <SocialHubScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub-gateway",
+            element: (
+              <ProtectedRoute>
+                <SocialHubGateway />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/decouverte",
+            element: (
+              <ProtectedRoute>
+                <DecouverteScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/rencontres",
+            element: (
+              <ProtectedRoute>
+                <RencontresScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/forums",
+            element: (
+              <ProtectedRoute>
+                <ForumsScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/salon/:id",
+            element: (
+              <ProtectedRoute>
+                <SalonChatScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/conversation/:id",
+            element: (
+              <ProtectedRoute>
+                <PrivateConversationScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/forums-menu",
+            element: (
+              <ProtectedRoute>
+                <ForumsMenuScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/creer-salon",
+            element: (
+              <ProtectedRoute>
+                <CreerSalonScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/decouvrir-salons",
+            element: (
+              <ProtectedRoute>
+                <DecouvrirSalonsScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/sauvegardes",
+            element: (
+              <ProtectedRoute>
+                <SauvegardesScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/preferences-discussion",
+            element: (
+              <ProtectedRoute>
+                <PreferencesDiscussionScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/signaler-abus",
+            element: (
+              <ProtectedRoute>
+                <SignalerAbusSalonScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/aide-support",
+            element: (
+              <ProtectedRoute>
+                <AideSupportScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/createur/:id",
+            element: (
+              <ProtectedRoute>
+                <CreateurProfileScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/profil-setup",
+            element: (
+              <ProtectedRoute>
+                <SocialProfilSetupScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/creer-groupe-prive",
+            element: (
+              <ProtectedRoute>
+                <CreerGroupePriveScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/groupe/:id/gerer",
+            element: (
+              <ProtectedRoute>
+                <GroupManagementScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "social-hub/salon/:id/gerer",
+            element: (
+              <ProtectedRoute>
+                <SalonManagementScreen />
+              </ProtectedRoute>
+            ),
+          },
+
+          // ── Cercles & Découverte ──
+          {
+            path: "discover-circles",
+            element: (
+              <ProtectedRoute>
+                <DiscoverCirclesScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "cercle-detail",
+            element: (
+              <ProtectedRoute>
+                <CercleDetailScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "rejoindre-cercle",
+            element: (
+              <ProtectedRoute>
+                <RejoindreCircleScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "circle-join-success",
+            element: (
+              <ProtectedRoute>
+                <CircleJoinSuccessScreen />
+              </ProtectedRoute>
+            ),
+          },
+
+          // ── Espaces Professionnels Spécifiques ──
           {
             path: "pro-project-form",
             element: (
-              <AccountTypeGuard allowedType="professionnel">
-                <ProProjectFormScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="professionnel">
+                  <ProProjectFormScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
             ),
           },
           {
             path: "pro-publish",
             element: (
-              <AccountTypeGuard allowedType="professionnel">
-                <ProPublishScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="professionnel">
+                  <ProPublishScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
             ),
           },
           {
             path: "pro-publication-stats",
             element: (
-              <AccountTypeGuard allowedType="professionnel">
-                <ProPublicationStatsScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="professionnel">
+                  <ProPublicationStatsScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
             ),
-          },
-          {
-            path: "suspended",
-            element: <SuspendedAccountScreen />,
-          },
-          {
-            path: "multi-signature",
-            element: <MultiSignatureValidationScreen />,
-          },
-          {
-            path: "animated-icons",
-            element: <AnimatedIconsDemoScreen />,
-          },
-          {
-            path: "trust-score-intro",
-            element: <TrustScoreIntroScreen />,
-          },
-          {
-            path: "preferences-contenu",
-            element: <PreferencesContentScreen />,
-          },
-          {
-            path: "smart-contract-explorer",
-            element: <SmartContractExplorerScreen />,
-          },
-          {
-            path: "mediation-system",
-            element: <MediationSystemScreen />,
-          },
-          {
-            path: "design-system",
-            element: <DesignSystemDemo />,
-          },
-          {
-            path: "login",
-            element: <KauriLoginScreen />,
-          },
-          {
-            path: "notifications",
-            element: <NotificationsScreen />,
           },
           {
             path: "pro-notifications",
             element: (
-              <AccountTypeGuard allowedType="professionnel">
-                <ProNotificationsScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="professionnel">
+                  <ProNotificationsScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
             ),
-          },
-          {
-            path: "manage-account",
-            element: <ManageAccountScreen />,
           },
           {
             path: "pro-manage-account",
             element: (
-              <AccountTypeGuard allowedType="professionnel">
-                <ProManageAccountScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="professionnel">
+                  <ProManageAccountScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
             ),
-          },
-          {
-            path: "send-money",
-            element: <SendMoneyScreen />,
-          },
-          {
-            path: "rejoindre-tontine",
-            element: <RejoindreTontineScreen />,
-          },
-          {
-            path: "transfer-confirm",
-            element: <TransferConfirmScreen />,
-          },
-          {
-            path: "transfer-success",
-            element: <TransferSuccessScreen />,
-          },
-          {
-            path: "tontines-actives",
-            element: <TontinesActivesScreen />,
-          },
-          {
-            path: "mes-tontines",
-            element: <MesTontinesScreen />,
-          },
-          {
-            path: "creer-tontine-privee",
-            element: <CreerTontinePriveeScreen />,
-          },
-          {
-            path: "creer-tontine-publique",
-            element: <CreerTontinePubliqueScreen />,
-          },
-          {
-            path: "projets-impacts",
-            element: <ProjetsImpactsScreen />,
-          },
-          {
-            path: "investissement",
-            element: <InvestissementScreen />,
-          },
-          {
-            path: "projet-detail",
-            element: <ProjetDetailScreen />,
-          },
-          {
-            path: "mes-investissements",
-            element: <MesInvestissementsScreen />,
-          },
-          {
-            path: "portefeuille",
-            element: <PortefeuilleScreen />,
           },
           {
             path: "pro-portefeuille",
             element: (
-              <AccountTypeGuard allowedType="professionnel">
-                <ProPortefeuilleScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="professionnel">
+                  <ProPortefeuilleScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
             ),
           },
           {
             path: "pro-leves",
             element: (
-              <AccountTypeGuard allowedType="professionnel">
-                <ProLevesScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="professionnel">
+                  <ProLevesScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
             ),
           },
           {
             path: "pro-investisseurs",
             element: (
-              <AccountTypeGuard allowedType="professionnel">
-                <ProInvestisseursScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="professionnel">
+                  <ProInvestisseursScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
             ),
           },
           {
             path: "pro-projets",
             element: (
-              <AccountTypeGuard allowedType="professionnel">
-                <ProProjetsScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="professionnel">
+                  <ProProjetsScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
             ),
           },
           {
-            path: "portefeuille-tontines",
-            element: <TontinesPortefeuilleScreen />,
+            path: "pro-creer-tontine",
+            element: (
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="professionnel">
+                  <ProCreerTontineScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
+            ),
+          },
+
+          // ── Gestion de Compte & Profils ──
+          {
+            path: "notifications",
+            element: (
+              <ProtectedRoute>
+                <NotificationsScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "portefeuille-investissements",
-            element: <InvestissementsPortefeuilleScreen />,
-          },
-          {
-            path: "historique-swaps",
-            element: <HistoriqueSwapsScreen />,
-          },
-          {
-            path: "emergency-swap",
-            element: <EmergencySwapScreen />,
+            path: "manage-account",
+            element: (
+              <ProtectedRoute>
+                <ManageAccountScreen />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "profil-particulier",
             element: (
-              <AccountTypeGuard allowedType="particulier">
-                <ProfilParticulierScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="particulier">
+                  <ProfilParticulierScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
             ),
           },
           {
             path: "profil-pro",
             element: (
-              <AccountTypeGuard allowedType="professionnel">
-                <ProfilProScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <AccountTypeGuard allowedType="professionnel">
+                  <ProfilProScreen />
+                </AccountTypeGuard>
+              </ProtectedRoute>
+            ),
+          },
+
+          // ── Transactions, Portefeuille & Tontines ──
+          {
+            path: "send-money",
+            element: (
+              <ProtectedRoute>
+                <SendMoneyScreen />
+              </ProtectedRoute>
             ),
           },
           {
-            path: "viral-feed",
-            element: <ViralFeedScreen />,
+            path: "rejoindre-tontine",
+            element: (
+              <ProtectedRoute>
+                <RejoindreTontineScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "content-sauvegardes",
-            element: <ContentSauvegardesScreen />,
+            path: "transfer-confirm",
+            element: (
+              <ProtectedRoute>
+                <TransferConfirmScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "rencontres-communautaires",
-            element: <RencontresCommunautairesScreen />,
+            path: "transfer-success",
+            element: (
+              <ProtectedRoute>
+                <TransferSuccessScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "community-chat",
-            element: <CommunityChatScreen />,
+            path: "tontines-actives",
+            element: (
+              <ProtectedRoute>
+                <TontinesActivesScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "social-hub",
-            element: <SocialHubScreen />,
+            path: "mes-tontines",
+            element: (
+              <ProtectedRoute>
+                <MesTontinesScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "social-hub-gateway",
-            element: <SocialHubGateway />,
+            path: "creer-tontine-privee",
+            element: (
+              <ProtectedRoute>
+                <CreerTontinePriveeScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "discover-circles",
-            element: <DiscoverCirclesScreen />,
+            path: "creer-tontine-publique",
+            element: (
+              <ProtectedRoute>
+                <CreerTontinePubliqueScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "projets-impacts",
+            element: (
+              <ProtectedRoute>
+                <ProjetsImpactsScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "investissement",
+            element: (
+              <ProtectedRoute>
+                <InvestissementScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "projet-detail",
+            element: (
+              <ProtectedRoute>
+                <ProjetDetailScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "mes-investissements",
+            element: (
+              <ProtectedRoute>
+                <MesInvestissementsScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "portefeuille",
+            element: (
+              <ProtectedRoute>
+                <PortefeuilleScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "portefeuille-tontines",
+            element: (
+              <ProtectedRoute>
+                <TontinesPortefeuilleScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "portefeuille-investissements",
+            element: (
+              <ProtectedRoute>
+                <InvestissementsPortefeuilleScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "historique-swaps",
+            element: (
+              <ProtectedRoute>
+                <HistoriqueSwapsScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "emergency-swap",
+            element: (
+              <ProtectedRoute>
+                <EmergencySwapScreen />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "investment-hub",
-            element: <InvestmentHubScreen />,
+            element: (
+              <ProtectedRoute>
+                <InvestmentHubScreen />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "premium-paywall",
-            element: <PremiumPaywallScreen />,
+            element: (
+              <ProtectedRoute>
+                <PremiumPaywallScreen />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "coffre-numerique",
-            element: <CoffreNumeriqueScreen />,
+            element: (
+              <ProtectedRoute>
+                <CoffreNumeriqueScreen />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "confirmation-don",
-            element: <ConfirmationDonScreen />,
+            element: (
+              <ProtectedRoute>
+                <ConfirmationDonScreen />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "confirmation-investissement",
-            element: <ConfirmationInvestissementScreen />,
+            element: (
+              <ProtectedRoute>
+                <ConfirmationInvestissementScreen />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "contribution-success",
-            element: <ContributionSuccessScreen />,
-          },
-          {
-            path: "cercle-detail",
-            element: <CercleDetailScreen />,
-          },
-          {
-            path: "rejoindre-cercle",
-            element: <RejoindreCircleScreen />,
-          },
-          {
-            path: "circle-join-success",
-            element: <CircleJoinSuccessScreen />,
-          },
-          {
-            path: "pro-creer-tontine",
             element: (
-              <AccountTypeGuard allowedType="professionnel">
-                <ProCreerTontineScreen />
-              </AccountTypeGuard>
+              <ProtectedRoute>
+                <ContributionSuccessScreen />
+              </ProtectedRoute>
             ),
           },
           {
             path: "badges",
-            element: <BadgesScreen />,
+            element: (
+              <ProtectedRoute>
+                <BadgesScreen />
+              </ProtectedRoute>
+            ),
+          },
+
+          // ── Système & Sécurité ──
+          {
+            path: "suspended",
+            element: (
+              <ProtectedRoute>
+                <SuspendedAccountScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "setup-2fa",
-            element: <Setup2FAScreen />,
+            path: "multi-signature",
+            element: (
+              <ProtectedRoute>
+                <MultiSignatureValidationScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "social-hub/decouverte",
-            element: <DecouverteScreen />,
+            path: "animated-icons",
+            element: (
+              <ProtectedRoute>
+                <AnimatedIconsDemoScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "social-hub/rencontres",
-            element: <RencontresScreen />,
+            path: "trust-score-intro",
+            element: (
+              <ProtectedRoute>
+                <TrustScoreIntroScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "social-hub/forums",
-            element: <ForumsScreen />,
+            path: "preferences-contenu",
+            element: (
+              <ProtectedRoute>
+                <PreferencesContentScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "social-hub/salon/:id",
-            element: <SalonChatScreen />,
+            path: "smart-contract-explorer",
+            element: (
+              <ProtectedRoute>
+                <SmartContractExplorerScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "social-hub/conversation/:id",
-            element: <PrivateConversationScreen />,
+            path: "mediation-system",
+            element: (
+              <ProtectedRoute>
+                <MediationSystemScreen />
+              </ProtectedRoute>
+            ),
           },
           {
-            path: "social-hub/forums-menu",
-            element: <ForumsMenuScreen />,
-          },
-          {
-            path: "social-hub/creer-salon",
-            element: <CreerSalonScreen />,
-          },
-          {
-            path: "social-hub/decouvrir-salons",
-            element: <DecouvrirSalonsScreen />,
-          },
-          {
-            path: "social-hub/sauvegardes",
-            element: <SauvegardesScreen />,
-          },
-          {
-            path: "social-hub/preferences-discussion",
-            element: <PreferencesDiscussionScreen />,
-          },
-          {
-            path: "social-hub/signaler-abus",
-            element: <SignalerAbusSalonScreen />,
-          },
-          {
-            path: "social-hub/aide-support",
-            element: <AideSupportScreen />,
-          },
-          {
-            path: "social-hub/createur/:id",
-            element: <CreateurProfileScreen />,
-          },
-          {
-            path: "social-hub/profil-setup",
-            element: <SocialProfilSetupScreen />,
-          },
-          {
-            path: "social-hub/creer-groupe-prive",
-            element: <CreerGroupePriveScreen />,
-          },
-          {
-            path: "social-hub/groupe/:id/gerer",
-            element: <GroupManagementScreen />,
-          },
-          {
-            path: "social-hub/salon/:id/gerer",
-            element: <SalonManagementScreen />,
+            path: "design-system",
+            element: (
+              <ProtectedRoute>
+                <DesignSystemDemo />
+              </ProtectedRoute>
+            ),
           },
         ],
       },
     ],
   },
   {
-    path: "*",
-    element: <Navigate to="/kauri/login" replace />,
-  },
-  {
     path: "/kauri/admin/kyc",
-    element: <KYCAdminDashboardScreen />,
+    element: (
+      <ProtectedRoute>
+        <KYCAdminDashboardScreen />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/kauri/admin/moderation",
-    element: <ModerationAdminDashboard />,
+    element: (
+      <ProtectedRoute>
+        <ModerationAdminDashboard />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "*",
+    element: <Navigate to="/kauri/login" replace />,
   },
 ]);
