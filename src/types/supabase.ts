@@ -24,6 +24,7 @@ export interface Database {
           street: string | null
           zip: string | null
           city: string | null
+          preferences: string[] | null
           created_at: string
         }
         Insert: {
@@ -40,6 +41,7 @@ export interface Database {
           street?: string | null
           zip?: string | null
           city?: string | null
+          preferences?: string[] | null
           created_at?: string
         }
         Update: {
@@ -56,6 +58,196 @@ export interface Database {
           street?: string | null
           zip?: string | null
           city?: string | null
+          preferences?: string[] | null
+          created_at?: string
+        }
+      }
+      wallets: {
+        Row: {
+          id: string
+          user_id: string
+          balance_eur: number
+          balance_xof: number
+          balance_usdt: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          balance_eur?: number
+          balance_xof?: number
+          balance_usdt?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          balance_eur?: number
+          balance_xof?: number
+          balance_usdt?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      tontines: {
+        Row: {
+          id: string
+          name: string
+          creator_id: string
+          monthly_amount: number
+          currency: string
+          max_members: number
+          current_cycle: number
+          total_cycles: number
+          frequency: string
+          status: "active" | "completed" | "pending" | "cancelled"
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          creator_id: string
+          monthly_amount: number
+          currency?: string
+          max_members?: number
+          current_cycle?: number
+          total_cycles?: number
+          frequency?: string
+          status?: "active" | "completed" | "pending" | "cancelled"
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          creator_id?: string
+          monthly_amount?: number
+          currency?: string
+          max_members?: number
+          current_cycle?: number
+          total_cycles?: number
+          frequency?: string
+          status?: "active" | "completed" | "pending" | "cancelled"
+          created_at?: string
+        }
+      }
+      tontine_members: {
+        Row: {
+          id: string
+          tontine_id: string
+          user_id: string
+          turn_position: number
+          has_received: boolean
+          joined_at: string
+        }
+        Insert: {
+          id?: string
+          tontine_id: string
+          user_id: string
+          turn_position: number
+          has_received?: boolean
+          joined_at?: string
+        }
+        Update: {
+          id?: string
+          tontine_id?: string
+          user_id?: string
+          turn_position?: number
+          has_received?: boolean
+          joined_at?: string
+        }
+      }
+      tontine_swaps: {
+        Row: {
+          id: string
+          tontine_id: string
+          requester_id: string
+          target_id: string | null
+          original_turn: number
+          requested_turn: number
+          reason: string | null
+          status: "pending" | "approved" | "rejected" | "cancelled"
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tontine_id: string
+          requester_id: string
+          target_id?: string | null
+          original_turn: number
+          requested_turn: number
+          reason?: string | null
+          status?: "pending" | "approved" | "rejected" | "cancelled"
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tontine_id?: string
+          requester_id?: string
+          target_id?: string | null
+          original_turn?: number
+          requested_turn?: number
+          reason?: string | null
+          status?: "pending" | "approved" | "rejected" | "cancelled"
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      tontine_swap_votes: {
+        Row: {
+          id: string
+          swap_id: string
+          voter_id: string
+          vote: "for" | "against" | "abstain"
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          swap_id: string
+          voter_id: string
+          vote: "for" | "against" | "abstain"
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          swap_id?: string
+          voter_id?: string
+          vote?: "for" | "against" | "abstain"
+          created_at?: string
+        }
+      }
+      transactions: {
+        Row: {
+          id: string
+          user_id: string
+          amount: number
+          currency: string
+          type: "deposit" | "withdrawal" | "tontine_pay" | "tontine_payout" | "swap_fee" | "transfer"
+          description: string | null
+          status: "pending" | "completed" | "failed" | "cancelled"
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          amount: number
+          currency?: string
+          type: "deposit" | "withdrawal" | "tontine_pay" | "tontine_payout" | "swap_fee" | "transfer"
+          description?: string | null
+          status?: "pending" | "completed" | "failed" | "cancelled"
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          amount?: number
+          currency?: string
+          type?: "deposit" | "withdrawal" | "tontine_pay" | "tontine_payout" | "swap_fee" | "transfer"
+          description?: string | null
+          status?: "pending" | "completed" | "failed" | "cancelled"
           created_at?: string
         }
       }
@@ -190,7 +382,6 @@ export interface Database {
           details?: string | null
           plain_text_snapshot?: string | null
           status?: "pending" | "in_review" | "resolved_sanctioned" | "dismissed"
-          moderator_notes?: string | null
           resolved_by?: string | null
           created_at?: string
           updated_at?: string
