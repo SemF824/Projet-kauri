@@ -15,7 +15,12 @@ import {
   Loader2,
 } from "lucide-react";
 import { useNavigate } from "react-router";
-import { getSupabase, SERVER_URL } from "../../../utils/supabase";
+import {
+  getSupabase,
+  SERVER_URL,
+  uploadKYCDocument,
+  arrayBufferToBase64,
+} from "../../../utils/supabase";
 import { toast } from "sonner";
 
 type Step =
@@ -26,12 +31,6 @@ type Step =
   | "password"
   | "phone"
   | "documents";
-
-// ── 🔒 CLÉ PUBLIQUE ADMINISTRATIVE ECC (P-256) POUR LE KYC ──
-const ADMIN_ECDH_PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErBf4GgqGXvYZGn7qZQlGZ0ogz9d4
-vsrPLUye3cZWTtALPQ9WxSSqwJMmPbp0U04+PdgAqICBBLg4OfuXrvMpCw==
------END PUBLIC KEY-----`;
 
 // ── 🛡️ PIPELINE DE STOCKAGE DE L'ENCLAVE MATÉRIELLE ──
 const DB_NAME = "KauriSecureEnclave";
@@ -81,28 +80,6 @@ async function getKeysFromEnclave(
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
-}
-
-function arrayBufferToBase64(blob: ArrayBuffer): string {
-  const bytes = new Uint8Array(blob);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return window.btoa(binary);
-}
-
-function pemToArrayBuffer(pem: string): ArrayBuffer {
-  const b64Lines = pem
-    .replace(/-----\s*BEGIN[^-]*-----\s*/g, "")
-    .replace(/-----\s*END[^-]*-----\s*/g, "")
-    .replace(/\s/g, "");
-  const binaryString = window.atob(b64Lines);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
 }
 
 export function AccountTypeSelectionScreen() {
@@ -337,9 +314,7 @@ export function AccountTypeSelectionScreen() {
       if (!signUpData.user?.id) throw new Error("ID de compte introuvable.");
       setActiveUserId(signUpData.user.id);
 
-      // ── 🔥 CORRECTION MAJEURE : FORCER L'UPDATE DU PROFIL 🔥 ──
-      // Le trigger PostgreSQL 'on_auth_user_created' de Supabase ignore les champs complexes.
-      // On force l'insertion des clés et des données pros directement après la création.
+      // Force la synchronisation du profil avec le trousseau de clés publiques
       const { error: profileUpdateError } = await (supabase as any)
         .from("profiles")
         .update({
@@ -489,150 +464,15 @@ export function AccountTypeSelectionScreen() {
     );
 
     try {
-      const supabase = getSupabase();
       const enclaveKeys = await getKeysFromEnclave("kauri_client");
       if (!enclaveKeys) throw new Error("Trousseau local corrompu.");
 
-      // Récupération prioritaire depuis l'enclave locale pour éviter tout 401 REST
-      let userEcdhPubPEM = enclaveKeys.ecdhPubPEM;
-
-      if (!userEcdhPubPEM) {
-        const { data: dbProfile } = await (supabase as any)
-          .from("profiles")
-          .select("user_public_key")
-          .eq("id", activeUserId)
-          .maybeSingle();
-
-        if (dbProfile?.user_public_key) {
-          try {
-            const parsed = JSON.parse(dbProfile.user_public_key);
-            userEcdhPubPEM = parsed.ecdh;
-          } catch (_) {}
-        }
-      }
-
-      if (!userEcdhPubPEM) {
-        throw new Error("Clé de chiffrement publique introuvable.");
-      }
-
-      const fileBuffer = await fileData.arrayBuffer();
-      const ephKey = await window.crypto.subtle.generateKey(
-        { name: "ECDH", namedCurve: "P-256" },
-        true,
-        ["deriveKey"],
+      await uploadKYCDocument(
+        activeUserId,
+        type,
+        fileData,
+        enclaveKeys,
       );
-      const ephPubRaw = await window.crypto.subtle.exportKey(
-        "raw",
-        ephKey.publicKey,
-      );
-
-      const fek = await window.crypto.subtle.generateKey(
-        { name: "AES-GCM", length: 256 },
-        true,
-        ["encrypt"],
-      );
-      const fileIV = window.crypto.getRandomValues(new Uint8Array(12));
-      const encryptedFileContent = await window.crypto.subtle.encrypt(
-        { name: "AES-GCM", iv: fileIV },
-        fek,
-        fileBuffer,
-      );
-      const exportedFek = await window.crypto.subtle.exportKey("raw", fek);
-      const wrapIV = window.crypto.getRandomValues(new Uint8Array(12));
-
-      const adminPubKey = await window.crypto.subtle.importKey(
-        "spki",
-        pemToArrayBuffer(ADMIN_ECDH_PUBLIC_KEY_PEM),
-        { name: "ECDH", namedCurve: "P-256" },
-        false,
-        [],
-      );
-      const adminWrapKey = await window.crypto.subtle.deriveKey(
-        { name: "ECDH", public: adminPubKey },
-        ephKey.privateKey,
-        { name: "AES-GCM", length: 256 },
-        false,
-        ["encrypt"],
-      );
-      const adminEncFEK = await window.crypto.subtle.encrypt(
-        { name: "AES-GCM", iv: wrapIV },
-        adminWrapKey,
-        exportedFek,
-      );
-
-      const userPubKey = await window.crypto.subtle.importKey(
-        "spki",
-        pemToArrayBuffer(userEcdhPubPEM),
-        { name: "ECDH", namedCurve: "P-256" },
-        false,
-        [],
-      );
-      const userWrapKey = await window.crypto.subtle.deriveKey(
-        { name: "ECDH", public: userPubKey },
-        ephKey.privateKey,
-        { name: "AES-GCM", length: 256 },
-        false,
-        ["encrypt"],
-      );
-      const userEncFEK = await window.crypto.subtle.encrypt(
-        { name: "AES-GCM", iv: wrapIV },
-        userWrapKey,
-        exportedFek,
-      );
-
-      const dataToSign = new Uint8Array(
-        ephPubRaw.byteLength +
-          fileIV.byteLength +
-          encryptedFileContent.byteLength,
-      );
-      dataToSign.set(new Uint8Array(ephPubRaw), 0);
-      dataToSign.set(fileIV, ephPubRaw.byteLength);
-      dataToSign.set(
-        new Uint8Array(encryptedFileContent),
-        ephPubRaw.byteLength + fileIV.byteLength,
-      );
-      const signatureBuffer = await window.crypto.subtle.sign(
-        { name: "ECDSA", hash: { name: "SHA-256" } },
-        enclaveKeys.ecdsaPriv,
-        dataToSign,
-      );
-
-      const totalLength =
-        101 +
-        adminEncFEK.byteLength +
-        userEncFEK.byteLength +
-        signatureBuffer.byteLength +
-        encryptedFileContent.byteLength;
-      const packedBuffer = new ArrayBuffer(totalLength);
-      const view = new DataView(packedBuffer);
-      view.setUint32(0, adminEncFEK.byteLength, false);
-      view.setUint32(4, userEncFEK.byteLength, false);
-      view.setUint32(8, signatureBuffer.byteLength, false);
-
-      const packedBytes = new Uint8Array(packedBuffer);
-      packedBytes.set(new Uint8Array(ephPubRaw), 12);
-      packedBytes.set(wrapIV, 77);
-      packedBytes.set(fileIV, 89);
-
-      let offset = 101;
-      packedBytes.set(new Uint8Array(adminEncFEK), offset);
-      offset += adminEncFEK.byteLength;
-      packedBytes.set(new Uint8Array(userEncFEK), offset);
-      offset += userEncFEK.byteLength;
-      packedBytes.set(new Uint8Array(signatureBuffer), offset);
-      offset += signatureBuffer.byteLength;
-      packedBytes.set(new Uint8Array(encryptedFileContent), offset);
-
-      const { error: uploadError } = await supabase.storage
-        .from("secure-kyc")
-        .upload(
-          `${activeUserId}/${type}.enc`,
-          new Blob([packedBytes], {
-            type: "application/octet-stream",
-          }),
-          { upsert: true },
-        );
-      if (uploadError) throw uploadError;
 
       const localUrl = URL.createObjectURL(
         fileData instanceof Blob ? fileData : new Blob([fileData]),

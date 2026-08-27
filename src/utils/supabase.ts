@@ -89,101 +89,205 @@ export function phoneToEmail(phone: string): string {
   return `${normalized}@kauri.app`;
 }
 
-// Supabase requires 6+ character passwords — pad short PINs with a fixed salt
 export function pinToPassword(pin: string): string {
   return `${pin}_kauri`;
 }
 
-// ── Cryptographie & Chiffrement Asymétrique Client-Side (KYC) ──────────────────
+// ── Cryptographie & Chiffrement Asymétrique ECC P-256 (KYC Vault) ───────────
 
-// Clé publique RSA de Kauri (Format SPKI encodé en Base64)
-// REMPLACE CETTE CLÉ PAR TA PROPRE CLÉ PUBLIQUE RSA 2048 PRODUCTION
-const KAURI_RSA_PUBLIC_KEY_B64 =
-  `MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8ur5G69kIhRoKMax0kr+Xn60dzeviG9BxtwZMNluOAKjQiPbyDrnhem7zvB4BMRsywP8GB3lnz3dyegiQJUYtdj6stKNl3oAgWCYvcj2o+VhU6se35YqGixeog4rcIdmzj3DTOLvdubWf14eR4q9+pkOVWiGexJrDRf72na6f04jXIiL58G5grx7rPUiYSki5T4gwqXz/L8JO1Eg7b0XTr/FnQdG320uN7L1KAF56R2dmt/XnJTotnsL0sJwxeHf97BtoFtIGqdFCzBHcbEBh+OUooG1o/3me86Vw/KwjbPwlt3DXB/Y1YiV2xrKueJDbhYNhtbKJw9o1cxRckobEQIDAQAB`.replace(
-    /\s+/g,
-    "",
-  );
+export const ADMIN_ECDH_PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErBf4GgqGXvYZGn7qZQlGZ0ogz9d4
+vsrPLUye3cZWTtALPQ9WxSSqwJMmPbp0U04+PdgAqICBBLg4OfuXrvMpCw==
+-----END PUBLIC KEY-----`;
 
-// Convertisseur Base64 vers ArrayBuffer
-function base64ToArrayBuffer(b64: string): ArrayBuffer {
-  const binaryString = window.atob(b64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
+export function arrayBufferToBase64(blob: ArrayBuffer): string {
+  const bytes = new Uint8Array(blob);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+
+export function pemToArrayBuffer(pem: string): ArrayBuffer {
+  const b64Lines = pem
+    .replace(/-----\s*BEGIN[^-]*-----\s*/g, "")
+    .replace(/-----\s*END[^-]*-----\s*/g, "")
+    .replace(/\s/g, "");
+  const binaryString = window.atob(b64Lines);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
   return bytes.buffer;
 }
 
 /**
- * Chiffre localement un document en utilisant le mécanisme d'enveloppe hybride :
- * Clé de session éphémère AES-GCM 256 + Clé publique RSA-OAEP 2048 Kauri.
+ * Chiffre un document avec le protocole ECIES hybride (ECC P-256 + AES-GCM 256 + Signature ECDSA)
+ * et le téléverse dans le dossier kyc-vault/<userId>/<type>.enc du bucket secure-kyc.
  */
-export async function encryptFileAsymmetric(file: File): Promise<Blob> {
-  // 1. Génération d'une clé symétrique éphémère AES-GCM
-  const aesKey = await window.crypto.subtle.generateKey(
+export async function uploadKYCDocument(
+  userId: string,
+  type: "identity" | "selfie",
+  file: File | Blob,
+  enclaveKeys: {
+    ecdhPriv: CryptoKey;
+    ecdsaPriv: CryptoKey;
+    ecdhPubPEM?: string;
+    ecdsaPubPEM?: string;
+  },
+  userPublicKeysJSON?: string,
+): Promise<string> {
+  const supabase = getSupabase();
+
+  let userEcdhPubPEM = enclaveKeys.ecdhPubPEM;
+
+  if (!userEcdhPubPEM && userPublicKeysJSON) {
+    try {
+      const parsed = JSON.parse(userPublicKeysJSON);
+      userEcdhPubPEM = parsed.ecdh;
+    } catch (_) {}
+  }
+
+  if (!userEcdhPubPEM) {
+    const { data: dbProfile } = await (supabase as any)
+      .from("profiles")
+      .select("user_public_key")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (dbProfile?.user_public_key) {
+      try {
+        const parsed = JSON.parse(dbProfile.user_public_key);
+        userEcdhPubPEM = parsed.ecdh;
+      } catch (_) {}
+    }
+  }
+
+  if (!userEcdhPubPEM) {
+    throw new Error("Clé publique utilisateur introuvable pour le chiffrement.");
+  }
+
+  const fileBuffer = await file.arrayBuffer();
+
+  const ephKey = await window.crypto.subtle.generateKey(
+    { name: "ECDH", namedCurve: "P-256" },
+    true,
+    ["deriveKey"],
+  );
+  const ephPubRaw = await window.crypto.subtle.exportKey("raw", ephKey.publicKey);
+
+  const fek = await window.crypto.subtle.generateKey(
     { name: "AES-GCM", length: 256 },
     true,
     ["encrypt"],
   );
+  const fileIV = window.crypto.getRandomValues(new Uint8Array(12));
+  const encryptedFileContent = await window.crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: fileIV },
+    fek,
+    fileBuffer,
+  );
+  const exportedFek = await window.crypto.subtle.exportKey("raw", fek);
+  const wrapIV = window.crypto.getRandomValues(new Uint8Array(12));
 
-  // 2. Exportation de la clé AES brute pour pouvoir la chiffrer en RSA
-  const rawAesKey = await window.crypto.subtle.exportKey("raw", aesKey);
-
-  // 3. Importation de la clé publique de Kauri
-  const publicKeyBuffer = base64ToArrayBuffer(KAURI_RSA_PUBLIC_KEY_B64);
-  const rsaPublicKey = await window.crypto.subtle.importKey(
+  const adminPubKey = await window.crypto.subtle.importKey(
     "spki",
-    publicKeyBuffer,
-    { name: "RSA-OAEP", hash: "SHA-256" },
+    pemToArrayBuffer(ADMIN_ECDH_PUBLIC_KEY_PEM),
+    { name: "ECDH", namedCurve: "P-256" },
+    false,
+    [],
+  );
+  const adminWrapKey = await window.crypto.subtle.deriveKey(
+    { name: "ECDH", public: adminPubKey },
+    ephKey.privateKey,
+    { name: "AES-GCM", length: 256 },
     false,
     ["encrypt"],
   );
-
-  // 4. Chiffrement de la clé AES avec la clé publique RSA
-  const encryptedAesKey = await window.crypto.subtle.encrypt(
-    { name: "RSA-OAEP" },
-    rsaPublicKey,
-    rawAesKey,
+  const adminEncFEK = await window.crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: wrapIV },
+    adminWrapKey,
+    exportedFek,
   );
 
-  // 5. Chiffrement du fichier avec la clé AES
-  const iv = window.crypto.getRandomValues(new Uint8Array(12));
-  const fileBuffer = await file.arrayBuffer();
-  const encryptedFileContent = await window.crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: iv },
-    aesKey,
-    fileBuffer,
+  const userPubKey = await window.crypto.subtle.importKey(
+    "spki",
+    pemToArrayBuffer(userEcdhPubPEM),
+    { name: "ECDH", namedCurve: "P-256" },
+    false,
+    [],
+  );
+  const userWrapKey = await window.crypto.subtle.deriveKey(
+    { name: "ECDH", public: userPubKey },
+    ephKey.privateKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt"],
+  );
+  const userEncFEK = await window.crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: wrapIV },
+    userWrapKey,
+    exportedFek,
   );
 
-  // 6. Assemblage de l'enveloppe : [Clé AES Chiffrée (256 octets)] + [IV (12 octets)] + [Fichier Chiffré]
-  return new Blob([encryptedAesKey, iv, encryptedFileContent], {
-    type: "application/octet-stream",
-  });
-}
+  const dataToSign = new Uint8Array(
+    ephPubRaw.byteLength + fileIV.byteLength + encryptedFileContent.byteLength,
+  );
+  dataToSign.set(new Uint8Array(ephPubRaw), 0);
+  dataToSign.set(fileIV, ephPubRaw.byteLength);
+  dataToSign.set(
+    new Uint8Array(encryptedFileContent),
+    ephPubRaw.byteLength + fileIV.byteLength,
+  );
 
-/**
- * Gère le chiffrement complet et l'envoi sécurisé vers le bucket de stockage de Supabase
- */
-export async function uploadKYCDocument(
-  userId: string,
-  stepName: string,
-  file: File,
-): Promise<string> {
-  const supabase = getSupabase();
+  const signatureBuffer = await window.crypto.subtle.sign(
+    { name: "ECDSA", hash: { name: "SHA-256" } },
+    enclaveKeys.ecdsaPriv,
+    dataToSign,
+  );
 
-  // Exécuter le chiffrement côté client avant l'envoi
-  const encryptedBlob = await encryptFileAsymmetric(file);
+  const totalLength =
+    101 +
+    adminEncFEK.byteLength +
+    userEncFEK.byteLength +
+    signatureBuffer.byteLength +
+    encryptedFileContent.byteLength;
 
-  const fileExt = file.name.split(".").pop() || "bin";
-  const filePath = `kyc-vault/${userId}/${stepName}_${Date.now()}.${fileExt}.enc`;
+  const packedBuffer = new ArrayBuffer(totalLength);
+  const view = new DataView(packedBuffer);
+  view.setUint32(0, adminEncFEK.byteLength, false);
+  view.setUint32(4, userEncFEK.byteLength, false);
+  view.setUint32(8, signatureBuffer.byteLength, false);
+
+  const packedBytes = new Uint8Array(packedBuffer);
+  packedBytes.set(new Uint8Array(ephPubRaw), 12);
+  packedBytes.set(wrapIV, 77);
+  packedBytes.set(fileIV, 89);
+
+  let offset = 101;
+  packedBytes.set(new Uint8Array(adminEncFEK), offset);
+  offset += adminEncFEK.byteLength;
+  packedBytes.set(new Uint8Array(userEncFEK), offset);
+  offset += userEncFEK.byteLength;
+  packedBytes.set(new Uint8Array(signatureBuffer), offset);
+  offset += signatureBuffer.byteLength;
+  packedBytes.set(new Uint8Array(encryptedFileContent), offset);
+
+  const filePath = `kyc-vault/${userId}/${type}.enc`;
 
   const { data, error } = await supabase.storage
-    .from("secure-kyc") // Assure-toi que ce bucket existe dans Supabase
-    .upload(filePath, encryptedBlob, {
-      contentType: "application/octet-stream",
-      cacheControl: "3600",
-      upsert: true,
-    });
+    .from("secure-kyc")
+    .upload(
+      filePath,
+      new Blob([packedBytes], { type: "application/octet-stream" }),
+      {
+        contentType: "application/octet-stream",
+        cacheControl: "3600",
+        upsert: true,
+      },
+    );
 
   if (error) {
     throw new Error(

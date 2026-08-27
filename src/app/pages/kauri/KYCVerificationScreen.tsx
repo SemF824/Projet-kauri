@@ -6,9 +6,7 @@ import {
   Loader2,
   CheckCircle2,
   RotateCw,
-  Check,
   Clock,
-  X,
   Video,
   AlertTriangle,
   ShieldCheck,
@@ -18,18 +16,23 @@ import {
 import { useNavigate, useSearchParams } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { getSupabase, uploadKYCDocument } from "../../../utils/supabase";
+import {
+  getSupabase,
+  uploadKYCDocument,
+  arrayBufferToBase64,
+} from "../../../utils/supabase";
 import { toast } from "sonner";
 
-// ── 🔒 CLÉ PUBLIQUE ADMINISTRATIVE ECC (P-256) ENREGISTRÉE ──
-const ADMIN_ECDH_PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErBf4GgqGXvYZGn7qZQlGZ0ogz9d4
-vsrPLUye3cZWTtALPQ9WxSSqwJMmPbp0U04+PdgAqICBBLg4OfuXrvMpCw==
------END PUBLIC KEY-----`;
-
-// ── 🛡️ UTILITAIRES WEBCRYPTO & INDEXED-DB SANS DESTRUCTION ──
+// ── 🛡️ UTILITAIRES INDEXED-DB DE L'ENCLAVE MATÉRIELLE ──
 const DB_NAME = "KauriSecureEnclave";
 const STORE_NAME = "client_keys";
+
+interface StoredEnclaveKeys {
+  ecdhPriv: CryptoKey;
+  ecdsaPriv: CryptoKey;
+  ecdhPubPEM?: string;
+  ecdsaPubPEM?: string;
+}
 
 function getDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -47,7 +50,7 @@ function getDB(): Promise<IDBDatabase> {
 
 async function saveKeysToEnclave(
   id: string,
-  keys: { ecdhPriv: CryptoKey; ecdsaPriv: CryptoKey },
+  keys: StoredEnclaveKeys,
 ) {
   const db = await getDB();
   return new Promise<void>((resolve, reject) => {
@@ -60,7 +63,7 @@ async function saveKeysToEnclave(
 
 async function getKeysFromEnclave(
   id: string,
-): Promise<{ ecdhPriv: CryptoKey; ecdsaPriv: CryptoKey } | undefined> {
+): Promise<StoredEnclaveKeys | undefined> {
   const db = await getDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
@@ -68,62 +71,6 @@ async function getKeysFromEnclave(
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
-}
-
-function arrayBufferToBase64(blob: ArrayBuffer): string {
-  const bytes = new Uint8Array(blob);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return window.btoa(binary);
-}
-
-function pemToArrayBuffer(pem: string): ArrayBuffer {
-  const b64Lines = pem
-    .replace(/-----\s*BEGIN[^-]*-----\s*/g, "")
-    .replace(/-----\s*END[^-]*-----\s*/g, "")
-    .replace(/\s/g, "");
-  const binaryString = window.atob(b64Lines);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
-}
-
-function detectMimeType(arrayBuffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(arrayBuffer).slice(0, 12);
-  if (
-    bytes[0] === 0x25 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x44 &&
-    bytes[3] === 0x46
-  )
-    return "application/pdf";
-  if (
-    bytes[0] === 0x89 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x4e &&
-    bytes[3] === 0x47
-  )
-    return "image/png";
-  if (
-    bytes[0] === 0x1a &&
-    bytes[1] === 0x45 &&
-    bytes[2] === 0xdf &&
-    bytes[3] === 0xa3
-  )
-    return "video/webm";
-  if (
-    bytes[4] === 0x66 &&
-    bytes[5] === 0x74 &&
-    bytes[6] === 0x79 &&
-    bytes[7] === 0x70
-  )
-    return "video/mp4";
-  return "image/jpeg";
 }
 
 export function KYCVerificationScreen() {
@@ -317,10 +264,10 @@ export function KYCVerificationScreen() {
 
   const handleUploadAndEncrypt = async (
     type: "identity" | "selfie",
-    fileFromParam?: File,
+    fileFromParam?: File | Blob,
   ) => {
     const file = fileFromParam;
-    if (!file) return;
+    if (!file || !profile?.id) return;
 
     setIsActionLoading(true);
     const toastId = toast.loading(
@@ -331,7 +278,6 @@ export function KYCVerificationScreen() {
       let enclaveKeys = await getKeysFromEnclave("kauri_client");
 
       if (!enclaveKeys) {
-        toast.info("Génération de nouvelles clés d'enclave sécurisée...");
         const ecdhKeyPair = await window.crypto.subtle.generateKey(
           { name: "ECDH", namedCurve: "P-256" },
           true,
@@ -343,13 +289,6 @@ export function KYCVerificationScreen() {
           ["sign", "verify"],
         );
 
-        enclaveKeys = {
-          ecdhPriv: ecdhKeyPair.privateKey,
-          ecdsaPriv: ecdsaKeyPair.privateKey,
-        };
-        await saveKeysToEnclave("kauri_client", enclaveKeys);
-        toast.success("Clés d'enclave sécurisée générées et sauvegardées !");
-
         const ecdhPubBuf = await window.crypto.subtle.exportKey(
           "spki",
           ecdhKeyPair.publicKey,
@@ -359,43 +298,55 @@ export function KYCVerificationScreen() {
           ecdsaKeyPair.publicKey,
         );
 
-        // Mise à jour de la clé publique de l'utilisateur dans Supabase Auth et dans la table profiles
+        const ecdhPubPEM = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`;
+        const ecdsaPubPEM = `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`;
+
+        enclaveKeys = {
+          ecdhPriv: ecdhKeyPair.privateKey,
+          ecdsaPriv: ecdsaKeyPair.privateKey,
+          ecdhPubPEM,
+          ecdsaPubPEM,
+        };
+
+        await saveKeysToEnclave("kauri_client", enclaveKeys);
+
         const publicKeysJSON = JSON.stringify({
-          ecdh: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdhPubBuf)}\n-----END PUBLIC KEY-----`,
-          ecdsa: `-----BEGIN PUBLIC KEY-----\n${arrayBufferToBase64(ecdsaPubBuf)}\n-----END PUBLIC KEY-----`,
+          ecdh: ecdhPubPEM,
+          ecdsa: ecdsaPubPEM,
         });
 
         await supabase.auth.updateUser({
           data: { user_public_key: publicKeysJSON },
         });
 
-        if (profile?.id) {
-          await supabase
-            .from("profiles")
-            .update({ user_public_key: publicKeysJSON })
-            .eq("id", profile.id);
-        }
-
-        await refreshProfile(); // Rafraîchir le profil pour récupérer la nouvelle clé publique
+        await (supabase as any)
+          .from("profiles")
+          .update({ user_public_key: publicKeysJSON })
+          .eq("id", profile.id);
       }
 
-      if (!enclaveKeys) {
-        throw new Error(
-          "Clés d'enclave critiques introuvables ou échec de génération.",
-        );
-      }
+      await uploadKYCDocument(
+        profile.id,
+        type,
+        file,
+        enclaveKeys,
+        (profile as any)?.user_public_key,
+      );
 
-      // ── Téléversement et scellage du document ──
-      const uploadedPath = await uploadKYCDocument(profile.id, type, file);
+      const localUrl = URL.createObjectURL(
+        file instanceof Blob ? file : new Blob([file]),
+      );
 
       if (type === "identity") {
+        setIdentityPreviewUrl(localUrl);
         setHasExistingIdentity(true);
       } else if (type === "selfie") {
+        setSelfiePreviewUrl(localUrl);
         setHasExistingSelfie(true);
       }
 
       toast.success(`Module ${type} scellé et téléversé !`);
-      await refreshProfile(); // Rafraîchir le profil pour mettre à jour l'état KYC, si applicable
+      await refreshProfile();
     } catch (e: any) {
       console.error("Erreur handleUploadAndEncrypt:", e);
       const errorMessage =
@@ -416,9 +367,7 @@ export function KYCVerificationScreen() {
 
   const hasAnyMutation = isAddressChanged || hasFileChanges;
 
-  // Modificateur de champ avec persistance dynamique + RÈGLE CHIFFRES UNIQUES SUR CODE POSTAL
   const updateAddressField = (field: keyof typeof address, value: string) => {
-    // 🛡️ REJET STRICT DES LETTRES SUR LE CODE POSTAL
     const sanitizedValue = field === "zip" ? value.replace(/\D/g, "") : value;
 
     setAddress((prev) => {
@@ -446,7 +395,6 @@ export function KYCVerificationScreen() {
   const isFilesValid = hasIdentity && hasSelfie;
   const isFormComplete = isAddressValid && isFilesValid;
 
-  // ── 🎯 ACTION PRINCIPALE : NAVIGATION AUTORISÉE ET SAUVEGARDE DYNAMIQUE ──
   const handleMainAction = async () => {
     if (!isFormComplete) {
       if (!isFilesValid) {
@@ -482,13 +430,9 @@ export function KYCVerificationScreen() {
         zip: address.zip.trim(),
       };
 
-      // Retrait temporaire de la mise à jour de kyc_status et trust_score
-      // pour éviter l'erreur 400 (RLS policy potentielle).
-      // Ces champs devraient être gérés côté serveur.
-
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("profiles")
-        .update(updateData as any)
+        .update(updateData)
         .eq("id", profile?.id);
 
       if (error) {
@@ -500,7 +444,7 @@ export function KYCVerificationScreen() {
         localStorage.removeItem(`kauri_address_draft_${profile.id}`);
       }
 
-      setInitialAddress({ ...address }); // Réalignement synchrone instantané
+      setInitialAddress({ ...address });
       await refreshProfile();
 
       toast.success("Informations enregistrées !", {
@@ -690,7 +634,7 @@ export function KYCVerificationScreen() {
               </div>
             </div>
 
-            {/* ── 🎯 FORMULAIRE DE RÉSIDENCE AVEC VERROU NUMÉRIQUE SUR CODE POSTAL ── */}
+            {/* ── FORMULAIRE DE RÉSIDENCE ── */}
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
@@ -782,7 +726,7 @@ export function KYCVerificationScreen() {
               </div>
             </div>
 
-            {/* ── 🚀 BOUTON D'ACTION PRINCIPAL ACTIF ET FLUIDE ── */}
+            {/* BOUTON D'ACTION */}
             <button
               onClick={handleMainAction}
               disabled={
@@ -792,9 +736,7 @@ export function KYCVerificationScreen() {
                 ${
                   !isFormComplete
                     ? "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none"
-                    : hasAnyMutation
-                      ? "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20"
-                      : "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20"
+                    : "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20"
                 }`}
             >
               {isActionLoading ? (
@@ -869,14 +811,12 @@ export function KYCVerificationScreen() {
               >
                 {recordingState === "idle" ? (
                   <>
-                    {" "}
-                    <Video className="w-5 h-5" /> Démarrer l'enregistrement{" "}
+                    <Video className="w-5 h-5" /> Démarrer l'enregistrement
                   </>
                 ) : (
                   <>
-                    {" "}
                     <Loader2 className="w-5 h-5 animate-spin" /> Ne quittez pas
-                    le cadre...{" "}
+                    le cadre...
                   </>
                 )}
               </button>
