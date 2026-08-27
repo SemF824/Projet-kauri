@@ -504,10 +504,15 @@ export function AccountTypeSelectionScreen() {
     setIsLoading(true);
     try {
       const supabase = getSupabase();
-      await (supabase as any)
+      
+      const { error: kycUpdateError } = await (supabase as any)
         .from("profiles")
         .update({ kyc_status: "pending" })
         .eq("id", activeUserId);
+
+      if (kycUpdateError) {
+        console.warn("Mise à jour kyc_status rejetée par la DB:", kycUpdateError.message);
+      }
 
       const sessionData = (await supabase.auth.getSession()).data.session;
       const accessToken = sessionData?.access_token;
@@ -524,7 +529,8 @@ export function AccountTypeSelectionScreen() {
 
       toast.success("Dossier validé ! Redirection vers votre tableau de bord.");
       navigate("/kauri/normal-dashboard");
-    } catch (e) {
+    } catch (e: any) {
+      console.error("Erreur finalisation:", e);
       toast.error("Erreur de routage final.");
     } finally {
       setIsLoading(false);
