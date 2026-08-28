@@ -15,9 +15,9 @@ export interface KauriUserProfile {
   lastName: string;
   accountType: "particulier" | "professionnel";
   trustScore: number;
-  balance: number; // Solde EUR (Rétrocompatibilité)
-  balanceXof: number; // Solde XOF (Franc CFA)
-  balanceUsdt: number; // Solde stablecoin USDT
+  balance: number;
+  balanceXof: number;
+  balanceUsdt: number;
   currency: string;
   businessName?: string;
   kycCompleted: boolean;
@@ -35,11 +35,8 @@ interface AuthContextValue {
   refreshProfile: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(
-  null,
-);
+const AuthContext = createContext<AuthContextValue | null>(null);
 
-// Construit un profil consolidé avec le profil DB et son wallet associé
 function profileFromMeta(
   user: User,
   dbProfile: any = null,
@@ -66,12 +63,10 @@ function profileFromMeta(
     accountType:
       dbProfile?.account_type ?? m.accountType ?? m.account_type ?? "particulier",
     businessName: dbProfile?.business_name ?? m.businessName ?? m.business_name,
-    trustScore: dbProfile?.trust_score
-      ? Number(dbProfile.trust_score)
-      : 100,
-    balance: wallet?.balance_eur !== undefined ? Number(wallet.balance_eur) : 2450.00,
-    balanceXof: wallet?.balance_xof !== undefined ? Number(wallet.balance_xof) : 1600000.00,
-    balanceUsdt: wallet?.balance_usdt !== undefined ? Number(wallet.balance_usdt) : 1250.00,
+    trustScore: dbProfile?.trust_score ? Number(dbProfile.trust_score) : 100,
+    balance: wallet?.balance_eur !== undefined && wallet?.balance_eur !== null ? Number(wallet.balance_eur) : 0,
+    balanceXof: wallet?.balance_xof !== undefined && wallet?.balance_xof !== null ? Number(wallet.balance_xof) : 0,
+    balanceUsdt: wallet?.balance_usdt !== undefined && wallet?.balance_usdt !== null ? Number(wallet.balance_usdt) : 0,
     currency: "EUR",
     kycCompleted: dbProfile?.kyc_completed ?? false,
     createdAt: user.created_at ?? new Date().toISOString(),
@@ -85,15 +80,13 @@ export function AuthProvider({
 }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] =
-    useState<KauriUserProfile | null>(null);
+  const [profile, setProfile] = useState<KauriUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (currentUser: User) => {
     try {
       const supabase = getSupabase();
 
-      // Récupération simultanée du profil et du portefeuille
       const [profileRes, walletRes] = await Promise.all([
         supabase
           .from("profiles")
@@ -111,29 +104,27 @@ export function AuthProvider({
 
       let walletData = walletRes.data;
 
-      // Auto-initialisation robuste du portefeuille de démo s'il n'existe pas encore
+      // Auto-création du portefeuille à 0,00 € si inexistant
       if (!walletData && profileRes.data) {
-        const { data: newWallet } = await supabase
+        const { data: newWallet, error: insertErr } = await supabase
           .from("wallets")
           .insert({
             user_id: currentUser.id,
-            balance_eur: 2450.00,
-            balance_xof: 1600000.00,
-            balance_usdt: 1250.00,
+            balance_eur: 0.00,
+            balance_xof: 0.00,
+            balance_usdt: 0.00,
           })
           .select()
           .maybeSingle();
-        if (newWallet) {
+
+        if (!insertErr && newWallet) {
           walletData = newWallet;
         }
       }
 
       setProfile(profileFromMeta(currentUser, profileRes.data, walletData));
     } catch (e) {
-      console.error(
-        "Failed to fetch profile from PostgreSQL:",
-        e,
-      );
+      console.error("Failed to fetch profile from PostgreSQL:", e);
       setProfile(profileFromMeta(currentUser));
     }
   };
@@ -146,9 +137,7 @@ export function AuthProvider({
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
-        fetchProfile(currentUser).finally(() =>
-          setLoading(false),
-        );
+        fetchProfile(currentUser).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }

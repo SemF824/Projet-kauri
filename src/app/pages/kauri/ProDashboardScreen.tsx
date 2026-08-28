@@ -12,22 +12,19 @@ import {
   Sun,
   Home,
   Briefcase,
-  Play,
-  BarChart2,
-  Lock,
-  ShieldAlert,
+  RefreshCcw,
+  Compass,
+  Leaf,
+  Layers,
   ArrowRight,
-  RefreshCw,
+  ShieldCheck,
 } from "lucide-react";
 import { useProData } from "../../contexts/ProDataContext";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useDarkMode } from "../../contexts/DarkModeContext";
 import { useAuth } from "../../contexts/AuthContext";
-import {
-  useProPublications,
-  computeSocialStats,
-} from "../../contexts/ProPublicationsContext";
+import { getSupabase } from "../../../utils/supabase";
 
 function SocialIcon({
   color,
@@ -178,7 +175,7 @@ function ProBottomNav({
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50"
+      className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 shadow-2xl"
       style={{
         backgroundColor: bg,
         borderTop: `1px solid ${border}`,
@@ -375,9 +372,11 @@ export function ProDashboardScreen() {
   const navigate = useNavigate();
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
-  const { isDarkMode, toggleDarkMode, resetDarkMode } =
-    useDarkMode();
-  const { profile, refreshProfile } = useAuth();
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
+  const { profile } = useAuth();
+  const { projets } = useProData();
+
+  const [tontinesCount, setTontinesCount] = useState<number | null>(null);
 
   const displayName =
     profile?.businessName ||
@@ -388,7 +387,6 @@ export function ProDashboardScreen() {
     ? profile.businessName.slice(0, 2).toUpperCase()
     : `${profile?.firstName?.[0] ?? "P"}${profile?.lastName?.[0] ?? ""}`.toUpperCase();
 
-  // RECUPERATION DU SOLDE REEL SUPABASE SANS FACTICE EN DUR
   const balanceEur = profile?.balance ?? 0;
 
   useEffect(() => {
@@ -404,25 +402,44 @@ export function ProDashboardScreen() {
     };
   }, []);
 
-  const { projets } = useProData();
-  const projetsActifs = projets.filter(
-    (p) => p.statut === "En cours",
-  );
+  // Récupération dynamique des tontines de l'entreprise
+  useEffect(() => {
+    const fetchTontines = async () => {
+      if (!profile?.id) return;
+      try {
+        const supabase = getSupabase();
+        const { data, error } = await supabase
+          .from("tontine_members")
+          .select("tontine_id")
+          .eq("user_id", profile.id);
+
+        if (!error && data) {
+          setTontinesCount(data.length);
+        } else {
+          setTontinesCount(0);
+        }
+      } catch {
+        setTontinesCount(0);
+      }
+    };
+
+    fetchTontines();
+  }, [profile?.id]);
+
+  const projetsActifs = projets.filter((p) => p.statut === "En cours");
   const totalLeve = projets.reduce((s, p) => s + p.leve, 0);
-  const totalBackers = projets.reduce(
-    (s, p) => s + p.backers,
-    0,
-  );
+  const totalBackers = projets.reduce((s, p) => s + p.backers, 0);
 
   return (
     <div
-      className={`min-h-screen pb-24 transition-colors relative ${isDarkMode ? "bg-[#0F172A]" : "bg-[#F9F9F9]"}`}
+      className={`min-h-screen pb-32 transition-colors relative font-sans select-none ${isDarkMode ? "bg-[#0F172A]" : "bg-[#F8FAFC]"}`}
     >
       <div>
+        {/* HEADER PRO */}
         <div
           className={`px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl ${isDarkMode ? "bg-gradient-to-br from-[#1E293B] to-[#334155]" : "bg-gradient-to-br from-[#D4AF37] to-[#F59E0B]"}`}
         >
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div
                 className={`w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-lg ${isDarkMode ? "bg-[#D4AF37] border-white" : "bg-white border-[#D4AF37]"}`}
@@ -439,7 +456,7 @@ export function ProDashboardScreen() {
                 <h2 className="text-white font-bold text-lg leading-tight">
                   Bonjour, {displayName}
                 </h2>
-                <p className="text-white/90 text-sm">
+                <p className="text-white/90 text-xs font-semibold uppercase tracking-wider">
                   Compte Professionnel
                 </p>
               </div>
@@ -449,9 +466,7 @@ export function ProDashboardScreen() {
               <button
                 onClick={toggleDarkMode}
                 className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border-none cursor-pointer"
-                title={
-                  isDarkMode ? "Mode Clair" : "Mode Sombre"
-                }
+                title={isDarkMode ? "Mode Clair" : "Mode Sombre"}
               >
                 {isDarkMode ? (
                   <Sun className="w-5 h-5 text-white" />
@@ -460,9 +475,7 @@ export function ProDashboardScreen() {
                 )}
               </button>
               <button
-                onClick={() =>
-                  navigate("/kauri/pro-notifications")
-                }
+                onClick={() => navigate("/kauri/pro-notifications")}
                 className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border-none cursor-pointer"
                 title="Notifications Pro"
               >
@@ -471,15 +484,14 @@ export function ProDashboardScreen() {
             </div>
           </div>
 
+          {/* CARTE PORTEFEUILLE BUSINESS */}
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/20">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-white/90 text-sm font-bold">
-                Portefeuille Entreprise (EUR)
+              <span className="text-white/90 text-xs font-bold uppercase tracking-wider">
+                Trésorerie Disponible (EUR)
               </span>
               <button
-                onClick={() =>
-                  setBalanceVisible(!balanceVisible)
-                }
+                onClick={() => setBalanceVisible(!balanceVisible)}
                 className="text-white bg-transparent border-none cursor-pointer"
               >
                 {balanceVisible ? (
@@ -490,27 +502,24 @@ export function ProDashboardScreen() {
               </button>
             </div>
             
-            {/* AFFICHAGE EN TEMPS REEL DE LA BASE DE DONNEES POSTGRESQL */}
-            <h1 className="text-white text-3xl mb-4 font-black">
+            <h1 className="text-white text-3xl mb-4 font-black tracking-tight">
               {balanceVisible ? `${balanceEur.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : "•••••"}
             </h1>
             
-            <p className="text-white/60 text-[10px] mb-4 leading-normal">
-              ℹ️ Solde synchronisé avec Supabase PostgreSQL. La liaison aux flux bancaires réels sera activée via l'API Stripe / Banxo.
+            <p className="text-white/70 text-[10px] mb-4 leading-normal font-medium">
+              ℹ️ Synchronisé en temps réel avec la base de données Kauri.
             </p>
 
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() =>
-                  navigate("/kauri/pro-portefeuille")
-                }
-                className="bg-white text-[#D4AF37] py-3 rounded-xl text-sm font-bold border-none cursor-pointer"
+                onClick={() => navigate("/kauri/pro-portefeuille")}
+                className="bg-white text-[#D4AF37] py-3 rounded-xl text-xs font-black uppercase tracking-wider border-none cursor-pointer hover:bg-slate-50 transition-colors"
               >
                 Détails de Caisse
               </button>
               <button
                 onClick={() => navigate("/kauri/pro-projets")}
-                className="bg-[#006D77] text-white py-3 rounded-xl text-sm font-bold border-none cursor-pointer"
+                className="bg-[#006D77] text-white py-3 rounded-xl text-xs font-black uppercase tracking-wider border-none cursor-pointer hover:bg-[#005a63] transition-colors"
               >
                 Suivi Levées
               </button>
@@ -534,63 +543,133 @@ export function ProDashboardScreen() {
           </div>
         )}
 
+        {/* STATS RAPIDES */}
         <div className="px-6 py-6 space-y-6">
           <div className="grid grid-cols-3 gap-3">
             <button
               onClick={() => navigate("/kauri/pro-leves")}
-              className={`rounded-xl p-4 text-center shadow-md border transition-opacity active:opacity-70 border-none cursor-pointer ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
+              className={`rounded-2xl p-4 text-center shadow-sm border transition-all active:scale-95 border-none cursor-pointer ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
             >
-              <BarChart3 className="w-8 h-8 text-[#006D77] mx-auto mb-2" />
+              <BarChart3 className="w-6 h-6 text-[#006D77] mx-auto mb-1.5" />
               <p
-                className={`mb-1 font-bold ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
+                className={`mb-0.5 font-black text-sm ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
               >
                 {totalLeve.toLocaleString("fr-FR")} €
               </p>
-              <p
-                className={`text-xs font-bold ${isDarkMode ? "text-[#94A3B8]" : "text-[#4A4A4A]"}`}
-              >
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 Levés
               </p>
             </button>
 
             <button
-              onClick={() =>
-                navigate("/kauri/pro-investisseurs")
-              }
-              className={`rounded-xl p-4 text-center shadow-md border transition-opacity active:opacity-70 border-none cursor-pointer ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
+              onClick={() => navigate("/kauri/pro-investisseurs")}
+              className={`rounded-2xl p-4 text-center shadow-sm border transition-all active:scale-95 border-none cursor-pointer ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
             >
-              <Users className="w-8 h-8 text-[#D4AF37] mx-auto mb-2" />
+              <Users className="w-6 h-6 text-[#D4AF37] mx-auto mb-1.5" />
               <p
-                className={`mb-1 font-bold ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
+                className={`mb-0.5 font-black text-sm ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
               >
                 {totalBackers}
               </p>
-              <p
-                className={`text-xs font-bold ${isDarkMode ? "text-[#94A3B8]" : "text-[#4A4A4A]"}`}
-              >
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 Investisseurs
               </p>
             </button>
 
             <button
               onClick={() => navigate("/kauri/pro-projets")}
-              className={`rounded-xl p-4 text-center shadow-md border transition-opacity active:opacity-70 border-none cursor-pointer ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
+              className={`rounded-2xl p-4 text-center shadow-sm border transition-all active:scale-95 border-none cursor-pointer ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
             >
-              <TrendingUp className="w-8 h-8 text-[#0D9488] mx-auto mb-2" />
+              <TrendingUp className="w-6 h-6 text-[#0D9488] mx-auto mb-1.5" />
               <p
-                className={`mb-1 font-bold ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
+                className={`mb-0.5 font-black text-sm ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
               >
                 {projetsActifs.length}
               </p>
-              <p
-                className={`text-xs font-bold ${isDarkMode ? "text-[#94A3B8]" : "text-[#4A4A4A]"}`}
-              >
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 En cours
               </p>
             </button>
           </div>
+
+          {/* ACTIONS RAPIDES BUSINESS */}
+          <div>
+            <h3
+              className={`text-sm font-bold mb-3 flex items-center gap-2 ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
+            >
+              <div className="w-1.5 h-4 bg-[#D4AF37] rounded-full"></div>
+              Outils & Gestion Business
+            </h3>
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <button
+                onClick={() => navigate("/kauri/tontines-actives")}
+                className={`rounded-2xl p-4 text-center shadow-sm border hover:shadow-md transition-all active:scale-95 cursor-pointer border-none ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
+              >
+                <div className="w-10 h-10 mx-auto mb-2 bg-[#006D77]/10 rounded-xl flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#006D77]" />
+                </div>
+                <p className="text-xs font-bold text-slate-500 mb-0.5">Tontines Pro</p>
+                <p className={`text-sm font-black ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}>
+                  {tontinesCount !== null ? `${tontinesCount} active${tontinesCount > 1 ? "s" : ""}` : "0"}
+                </p>
+              </button>
+
+              <button
+                onClick={() => navigate("/kauri/pro-projets")}
+                className={`rounded-2xl p-4 text-center shadow-sm border hover:shadow-md transition-all active:scale-95 cursor-pointer border-none ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
+              >
+                <div className="w-10 h-10 mx-auto mb-2 bg-[#D4AF37]/10 rounded-xl flex items-center justify-center">
+                  <Leaf className="w-5 h-5 text-[#D4AF37]" />
+                </div>
+                <p className="text-xs font-bold text-slate-500 mb-0.5">Campagnes</p>
+                <p className={`text-sm font-black ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}>
+                  {projets.length} projet{projets.length > 1 ? "s" : ""}
+                </p>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => navigate("/kauri/historique-swaps")}
+                className={`rounded-2xl p-4 text-center shadow-sm border hover:shadow-md transition-all active:scale-95 cursor-pointer border-none ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
+              >
+                <div className="w-10 h-10 mx-auto mb-2 bg-[#F59E0B]/10 rounded-xl flex items-center justify-center">
+                  <RefreshCcw className="w-5 h-5 text-[#F59E0B]" />
+                </div>
+                <p className="text-xs font-bold text-slate-500 mb-0.5">Demandes Swap</p>
+                <p className={`text-sm font-black ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}>
+                  Historique
+                </p>
+              </button>
+
+              <button
+                onClick={() => navigate("/kauri/discover-circles")}
+                className={`rounded-2xl p-4 text-center shadow-sm border hover:shadow-md transition-all active:scale-95 cursor-pointer border-none ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
+              >
+                <div className="w-10 h-10 mx-auto mb-2 bg-[#006D77]/10 rounded-xl flex items-center justify-center">
+                  <Compass className="w-5 h-5 text-[#006D77]" />
+                </div>
+                <p className="text-xs font-bold text-slate-500 mb-0.5">Réseau Cercles</p>
+                <p className={`text-sm font-black ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}>
+                  Explorer
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* BOUTON D'ACTION D'URGENCE */}
+          <button
+            onClick={() => navigate("/kauri/emergency-swap")}
+            className="w-full bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 font-bold cursor-pointer border-none"
+          >
+            <RefreshCcw className="w-5 h-5" />
+            <span>Demande de Swap d'Urgence</span>
+          </button>
         </div>
       </div>
+
+      {/* BARRE DE NAVIGATION INFÉRIEURE */}
       <ProBottomNav active="accueil" isDarkMode={isDarkMode} navigate={navigate} />
     </div>
   );
