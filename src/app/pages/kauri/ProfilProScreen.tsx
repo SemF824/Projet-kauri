@@ -20,12 +20,11 @@ import {
   Star,
 } from "lucide-react";
 import { useNavigate } from "react-router";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useDarkMode } from "../../contexts/DarkModeContext";
 import { useAuth } from "../../contexts/AuthContext";
 
 // ── Logique des badges ────────────────────────────────────────────────────────
-// Chaque badge a des conditions calculées depuis les métriques réelles
 interface Badge {
   id: string;
   icon: React.ElementType;
@@ -62,7 +61,7 @@ function computeBadges(
       condition: "KYB validé",
       color: "#006D77",
       gradient: "from-[#006D77] to-[#0D9488]",
-      earned: true, // compte vérifié par défaut
+      earned: true,
     },
     {
       id: "performer",
@@ -102,39 +101,49 @@ function computeBadges(
       condition: "Membre depuis 2026",
       color: "#64748B",
       gradient: "from-[#475569] to-[#64748B]",
-      earned: false, // non encore débloqué
+      earned: false,
     },
   ];
 }
 
-// ── Profil par défaut ─────────────────────────────────────────────────────────
-const DEFAULT_PROFILE = {
-  nom: "SARL Innovation Caraïbes",
-  description:
-    "Entreprise spécialisée dans le financement participatif et le développement économique de la diaspora afro-caribéenne.",
-  secteur: "Financement & Innovation",
-  localisation: "Fort-de-France, Martinique",
-  siteWeb: "www.innovation-caraibes.fr",
-  siret: "123 456 789 00012",
-  formeJuridique: "SARL",
-  dirigeant: "Marie Céleste (Gérante)",
-};
-
 export function ProfilProScreen() {
   const navigate = useNavigate();
   const { isDarkMode, resetDarkMode } = useDarkMode();
-  const { signOut } = useAuth();
+  const { signOut, profile: userProfile } = useAuth();
 
-  const trustScore = 92;
+  const trustScore = userProfile?.trustScore ?? 92;
   const totalLeve = 77_000;
   const backers = 129;
   const projetsActifs = 2;
   const tauxSucces = 100;
 
-  // Édition profil
-  const [profile, setProfile] = useState(DEFAULT_PROFILE);
+  // Profil hydraté avec les données Supabase réelles
+  const [profile, setProfile] = useState({
+    nom: userProfile?.businessName || "SARL Innovation Caraïbes",
+    description:
+      "Entreprise spécialisée dans le financement participatif et le développement économique de la diaspora afro-caribéenne.",
+    secteur: "Financement & Innovation",
+    localisation: "Fort-de-France, Martinique",
+    siteWeb: "www.innovation-caraibes.fr",
+    siret: userProfile?.siret || "123 456 789 00012",
+    formeJuridique: userProfile?.formeJuridique || "SARL",
+    dirigeant: userProfile?.dirigeant || "Marie Céleste (Gérante)",
+  });
+
+  useEffect(() => {
+    if (userProfile) {
+      setProfile((prev) => ({
+        ...prev,
+        nom: userProfile.businessName || prev.nom,
+        siret: userProfile.siret || prev.siret,
+        formeJuridique: userProfile.formeJuridique || prev.formeJuridique,
+        dirigeant: userProfile.dirigeant || prev.dirigeant,
+      }));
+    }
+  }, [userProfile]);
+
   const [editOpen, setEditOpen] = useState(false);
-  const [draft, setDraft] = useState(DEFAULT_PROFILE);
+  const [draft, setDraft] = useState(profile);
   const [saved, setSaved] = useState(false);
 
   // Logo upload
@@ -159,7 +168,6 @@ export function ProfilProScreen() {
     reader.readAsDataURL(file);
   };
 
-  // Badge détail
   const [badgeDetail, setBadgeDetail] = useState<Badge | null>(null);
 
   const badges = computeBadges(totalLeve, backers, projetsActifs, trustScore);
@@ -193,6 +201,11 @@ export function ProfilProScreen() {
   const inp = isDarkMode
     ? "bg-[#0F172A] border-[#334155] text-white placeholder:text-white/30"
     : "border-[#E2E8F0] text-[#0F172A]";
+
+  const complianceLabel =
+    userProfile?.kybStatus === "verified" || userProfile?.kycCompleted
+      ? "VALIDÉ PAR CENTRAL REGISTRE"
+      : "EN COURS DE VALIDATION";
 
   return (
     <div className={`min-h-screen pb-10 font-sans ${bg}`}>
@@ -320,7 +333,7 @@ export function ProfilProScreen() {
           </div>
         </div>
 
-        {/* Informations Légales */}
+        {/* Informations Légales (KYB) */}
         <div className={`rounded-3xl border p-5 space-y-4 ${card}`}>
           <h3 className={`text-sm font-bold border-b pb-2 ${txt}`}>
             Informations réglementaires (KYB)
@@ -332,7 +345,7 @@ export function ProfilProScreen() {
               { label: "Dirigeant central", val: profile.dirigeant },
               {
                 label: "Statut de conformité",
-                val: "Validé par Central Registre",
+                val: complianceLabel,
                 badge: true,
               },
             ].map(({ label, val, badge }) => (
@@ -612,3 +625,5 @@ export function ProfilProScreen() {
     </div>
   );
 }
+
+export default ProfilProScreen;

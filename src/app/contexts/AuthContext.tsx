@@ -20,6 +20,10 @@ export interface KauriUserProfile {
   balanceUsdt: number;
   currency: string;
   businessName?: string;
+  siret?: string;
+  formeJuridique?: string;
+  dirigeant?: string;
+  kybStatus?: "pending" | "verified" | "rejected" | "unverified";
   kycCompleted: boolean;
   createdAt: string;
 }
@@ -63,6 +67,10 @@ function profileFromMeta(
     accountType:
       dbProfile?.account_type ?? m.accountType ?? m.account_type ?? "particulier",
     businessName: dbProfile?.business_name ?? m.businessName ?? m.business_name,
+    siret: dbProfile?.siret ?? m.siret ?? "",
+    formeJuridique: dbProfile?.forme_juridique ?? m.formeJuridique ?? "",
+    dirigeant: dbProfile?.dirigeant ?? m.dirigeant ?? "",
+    kybStatus: dbProfile?.kyb_status ?? "verified",
     trustScore: dbProfile?.trust_score ? Number(dbProfile.trust_score) : 100,
     balance: wallet?.balance_eur !== undefined && wallet?.balance_eur !== null ? Number(wallet.balance_eur) : 0,
     balanceXof: wallet?.balance_xof !== undefined && wallet?.balance_xof !== null ? Number(wallet.balance_xof) : 0,

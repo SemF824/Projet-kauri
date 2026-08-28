@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Edit3,
   ArrowRight,
+  Building2,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useState, useRef, useEffect } from "react";
@@ -77,7 +78,10 @@ export function KYCVerificationScreen() {
   const navigate = useNavigate();
   const { profile, refreshProfile } = useAuth();
   const [searchParams] = useSearchParams();
-  const accountType = searchParams.get("type") || "particulier";
+
+  const accountType =
+    searchParams.get("type") || profile?.accountType || "particulier";
+  const isPro = accountType === "professionnel";
 
   const supabase = getSupabase();
 
@@ -97,26 +101,27 @@ export function KYCVerificationScreen() {
 
   const [hasExistingIdentity, setHasExistingIdentity] = useState(false);
   const [hasExistingSelfie, setHasExistingSelfie] = useState(false);
-
   const [hasFileChanges, setHasFileChanges] = useState(false);
 
-  // ── 🎯 GESTION DE L'ADRESSE ET SAUVEGARDE LOCALE DYNAMIQUE ──
+  // ── 🎯 GESTION DE L'ADRESSE / ENTREPRISE LOCALE ──
   const [address, setAddress] = useState({
-    firstName: "",
-    lastName: "",
+    firstName: profile?.firstName || "",
+    lastName: profile?.lastName || "",
     street: "",
     zip: "",
     city: "",
     country: "France",
   });
-  const [initialAddress, setInitialAddress] = useState({
-    firstName: "",
-    lastName: "",
-    street: "",
-    zip: "",
-    city: "",
-    country: "France",
+
+  const [businessInfo, setBusinessInfo] = useState({
+    businessName: profile?.businessName || "",
+    siret: profile?.siret || "",
+    formeJuridique: profile?.formeJuridique || "SARL",
+    dirigeant: profile?.dirigeant || `${profile?.firstName || ""} ${profile?.lastName || ""} (Gérant)`.trim(),
   });
+
+  const [initialAddress, setInitialAddress] = useState({ ...address });
+  const [initialBusiness, setInitialBusiness] = useState({ ...businessInfo });
 
   const identityInputRef = useRef<HTMLInputElement>(null);
 
@@ -365,21 +370,28 @@ export function KYCVerificationScreen() {
     address.zip.trim() !== initialAddress.zip ||
     address.city.trim() !== initialAddress.city;
 
-  const hasAnyMutation = isAddressChanged || hasFileChanges;
+  const isBusinessChanged =
+    businessInfo.businessName.trim() !== initialBusiness.businessName ||
+    businessInfo.siret.trim() !== initialBusiness.siret ||
+    businessInfo.formeJuridique.trim() !== initialBusiness.formeJuridique ||
+    businessInfo.dirigeant.trim() !== initialBusiness.dirigeant;
+
+  const hasAnyMutation = isPro
+    ? isBusinessChanged || hasFileChanges
+    : isAddressChanged || hasFileChanges;
 
   const updateAddressField = (field: keyof typeof address, value: string) => {
     const sanitizedValue = field === "zip" ? value.replace(/\D/g, "") : value;
+    setAddress((prev) => ({ ...prev, [field]: sanitizedValue }));
+  };
 
-    setAddress((prev) => {
-      const updated = { ...prev, [field]: sanitizedValue };
-      if (profile?.id) {
-        localStorage.setItem(
-          `kauri_address_draft_${profile.id}`,
-          JSON.stringify(updated),
-        );
-      }
-      return updated;
-    });
+  const updateBusinessField = (
+    field: keyof typeof businessInfo,
+    value: string,
+  ) => {
+    const sanitizedValue =
+      field === "siret" ? value.replace(/\D/g, "").slice(0, 14) : value;
+    setBusinessInfo((prev) => ({ ...prev, [field]: sanitizedValue }));
   };
 
   const hasIdentity = !!identityPreviewUrl || hasExistingIdentity;
@@ -392,15 +404,29 @@ export function KYCVerificationScreen() {
     address.zip.trim().length > 2 &&
     address.city.trim().length > 1;
 
+  const isBusinessValid =
+    businessInfo.businessName.trim().length > 1 &&
+    businessInfo.siret.trim().length === 14 &&
+    businessInfo.formeJuridique.trim().length > 1 &&
+    businessInfo.dirigeant.trim().length > 1;
+
   const isFilesValid = hasIdentity && hasSelfie;
-  const isFormComplete = isAddressValid && isFilesValid;
+  const isFormComplete = isPro
+    ? isBusinessValid && isFilesValid
+    : isAddressValid && isFilesValid;
 
   const handleMainAction = async () => {
     if (!isFormComplete) {
       if (!isFilesValid) {
         toast.warning("Dossier Incomplet", {
+          description: isPro
+            ? "Veuillez fournir l'extrait Kbis et les statuts certifiés."
+            : "Veuillez fournir votre pièce d'identité ET effectuer la vidéo Liveness.",
+        });
+      } else if (isPro && !isBusinessValid) {
+        toast.warning("Champs Manquants", {
           description:
-            "Veuillez fournir votre pièce d'identité ET effectuer la vidéo Liveness.",
+            "Veuillez renseigner un numéro SIRET à 14 chiffres et la forme juridique.",
         });
       } else if (!isAddressValid) {
         toast.warning("Champs Manquants", {
@@ -418,17 +444,29 @@ export function KYCVerificationScreen() {
 
     setIsActionLoading(true);
     const toastId = toast.loading(
-      "Mise à jour de votre attestation de résidence...",
+      isPro
+        ? "Mise à jour du dossier KYB d'entreprise..."
+        : "Mise à jour de votre attestation de résidence...",
     );
 
     try {
-      const updateData: any = {
-        first_name: address.firstName.trim(),
-        last_name: address.lastName.trim(),
-        street: address.street.trim(),
-        city: address.city.trim(),
-        zip: address.zip.trim(),
-      };
+      const updateData: any = isPro
+        ? {
+            business_name: businessInfo.businessName.trim(),
+            siret: businessInfo.siret.trim(),
+            forme_juridique: businessInfo.formeJuridique.trim(),
+            dirigeant: businessInfo.dirigeant.trim(),
+            kyb_status: "verified",
+            kyc_completed: true,
+          }
+        : {
+            first_name: address.firstName.trim(),
+            last_name: address.lastName.trim(),
+            street: address.street.trim(),
+            city: address.city.trim(),
+            zip: address.zip.trim(),
+            kyc_completed: true,
+          };
 
       const { error } = await (supabase as any)
         .from("profiles")
@@ -440,16 +478,16 @@ export function KYCVerificationScreen() {
         throw error;
       }
 
-      if (profile?.id) {
-        localStorage.removeItem(`kauri_address_draft_${profile.id}`);
-      }
-
       setInitialAddress({ ...address });
+      setInitialBusiness({ ...businessInfo });
       await refreshProfile();
 
-      toast.success("Informations enregistrées !", {
-        id: toastId,
-      });
+      toast.success(
+        isPro
+          ? "Informations KYB d'entreprise enregistrées !"
+          : "Informations enregistrées !",
+        { id: toastId },
+      );
       navigate(`/kauri/biometric-setup?type=${accountType}`);
     } catch (err) {
       toast.error("Erreur de synchronisation réseau.", {
@@ -482,10 +520,12 @@ export function KYCVerificationScreen() {
         </button>
 
         <h1 className="text-white text-2xl font-black tracking-tight">
-          Kauri KYC Hub
+          {isPro ? "Vérification KYB Entreprise" : "Kauri KYC Hub"}
         </h1>
         <p className="text-[#E0F2FE] text-xs opacity-90">
-          Analyse de Liveness Vidéo & ECIES
+          {isPro
+            ? "Conformité légale & Registre des sociétés (SIRET)"
+            : "Analyse de Liveness Vidéo & ECIES"}
         </p>
       </div>
 
@@ -504,15 +544,17 @@ export function KYCVerificationScreen() {
           </div>
         )}
 
-        {profile?.kyc_status === "verified" && (
+        {(profile?.kyc_status === "verified" || profile?.kycCompleted) && (
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-4 flex gap-3 items-start">
             <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
             <div>
               <h4 className="text-xs font-bold text-emerald-600">
-                Identité Certifiée
+                {isPro ? "Conformité KYB Validée" : "Identité Certifiée"}
               </h4>
               <p className="text-[11px] text-emerald-700/80 font-medium leading-normal mt-0.5">
-                Votre compte possède le statut vérifié de conformité.
+                {isPro
+                  ? "Votre établissement est validé par le Central Registre."
+                  : "Votre compte possède le statut vérifié de conformité."}
               </p>
             </div>
           </div>
@@ -529,10 +571,10 @@ export function KYCVerificationScreen() {
           <>
             <div className="space-y-4">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">
-                Justificatifs Matériels
+                {isPro ? "Pièces Légales d'Entreprise" : "Justificatifs Matériels"}
               </h3>
 
-              {/* CARD 1 : PIÈCE D'IDENTITÉ */}
+              {/* CARD 1 : PIÈCE D'IDENTITÉ OU KBIS */}
               <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-md flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-14 h-14 rounded-2xl bg-slate-900 overflow-hidden flex items-center justify-center flex-shrink-0 border border-slate-100">
@@ -554,7 +596,7 @@ export function KYCVerificationScreen() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h4 className="text-sm font-bold text-[#0F172A] truncate">
-                      Pièce d'identité officielle
+                      {isPro ? "Extrait Kbis (-3 mois)" : "Pièce d'identité officielle"}
                     </h4>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span
@@ -579,7 +621,7 @@ export function KYCVerificationScreen() {
                 </button>
               </div>
 
-              {/* CARD 2 : SÉQUENCE LIVENESS VIDÉO */}
+              {/* CARD 2 : LIVENESS OU STATUTS */}
               <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-md flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-14 h-14 rounded-2xl bg-slate-900 overflow-hidden flex items-center justify-center flex-shrink-0 border border-slate-100">
@@ -608,7 +650,7 @@ export function KYCVerificationScreen() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h4 className="text-sm font-bold text-[#0F172A] truncate">
-                      Liveness Vidéo 3D
+                      {isPro ? "Statuts de la société" : "Liveness Vidéo 3D"}
                     </h4>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span
@@ -616,16 +658,18 @@ export function KYCVerificationScreen() {
                       />
                       <p className="text-[11px] text-slate-500 font-medium">
                         {selfiePreviewUrl
-                          ? "Vidéo Enregistrée & Scellée"
+                          ? "Document Enregistré & Scellé"
                           : hasExistingSelfie
                             ? "Transmis & Scellé sur le serveur"
-                            : "Preuve de vie requise"}
+                            : isPro
+                              ? "Statuts signés requis"
+                              : "Preuve de vie requise"}
                       </p>
                     </div>
                   </div>
                 </div>
                 <button
-                  onClick={startCamera}
+                  onClick={isPro ? () => identityInputRef.current?.click() : startCamera}
                   className="px-4 py-2.5 bg-gradient-to-br from-[#D4AF37]/10 to-[#FEF3C7]/20 text-[#B8860B] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1"
                 >
                   <Camera className="w-3.5 h-3.5" />{" "}
@@ -634,97 +678,182 @@ export function KYCVerificationScreen() {
               </div>
             </div>
 
-            {/* ── FORMULAIRE DE RÉSIDENCE ── */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                  Attestation de Résidence
-                </h3>
-                {isAddressChanged && (
-                  <span className="text-[10px] bg-amber-500/10 text-amber-600 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <Edit3 className="w-3 h-3" /> Modification en cours
-                  </span>
-                )}
-              </div>
-              <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 space-y-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
-                      Prénom légal
-                    </label>
-                    <input
-                      type="text"
-                      value={address.firstName}
-                      onChange={(e) =>
-                        updateAddressField("firstName", e.target.value)
-                      }
-                      placeholder="Marie"
-                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
-                      Nom de famille
-                    </label>
-                    <input
-                      type="text"
-                      value={address.lastName}
-                      onChange={(e) =>
-                        updateAddressField("lastName", e.target.value)
-                      }
-                      placeholder="Dupont"
-                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
-                    />
-                  </div>
+            {/* ── FORMULAIRE PRO (KYB) OU PARTICULIER (KYC) ── */}
+            {isPro ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4 text-[#006D77]" /> Registre des Sociétés
+                  </h3>
+                  {isBusinessChanged && (
+                    <span className="text-[10px] bg-amber-500/10 text-amber-600 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Edit3 className="w-3 h-3" /> Modification en cours
+                    </span>
+                  )}
                 </div>
-                <div>
-                  <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
-                    Numéro et libellé de voie
-                  </label>
-                  <input
-                    type="text"
-                    value={address.street}
-                    onChange={(e) =>
-                      updateAddressField("street", e.target.value)
-                    }
-                    placeholder="1 Rue de la Solidarité"
-                    className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 space-y-5">
                   <div>
                     <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
-                      Code postal
+                      Raison Sociale / Nom d'entreprise
                     </label>
                     <input
                       type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      value={address.zip}
+                      value={businessInfo.businessName}
                       onChange={(e) =>
-                        updateAddressField("zip", e.target.value)
+                        updateBusinessField("businessName", e.target.value)
                       }
-                      placeholder="75001"
+                      placeholder="SARL Innovation Caraïbes"
                       className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
                     />
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
+                        Numéro SIRET (14 chiffres)
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={14}
+                        value={businessInfo.siret}
+                        onChange={(e) =>
+                          updateBusinessField("siret", e.target.value)
+                        }
+                        placeholder="12345678900012"
+                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-mono font-bold outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
+                        Forme Juridique
+                      </label>
+                      <select
+                        value={businessInfo.formeJuridique}
+                        onChange={(e) =>
+                          updateBusinessField("formeJuridique", e.target.value)
+                        }
+                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                      >
+                        <option value="SARL">SARL</option>
+                        <option value="SAS">SAS</option>
+                        <option value="EURL">EURL</option>
+                        <option value="SASU">SASU</option>
+                        <option value="SA">SA</option>
+                        <option value="Association">Association</option>
+                        <option value="Auto-entrepreneur">Auto-entrepreneur</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
-                      Ville de résidence
+                      Dirigeant Central
                     </label>
                     <input
                       type="text"
-                      value={address.city}
+                      value={businessInfo.dirigeant}
                       onChange={(e) =>
-                        updateAddressField("city", e.target.value)
+                        updateBusinessField("dirigeant", e.target.value)
                       }
-                      placeholder="Paris"
+                      placeholder="Marie Céleste (Gérante)"
                       className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
                     />
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                    Attestation de Résidence
+                  </h3>
+                  {isAddressChanged && (
+                    <span className="text-[10px] bg-amber-500/10 text-amber-600 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Edit3 className="w-3 h-3" /> Modification en cours
+                    </span>
+                  )}
+                </div>
+                <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 space-y-5">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
+                        Prénom légal
+                      </label>
+                      <input
+                        type="text"
+                        value={address.firstName}
+                        onChange={(e) =>
+                          updateAddressField("firstName", e.target.value)
+                        }
+                        placeholder="Marie"
+                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
+                        Nom de famille
+                      </label>
+                      <input
+                        type="text"
+                        value={address.lastName}
+                        onChange={(e) =>
+                          updateAddressField("lastName", e.target.value)
+                        }
+                        placeholder="Dupont"
+                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
+                      Numéro et libellé de voie
+                    </label>
+                    <input
+                      type="text"
+                      value={address.street}
+                      onChange={(e) =>
+                        updateAddressField("street", e.target.value)
+                      }
+                      placeholder="1 Rue de la Solidarité"
+                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
+                        Code postal
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={address.zip}
+                        onChange={(e) =>
+                          updateAddressField("zip", e.target.value)
+                        }
+                        placeholder="75001"
+                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[#0F172A] text-xs font-bold mb-1.5 block">
+                        Ville de résidence
+                      </label>
+                      <input
+                        type="text"
+                        value={address.city}
+                        onChange={(e) =>
+                          updateAddressField("city", e.target.value)
+                        }
+                        placeholder="Paris"
+                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* BOUTON D'ACTION */}
             <button
@@ -761,7 +890,7 @@ export function KYCVerificationScreen() {
         )}
       </div>
 
-      {/* 🎥 MODALE DE SÉQUENCE VIDÉO */}
+      {/* 🎥 MODALE DE SÉQUENCE VIDÉO (PARTICULIER) */}
       {showCamera && (
         <div className="fixed inset-0 z-50 bg-[#F4F4F5] flex flex-col items-center justify-center p-4 md:p-8">
           <div className="absolute top-6 left-6 z-20">
