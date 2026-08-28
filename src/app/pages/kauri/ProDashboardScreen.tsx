@@ -506,9 +506,6 @@ export function ProDashboardScreen() {
               {balanceVisible ? `${balanceEur.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : "•••••"}
             </h1>
             
-            <p className="text-white/70 text-[10px] mb-4 leading-normal font-medium">
-              ℹ️ Synchronisé en temps réel avec la base de données Kauri.
-            </p>
 
             <div className="grid grid-cols-2 gap-3">
               <button
