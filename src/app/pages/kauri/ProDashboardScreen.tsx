@@ -388,7 +388,8 @@ export function ProDashboardScreen() {
     ? profile.businessName.slice(0, 2).toUpperCase()
     : `${profile?.firstName?.[0] ?? "P"}${profile?.lastName?.[0] ?? ""}`.toUpperCase();
 
-  const balanceEur = profile?.balance ?? 2450.00;
+  // RECUPERATION DU SOLDE REEL SUPABASE SANS FACTICE EN DUR
+  const balanceEur = profile?.balance ?? 0;
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -428,7 +429,7 @@ export function ProDashboardScreen() {
               >
                 <span
                   className={
-                    isDarkMode ? "text-white" : "text-[#D4AF37]"
+                    isDarkMode ? "text-white font-bold" : "text-[#D4AF37] font-bold"
                   }
                 >
                   {initials}
@@ -488,13 +489,14 @@ export function ProDashboardScreen() {
                 )}
               </button>
             </div>
+            
+            {/* AFFICHAGE EN TEMPS REEL DE LA BASE DE DONNEES POSTGRESQL */}
             <h1 className="text-white text-3xl mb-4 font-black">
-              {balanceVisible ? `${balanceEur.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €` : "•••••"}
+              {balanceVisible ? `${balanceEur.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : "•••••"}
             </h1>
             
-            {/* DISCLAIMER NON-MENSONGER PSP */}
             <p className="text-white/60 text-[10px] mb-4 leading-normal">
-              ℹ️ Solde de démonstration sécurisé. La connexion à vos comptes bancaires et au processeur de paiement (PSP) sera activée lors de l'intégration finale de l'API Stripe / Banxo.
+              ℹ️ Solde synchronisé avec Supabase PostgreSQL. La liaison aux flux bancaires réels sera activée via l'API Stripe / Banxo.
             </p>
 
             <div className="grid grid-cols-2 gap-3">

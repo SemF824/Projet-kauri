@@ -3,7 +3,7 @@ import {
   ArrowDownLeft, ArrowUpRight, Briefcase, Clock, Percent, RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useProData } from '../../contexts/ProDataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getSupabase } from '../../../utils/supabase';
@@ -28,6 +28,13 @@ function polarToXY(cx: number, cy: number, r: number, deg: number) {
 }
 
 function donutSlice(cx: number, cy: number, rO: number, rI: number, s: number, e: number) {
+  if (Math.abs(e - s) < 0.1) return "";
+  if (Math.abs(e - s) >= 359.9) {
+    const o1 = polarToXY(cx, cy, rO, 0), o2 = polarToXY(cx, cy, rO, 180), o3 = polarToXY(cx, cy, rO, 359.9);
+    const i1 = polarToXY(cx, cy, rI, 359.9), i2 = polarToXY(cx, cy, rI, 180), i3 = polarToXY(cx, cy, rI, 0);
+    return `M ${o1.x} ${o1.y} A ${rO} ${rO} 0 1 1 ${o2.x} ${o2.y} A ${rO} ${rO} 0 1 1 ${o3.x} ${o3.y} L ${i1.x} ${i1.y} A ${rI} ${rI} 0 1 0 ${i2.x} ${i2.y} A ${rI} ${rI} 0 1 0 ${i3.x} ${i3.y} Z`;
+  }
+
   const o1 = polarToXY(cx, cy, rO, s), o2 = polarToXY(cx, cy, rO, e);
   const i1 = polarToXY(cx, cy, rI, e), i2 = polarToXY(cx, cy, rI, s);
   const la = e - s > 180 ? 1 : 0;
@@ -51,50 +58,94 @@ function formatUsdt(n: number) {
 
 export function ProPortefeuilleScreen() {
   const navigate = useNavigate();
-  const { projets } = useProData();
-  const { profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
 
   const [activeSlice, setActiveSlice] = useState<'projets' | 'tontines' | 'invest' | null>(null);
   const [animated, setAnimated]       = useState(false);
+
+  const [tontinesTotal, setTontinesTotal] = useState(0);
+  const [investTotal, setInvestTotal] = useState(0);
 
   useEffect(() => {
     const t = setTimeout(() => setAnimated(true), 80);
     return () => clearTimeout(t);
   }, []);
 
-  const balanceEur = profile?.balance ?? 2450.00;
-  const balanceXof = profile?.balanceXof ?? 1600000;
-  const balanceUsdt = profile?.balanceUsdt ?? 1250;
+  // RECUPERATION REELLE DES SOLDES SANS PAR DÉFAUT FACTICE
+  const balanceEur = profile?.balance ?? 0;
+  const balanceXof = profile?.balanceXof ?? 0;
+  const balanceUsdt = profile?.balanceUsdt ?? 0;
 
-  // Conversion équivalente totale en EUR
+  // Calcul dynamique de la valeur equivalente
   const eurToXofRate = 655.957;
   const usdtToEurRate = 0.92;
   const totalEquivEur = balanceEur + (balanceXof / eurToXofRate) + (balanceUsdt * usdtToEurRate);
 
-  const tontinesTotal = balanceEur * 0.35;
-  const investTotal = balanceEur * 0.65;
+  // Synchronisation dynamique avec Supabase pour les tontines entreprise
+  useEffect(() => {
+    const fetchProPortefeuilleStats = async () => {
+      if (!user) return;
+      try {
+        const supabase = getSupabase();
+        
+        // 1. Tontines
+        const { data: tontineData } = await supabase
+          .from("tontine_members")
+          .select("turn_position, tontines ( monthly_amount )")
+          .eq("user_id", user.id);
 
-  const tontinesPct = totalEquivEur > 0 ? tontinesTotal / totalEquivEur : 0.35;
-  const investPct = totalEquivEur > 0 ? investTotal / totalEquivEur : 0.65;
+        if (tontineData) {
+          const calc = tontineData.reduce((acc, curr: any) => acc + (curr.tontines?.monthly_amount ?? 0), 0);
+          setTontinesTotal(calc);
+        }
 
-  // slices
-  const sliceTontines = donutSlice(CX, CY, R_OUTER, R_INNER, GAP / 2, 360 * tontinesPct - GAP / 2);
-  const sliceInvest   = donutSlice(CX, CY, R_OUTER, R_INNER, 360 * tontinesPct + GAP / 2, 360 - GAP / 2);
+        // 2. Transations / Investissements
+        const { data: txData } = await supabase
+          .from("transactions")
+          .select("amount")
+          .eq("user_id", user.id)
+          .eq("type", "withdrawal");
+
+        if (txData) {
+          const calcInv = txData.reduce((acc, curr) => acc + curr.amount, 0);
+          setInvestTotal(calcInv);
+        }
+      } catch (e) {
+        console.error("Erreur de synchro portefeuille pro:", e);
+      }
+    };
+
+    fetchProPortefeuilleStats();
+  }, [user]);
+
+  const totalEngaged = tontinesTotal + investTotal;
+  const tontinesPct = totalEngaged > 0 ? tontinesTotal / totalEngaged : 0;
+  const investPct = totalEngaged > 0 ? investTotal / totalEngaged : 0;
+
+  let sliceTontines = "";
+  let sliceInvest = "";
+
+  if (totalEngaged === 0) {
+    sliceTontines = donutSlice(CX, CY, R_OUTER, R_INNER, 0, 359.9);
+  } else {
+    sliceTontines = donutSlice(CX, CY, R_OUTER, R_INNER, GAP / 2, Math.max(0, 360 * tontinesPct - GAP / 2));
+    sliceInvest   = donutSlice(CX, CY, R_OUTER, R_INNER, 360 * tontinesPct + GAP / 2, Math.max(360 * tontinesPct + GAP / 2, 360 - GAP / 2));
+  }
 
   const centerLabel =
     activeSlice === 'tontines' ? { pct: `${Math.round(tontinesPct * 100)} %`, amount: formatEur(tontinesTotal), color: GOLD, label: 'Tontines' } :
-    activeSlice === 'invest'   ? { pct: `${Math.round(investPct * 100)} %`,   amount: formatEur(investTotal),   color: TERRA,  label: 'Invest. RWA' } :
-    { pct: '100 %', amount: formatEur(totalEquivEur), color: '#1A1A1A', label: 'Caisse Totale' };
+    activeSlice === 'invest'   ? { pct: `${Math.round(investPct * 100)} %`,   amount: formatEur(investTotal),   color: TERRA,  label: 'Investissements' } :
+    { pct: '100 %', amount: formatEur(totalEquivEur), color: '#1A1A1A', label: 'Solde Total' };
 
   const metrics = [
-    { icon: ArrowDownLeft, label: 'Solde EUR', value: formatEur(balanceEur), color: TEAL, bg: `${TEAL}14`, trend: null },
-    { icon: ArrowDownLeft, label: 'Solde CFA', value: formatXof(balanceXof), color: '#0284C7', bg: '#0284C714', trend: null },
-    { icon: ArrowDownLeft, label: 'Solde USDT', value: formatUsdt(balanceUsdt), color: '#16A34A', bg: '#16A34A14', trend: null },
-    { icon: Percent, label: 'Rendement moyen', value: '11.5 %', color: GOLD, bg: `${GOLD}1A`, trend: null },
+    { icon: ArrowDownLeft, label: 'Solde EUR', value: formatEur(balanceEur), color: TEAL, bg: `${TEAL}14` },
+    { icon: ArrowDownLeft, label: 'Solde CFA', value: formatXof(balanceXof), color: '#0284C7', bg: '#0284C714' },
+    { icon: ArrowDownLeft, label: 'Solde USDT', value: formatUsdt(balanceUsdt), color: '#16A34A', bg: '#16A34A14' },
+    { icon: Percent, label: 'Total Engagé', value: formatEur(totalEngaged), color: GOLD, bg: `${GOLD}1A` },
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-10 font-sans select-none">
       {/* HEADER */}
       <div style={{ backgroundColor: AMBER, borderRadius: '0 0 28px 28px' }} className="px-5 pt-14 pb-6 shadow-xl">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/80 hover:text-white mb-5 transition-colors border-none bg-transparent cursor-pointer">
@@ -125,28 +176,34 @@ export function ProPortefeuilleScreen() {
               overflow: 'visible',
             }}
           >
-            <path
-              d={sliceTontines}
-              fill={GOLD}
-              style={{
-                transform: activeSlice === 'tontines' ? 'scale(1.05)' : 'scale(1)',
-                transformOrigin: `${CX}px ${CY}px`,
-                transition: 'transform 0.2s ease',
-                cursor: 'pointer',
-              }}
-              onClick={() => setActiveSlice(s => s === 'tontines' ? null : 'tontines')}
-            />
-            <path
-              d={sliceInvest}
-              fill={TERRA}
-              style={{
-                transform: activeSlice === 'invest' ? 'scale(1.05)' : 'scale(1)',
-                transformOrigin: `${CX}px ${CY}px`,
-                transition: 'transform 0.2s ease',
-                cursor: 'pointer',
-              }}
-              onClick={() => setActiveSlice(s => s === 'invest' ? null : 'invest')}
-            />
+            {totalEngaged === 0 ? (
+              <path d={sliceTontines} fill="#E2E8F0" />
+            ) : (
+              <>
+                <path
+                  d={sliceTontines}
+                  fill={GOLD}
+                  style={{
+                    transform: activeSlice === 'tontines' ? 'scale(1.05)' : 'scale(1)',
+                    transformOrigin: `${CX}px ${CY}px`,
+                    transition: 'transform 0.2s ease',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => setActiveSlice(s => s === 'tontines' ? null : 'tontines')}
+                />
+                <path
+                  d={sliceInvest}
+                  fill={TERRA}
+                  style={{
+                    transform: activeSlice === 'invest' ? 'scale(1.05)' : 'scale(1)',
+                    transformOrigin: `${CX}px ${CY}px`,
+                    transition: 'transform 0.2s ease',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => setActiveSlice(s => s === 'invest' ? null : 'invest')}
+                />
+              </>
+            )}
           </svg>
 
           <div
@@ -162,10 +219,10 @@ export function ProPortefeuilleScreen() {
 
       {/* METRICS GRID */}
       <div className="flex-1 px-4 pt-3">
-        {/* DISCLAIMER INTEGRATION BANCAIRE / CARD */}
+        {/* TRANSPARENCE INTÉGRATION BANCAIRE */}
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4 text-center">
           <p className="text-amber-800 text-xs font-bold mb-1">🔌 Statut Intégration API Bancaire & PSP</p>
-          <p className="text-amber-700 text-[10px] leading-relaxed">
+          <p className="text-amber-700 text-[10px] leading-relaxed font-medium">
             Les liaisons de cartes bancaires d'entreprise et les flux de trésorerie réels s'activeront après connexion de vos identifiants d'API bancaire sécurisés lors de l'intégration finale.
           </p>
         </div>
