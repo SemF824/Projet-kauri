@@ -265,8 +265,9 @@ export function KauriLoginScreen() {
 
   return (
     <div
-      className="min-h-screen flex flex-col overflow-hidden font-sans"
+      className="flex flex-col overflow-hidden font-sans"
       style={{
+        minHeight: "100dvh",
         background:
           "linear-gradient(165deg, #006D77 0%, #004E57 55%, #003A42 100%)",
       }}
@@ -349,22 +350,23 @@ export function KauriLoginScreen() {
         </p>
       </div>
 
-      {/* Container Card */}
-      <div
-        className="relative z-10 flex-1 mx-4 mb-[calc(env(safe-area-inset-bottom,16px)+16px)] rounded-3xl overflow-hidden max-w-md w-full sm:mx-auto"
-        style={{
-          background: "#F9F9F9",
-          boxShadow: "0 -4px 40px rgba(0,0,0,0.3)",
-          opacity: animateIn ? 1 : 0,
-          transform: animateIn
-            ? "translateY(0)"
-            : "translateY(30px)",
-          transition:
-            "opacity 0.7s ease 0.15s, transform 0.7s ease 0.15s",
-        }}
-      >
-        <div className="p-5 flex flex-col h-full justify-between">
-          <div>
+      {/* Container Card — flex-1 centers card, card itself sizes to content */}
+      <div className="relative z-10 flex-1 flex flex-col justify-end mx-4 mb-[calc(env(safe-area-inset-bottom,16px)+8px)] max-w-md w-full sm:mx-auto">
+        <div
+          className="rounded-3xl overflow-hidden"
+          style={{
+            background: "#F9F9F9",
+            boxShadow: "0 -4px 40px rgba(0,0,0,0.3)",
+            opacity: animateIn ? 1 : 0,
+            transform: animateIn
+              ? "translateY(0)"
+              : "translateY(30px)",
+            transition:
+              "opacity 0.7s ease 0.15s, transform 0.7s ease 0.15s",
+          }}
+        >
+          <div className="p-5 flex flex-col">
+            <div>
             {step !== "welcome" && (
               <button
                 onClick={() => {
@@ -691,7 +693,7 @@ export function KauriLoginScreen() {
           </div>
 
           <div
-            className="pt-2.5 mt-2"
+            className="pt-2.5 mt-4"
             style={{ borderTop: "1px solid #F1F5F9" }}
           >
             <p
@@ -712,10 +714,14 @@ export function KauriLoginScreen() {
             </button>
           </div>
         </div>
+        {/* end card inner */}
+        </div>
+        {/* end card */}
       </div>
+      {/* end card wrapper */}
 
       <p
-        className="relative z-10 text-center text-[10px] pb-3"
+        className="relative z-10 text-center text-[10px] py-2"
         style={{ color: "rgba(255,255,255,0.4)" }}
       >
         KAUREE · Fondé par Kauree Family
