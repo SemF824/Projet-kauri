@@ -178,14 +178,32 @@ export function ProfilParticulierScreen() {
         );
       }
 
-      localStorage.setItem(
-        `kauri_bio_active_${user.email}`,
-        "true",
-      );
-      localStorage.setItem(
-        "kauri_rememberED_email",
-        user.email,
-      );
+      const normalizedEmail = user.email.toLowerCase();
+      localStorage.setItem(`kauri_bio_active_${normalizedEmail}`, "true");
+      localStorage.setItem(`kauri_bio_active_${user.email}`, "true");
+      localStorage.setItem("kauri_rememberED_email", user.email);
+
+      const isGoogle =
+        user.app_metadata?.provider === "google" ||
+        (user as any).identities?.some((id: any) => id.provider === "google") ||
+        user.user_metadata?.iss?.includes("google");
+
+      if (isGoogle) {
+        localStorage.setItem(`kauri_provider_${normalizedEmail}`, "google");
+      }
+
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.refresh_token) {
+        localStorage.setItem(
+          `kauri_passkey_vault_${normalizedEmail}`,
+          JSON.stringify({
+            refresh_token: session.refresh_token,
+            provider: isGoogle ? "google" : "email",
+          })
+        );
+      }
+
       setIsPasskeyActive(true);
       toast.success(
         "Félicitations, votre clé d'accès Face ID / Touch ID est active !",

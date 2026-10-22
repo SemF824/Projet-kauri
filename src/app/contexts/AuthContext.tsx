@@ -137,11 +137,41 @@ export function AuthProvider({
     }
   };
 
+  const handleSessionSync = (sess: Session | null) => {
+    const currentUser = sess?.user ?? null;
+    if (currentUser?.email) {
+      const normEmail = currentUser.email.toLowerCase();
+      localStorage.setItem("kauri_rememberED_email", currentUser.email);
+      const isGoogle =
+        currentUser.app_metadata?.provider === "google" ||
+        (currentUser as any).identities?.some((id: any) => id.provider === "google") ||
+        currentUser.user_metadata?.iss?.includes("google");
+      if (isGoogle) {
+        localStorage.setItem(`kauri_provider_${normEmail}`, "google");
+      }
+      if (sess?.refresh_token) {
+        const isBioActive =
+          localStorage.getItem(`kauri_bio_active_${normEmail}`) === "true" ||
+          localStorage.getItem(`kauri_bio_active_${currentUser.email}`) === "true";
+        if (isBioActive) {
+          localStorage.setItem(
+            `kauri_passkey_vault_${normEmail}`,
+            JSON.stringify({
+              refresh_token: sess.refresh_token,
+              provider: isGoogle ? "google" : "email",
+            })
+          );
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     const supabase = getSupabase();
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      handleSessionSync(session);
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
@@ -155,6 +185,7 @@ export function AuthProvider({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      handleSessionSync(session);
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
@@ -200,8 +231,9 @@ export function AuthProvider({
 
   const signOut = async () => {
     const supabase = getSupabase();
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     setUser(null);
+    setSession(null);
     setProfile(null);
     localStorage.removeItem("kauri_account_type");
   };

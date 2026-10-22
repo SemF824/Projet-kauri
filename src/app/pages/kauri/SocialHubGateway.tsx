@@ -273,12 +273,13 @@ const PILLARS = [
   {
     id: "decouverte",
     label: "Découverte",
-    tagline: "Tendances & viral",
-    desc: "Vidéos virales, tendances & actualités de la communauté.",
-    path: "/kauri/social-hub/decouverte",
-    accentHex: "#006D77",
-    badge: null,
+    tagline: "Bientôt disponible",
+    desc: "Vidéos, tendances & actualités en cours de développement.",
+    path: "#",
+    accentHex: "#94A3B8",
+    badge: "Bientôt",
     Icon: IconDecouverte,
+    disabled: true,
   },
   {
     id: "rencontres",
@@ -847,7 +848,16 @@ export function SocialHubGateway() {
                   ease: [0.16, 1, 0.3, 1],
                 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate(pillar.path)}
+                onClick={() => {
+                  if (pillar.id === "decouverte" || (pillar as any).disabled) {
+                    toast.info("Espace Découverte en préparation", {
+                      description: "Cette section sera disponible très prochainement.",
+                      duration: 1500,
+                    });
+                    return;
+                  }
+                  navigate(pillar.path);
+                }}
                 onMouseEnter={() => setActivePillar(pillar.id)}
                 onMouseLeave={() => setActivePillar(null)}
                 onTouchStart={() => setActivePillar(pillar.id)}
