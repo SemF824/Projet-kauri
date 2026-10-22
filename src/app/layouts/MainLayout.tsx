@@ -230,11 +230,17 @@ export function KauriBottomNav() {
   ];
 
   const activeIndex = tabs.findIndex((t) => t.id === active);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const displayedIndex = dragIndex !== null ? dragIndex : (activeIndex !== -1 ? activeIndex : 0);
 
   // Référence au conteneur nav pour le calcul géométrique du glissement de doigt
   const navRef = useRef<HTMLElement>(null);
   const isDraggingRef = useRef(false);
   const lastActiveIndexRef = useRef<number>(activeIndex);
+
+  useEffect(() => {
+    lastActiveIndexRef.current = activeIndex;
+  }, [activeIndex]);
 
   // ── ⚡ MOTEUR D'INTERCEPTION GÉOMÉTRIQUE FLUIDE & GLISSADE TACTILE (STYLE INSTAGRAM) ──
   const handlePointerDrag = (clientX: number, clientY: number) => {
@@ -255,6 +261,7 @@ export function KauriBottomNav() {
 
     if (targetIndex !== lastActiveIndexRef.current) {
       lastActiveIndexRef.current = targetIndex;
+      setDragIndex(targetIndex);
       const targetTab = tabs[targetIndex];
 
       // Retour haptique tactile léger
@@ -275,6 +282,7 @@ export function KauriBottomNav() {
   };
 
   const handleGestureStart = (targetPath: string, isPlaceholder?: boolean) => {
+    setDragIndex(null);
     if (isPlaceholder || targetPath === "#") {
       toast.info("Espace en préparation", {
         description: "Cette section est réservée pour une prochaine fonctionnalité.",
@@ -294,6 +302,7 @@ export function KauriBottomNav() {
     const handleGlobalRelease = () => {
       isDraggingRef.current = false;
       isSlidingRef.current = false;
+      setDragIndex(null);
     };
     window.addEventListener("mouseup", handleGlobalRelease);
     window.addEventListener("touchend", handleGlobalRelease);
@@ -340,6 +349,7 @@ export function KauriBottomNav() {
       }}
       onTouchEnd={() => {
         isDraggingRef.current = false;
+        setDragIndex(null);
       }}
       onPointerDown={(e) => {
         if (e.pointerType === "mouse") {
@@ -354,11 +364,41 @@ export function KauriBottomNav() {
       }}
       onPointerUp={() => {
         isDraggingRef.current = false;
+        setDragIndex(null);
       }}
     >
-      <div className="flex items-center justify-around px-1 relative">
-        {tabs.map((tab) => {
-          const isActive = active === tab.id;
+      <div className="grid grid-cols-5 items-center relative w-full">
+        {/* ── CAPSULE GLISSANTE FLUIDE (SLIDING LIQUID GLASS PILL - 120 FPS) ── */}
+        <div
+          className="absolute top-0 bottom-0 pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] px-1 py-0.5"
+          style={{
+            width: "20%",
+            left: 0,
+            transform: `translateX(${displayedIndex * 100}%)`,
+            opacity: tabs[displayedIndex]?.isCenter ? 0 : 1,
+            zIndex: 1,
+          }}
+        >
+          <div
+            className="w-full h-full rounded-2xl"
+            style={{
+              background: isDarkMode
+                ? "linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.08) 100%)"
+                : "linear-gradient(135deg, rgba(0, 109, 119, 0.14) 0%, rgba(0, 109, 119, 0.07) 100%)",
+              backdropFilter: "blur(14px) saturate(180%)",
+              WebkitBackdropFilter: "blur(14px) saturate(180%)",
+              boxShadow: isDarkMode
+                ? "inset 0 1px 1px rgba(255,255,255,0.22), 0 3px 10px rgba(0,0,0,0.3)"
+                : "inset 0 1px 1.5px rgba(255,255,255,0.9), 0 3px 10px rgba(0,109,119,0.12)",
+              border: isDarkMode
+                ? "1px solid rgba(255,255,255,0.18)"
+                : "1px solid rgba(255,255,255,0.85)",
+            }}
+          />
+        </div>
+
+        {tabs.map((tab, idx) => {
+          const isActive = displayedIndex === idx;
           const Icon = tab.icon;
 
           if (tab.isCenter) {
@@ -366,8 +406,8 @@ export function KauriBottomNav() {
               <div
                 key={tab.id}
                 data-kauri-target={tab.target}
-                className="flex flex-col items-center gap-1.5 relative cursor-pointer"
-                style={{ minWidth: 50, userSelect: "none" }}
+                className="flex flex-col items-center justify-center relative cursor-pointer z-10 py-1"
+                style={{ userSelect: "none" }}
                 onMouseDown={() => handleGestureStart(tab.target)}
                 onTouchStart={() => handleGestureStart(tab.target)}
               >
@@ -385,11 +425,12 @@ export function KauriBottomNav() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    top: -6,
+                    top: -8,
                     left: "50%",
-                    transform: "translateX(-50%)",
+                    transform: `translateX(-50%) ${isActive ? "scale(1.08)" : "scale(1)"}`,
+                    transition: "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
                     boxShadow:
-                      "0 8px 20px rgba(212,175,55,0.35), 0 3px 6px rgba(0,0,0,0.1)",
+                      "0 8px 20px rgba(212,175,55,0.38), 0 3px 6px rgba(0,0,0,0.12)",
                     border: isActive
                       ? "2.5px solid #ffffff"
                       : "2px solid rgba(255,255,255,0.6)",
@@ -459,24 +500,18 @@ export function KauriBottomNav() {
               onTouchStart={() =>
                 handleGestureStart(tab.target, (tab as any).isPlaceholder)
               }
-              className="flex flex-col items-center gap-1 bg-transparent border-none cursor-pointer p-0 relative outline-none py-2 px-3 rounded-2xl transition-all duration-300 select-none"
+              className="flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer p-0 relative outline-none py-1.5 rounded-2xl select-none z-10 transition-colors duration-200"
               style={{
                 color: isActive ? activeColor : inactiveColor,
-                minWidth: 58,
-                backgroundColor: isActive
-                  ? isDarkMode
-                    ? "rgba(255, 255, 255, 0.12)"
-                    : "rgba(0, 109, 119, 0.10)"
-                  : "transparent",
-                boxShadow: isActive
-                  ? isDarkMode
-                    ? "inset 0 1px 1px rgba(255,255,255,0.2), 0 2px 8px rgba(0,0,0,0.2)"
-                    : "inset 0 1px 1.5px rgba(255,255,255,0.8), 0 2px 8px rgba(0,109,119,0.08)"
-                  : "none",
                 WebkitTouchCallout: "none",
               }}
             >
-              <div className="flex flex-col items-center gap-1 pointer-events-none">
+              <div
+                className="flex flex-col items-center gap-1 pointer-events-none transition-transform duration-200"
+                style={{
+                  transform: isActive ? "scale(1.08)" : "scale(1)",
+                }}
+              >
                 {tab.id === "social" ? (
                   <SocialIcon
                     color={isActive ? activeColor : inactiveColor}
@@ -487,26 +522,20 @@ export function KauriBottomNav() {
                     <Icon
                       className="w-[20px] h-[20px]"
                       style={{
-                        strokeWidth: isActive ? 2.4 : 1.8,
+                        strokeWidth: isActive ? 2.5 : 1.8,
                       }}
                     />
                   )
                 )}
-                <span className="text-[10px] font-bold tracking-wide transition-colors">
+                <span
+                  className="text-[10px] tracking-wide transition-all"
+                  style={{
+                    fontWeight: isActive ? 800 : 600,
+                  }}
+                >
                   {tab.label}
                 </span>
               </div>
-              {isActive && (
-                <span
-                  className="absolute rounded-full pointer-events-none"
-                  style={{
-                    bottom: 2,
-                    width: 4,
-                    height: 4,
-                    backgroundColor: activeColor,
-                  }}
-                />
-              )}
             </button>
           );
         })}
