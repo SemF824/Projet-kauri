@@ -46,84 +46,11 @@ export function ProjectCrowdfundingScreen() {
 
   const fundingPercentage = Math.round((project.currentFunding / project.fundingGoal) * 100);
 
-  // LOGIQUE D'INVESTISSEMENT AVEC INTERACTION SUPABASE
-  const handleInvestNow = async () => {
-    if (!user || !profile) return;
-
-    if (profile.balance < project.minInvestment) {
-      toast.error("Solde insuffisant", {
-        description: `Il vous faut au moins ${project.minInvestment} € pour investir. Veuillez recharger votre portefeuille.`,
-      });
-      return;
-    }
-
-    setIsInvesting(true);
-    try {
-      const supabase = getSupabase();
-
-      // 1. Tenter d'exécuter la procédure stockée sécurisée côté PostgreSQL (Atomic RPC)
-      const { data: rpcSuccess, error: rpcErr } = await (supabase as any).rpc('invest_in_rwa_project', {
-        p_project_name: project.name,
-        p_sector_id: project.category || 'general',
-        p_sub_sector: 'RWA Crowdfunding',
-        p_amount: project.minInvestment,
-      });
-
-      if (rpcErr) {
-        // Fallback transactionnel standard
-        // A. Débiter le wallet de l'utilisateur
-        const { error: walletErr } = await supabase
-          .from('wallets')
-          .update({
-            balance_eur: profile.balance - project.minInvestment,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', user.id);
-
-        if (walletErr) throw walletErr;
-
-        // B. Enregistrer la transaction
-        const { error: txErr } = await supabase
-          .from('transactions')
-          .insert({
-            user_id: user.id,
-            amount: project.minInvestment,
-            currency: 'EUR',
-            type: 'withdrawal',
-            description: `Investissement RWA - ${project.name}`,
-            status: 'completed',
-          });
-
-        if (txErr) throw txErr;
-
-        // C. Enregistrer l'investissement dans rwa_investments
-        await (supabase as any)
-          .from('rwa_investments')
-          .insert({
-            user_id: user.id,
-            name: project.name,
-            sector_id: project.category || 'general',
-            sub_sector: 'RWA Crowdfunding',
-            amount: project.minInvestment,
-            status: 'En cours',
-          });
-      }
-
-      // 2. Rafraîchir les données de session du profile
-      await refreshProfile();
-
-      toast.success("Investissement confirmé !", {
-        description: `Vous avez investi ${project.minInvestment} € dans le projet ${project.name} avec succès.`,
-      });
-      setSuccessMsg(`Félicitations ! Vous avez investi ${project.minInvestment} € dans le projet ${project.name} avec succès.`);
-    } catch (err) {
-      console.error("Erreur d'investissement:", err);
-      toast.error("Échec de l'investissement", {
-        description: "Une erreur s'est produite lors de l'enregistrement de l'investissement.",
-      });
-    } finally {
-      setIsInvesting(false);
-    }
+  // MODULE D'INVESTISSEMENT SUSPENDU EN ATTENTE D'AGRÉMENT RÉGLEMENTAIRE
+  const handleInvestNow = () => {
+    toast.info("Fonctionnalité en attente d'agrément", {
+      description: "Le module d'investissement financier est temporairement désactivé en attendant les autorisations réglementaires nécessaires.",
+    });
   };
 
   return (
@@ -333,10 +260,9 @@ export function ProjectCrowdfundingScreen() {
           </button>
           <button
             onClick={handleInvestNow}
-            disabled={isInvesting}
-            className="bg-gradient-to-r from-[#0A847E] to-[#0D9488] text-white py-4 rounded-xl shadow-lg border-none font-bold cursor-pointer transition-transform hover:scale-[1.02] flex items-center justify-center"
+            className="bg-slate-200 text-slate-500 py-4 rounded-xl border border-slate-300 font-bold cursor-pointer transition-opacity active:opacity-80 flex items-center justify-center text-sm"
           >
-            {isInvesting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Investir Maintenant"}
+            Bientôt disponible
           </button>
         </div>
       </div>

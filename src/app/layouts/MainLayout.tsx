@@ -5,13 +5,15 @@ import {
   TrendingUp,
   User,
   Leaf,
+  Sparkles,
 } from "lucide-react";
 import { useDarkMode } from "../contexts/DarkModeContext";
 import { useAuth } from "../contexts/AuthContext";
+import { toast } from "sonner";
 
 type NavTab =
   | "accueil"
-  | "investissement"
+  | "bientot"
   | "kauri"
   | "social"
   | "profil";
@@ -196,12 +198,11 @@ export function KauriBottomNav() {
         : "/dashboard",
     },
     {
-      id: "investissement",
-      label: "Invest",
-      icon: TrendingUp,
-      target: currentPath.includes("/kauri/")
-        ? "/kauri/investissement"
-        : "/investments",
+      id: "bientot",
+      label: "Bientôt",
+      icon: Sparkles,
+      target: "#",
+      isPlaceholder: true,
     },
     {
       id: "kauri",
@@ -282,7 +283,13 @@ export function KauriBottomNav() {
     }
   };
 
-  const handleGestureStart = (targetPath: string) => {
+  const handleGestureStart = (targetPath: string, isPlaceholder?: boolean) => {
+    if (isPlaceholder || targetPath === "#") {
+      toast.info("Espace en préparation", {
+        description: "Cette section est réservée pour une prochaine fonctionnalité en cours de développement.",
+      });
+      return;
+    }
     isSlidingRef.current = true;
     if (currentPath !== targetPath) {
       lastNavigatedPathRef.current = targetPath;
@@ -415,14 +422,15 @@ export function KauriBottomNav() {
             <button
               key={tab.id}
               data-kauri-target={tab.target}
-              onMouseDown={() => handleGestureStart(tab.target)}
+              onMouseDown={() => handleGestureStart(tab.target, (tab as any).isPlaceholder)}
               onMouseEnter={() =>
                 isSlidingRef.current &&
+                !(tab as any).isPlaceholder &&
                 currentPath !== tab.target &&
                 navigate(tab.target)
               }
               onTouchStart={(e) => {
-                handleGestureStart(tab.target);
+                handleGestureStart(tab.target, (tab as any).isPlaceholder);
               }}
               className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-0 relative outline-none py-2 px-3 rounded-2xl transition-all duration-300 select-none"
               style={{

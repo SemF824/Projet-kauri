@@ -18,6 +18,7 @@ import { useNavigate } from "react-router";
 import { useState } from "react";
 import { useDarkMode } from "../../contexts/DarkModeContext";
 import { KauriBottomNav } from "../../layouts/MainLayout";
+import { toast } from "sonner";
 
 const GOLD = "#D4A373";
 const TEAL = "#0A847E";
@@ -342,16 +343,16 @@ function MarketCard({
         </div>
 
         <button
-          onClick={() => navigate("/kauri/projet-detail")}
-          className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 mb-2 border-none cursor-pointer"
-          style={{
-            background: `linear-gradient(135deg, ${p.color}, ${p.color}CC)`,
-            color: "#fff",
-            boxShadow: `0 3px 12px ${p.color}44`,
-          }}
+          onClick={() =>
+            toast.info("Fonctionnalité en attente d'agrément", {
+              description:
+                "Les investissements sont temporairement suspendus en attente du statut réglementaire nécessaire.",
+            })
+          }
+          className="w-full py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 mb-2 border border-slate-300 cursor-pointer bg-slate-200 text-slate-600 shadow-none transition-opacity active:opacity-80"
         >
-          <TrendingUp style={{ width: 15, height: 15 }} />
-          Acheter des Tokens (Dès {p.minInvest}€)
+          <Clock style={{ width: 14, height: 14 }} />
+          Bientôt disponible
         </button>
         <p className="text-center text-xs text-[#94A3B8]">
           <Clock
