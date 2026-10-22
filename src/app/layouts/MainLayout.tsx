@@ -10,6 +10,8 @@ import {
 import { useDarkMode } from "../contexts/DarkModeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
+import { TontineQuickActionsModal } from "../components/TontineQuickActionsModal";
+import { OnboardingTutorialModal } from "../components/OnboardingTutorialModal";
 
 type NavTab =
   | "accueil"
@@ -206,7 +208,7 @@ export function KauriBottomNav() {
     },
     {
       id: "kauri",
-      label: "Kauri",
+      label: "Tontines",
       icon: Leaf,
       target: "/kauri/tontines-actives",
       isCenter: true,
@@ -232,6 +234,9 @@ export function KauriBottomNav() {
   const activeIndex = tabs.findIndex((t) => t.id === active);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const displayedIndex = dragIndex !== null ? dragIndex : (activeIndex !== -1 ? activeIndex : 0);
+
+  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
   // Référence au conteneur nav pour le calcul géométrique du glissement de doigt
   const navRef = useRef<HTMLElement>(null);
@@ -281,8 +286,16 @@ export function KauriBottomNav() {
     }
   };
 
-  const handleGestureStart = (targetPath: string, isPlaceholder?: boolean) => {
+  const handleGestureStart = (
+    targetPath: string,
+    isPlaceholder?: boolean,
+    isCenter?: boolean
+  ) => {
     setDragIndex(null);
+    if (isCenter) {
+      setIsQuickActionsOpen(true);
+      return;
+    }
     if (isPlaceholder || targetPath === "#") {
       toast.info("Espace en préparation", {
         description: "Cette section est réservée pour une prochaine fonctionnalité.",
@@ -313,234 +326,251 @@ export function KauriBottomNav() {
   }, []);
 
   return (
-    <nav
-      ref={navRef}
-      className="fixed left-1/2 -translate-x-1/2 z-50 select-none transition-all duration-300"
-      style={{
-        bottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
-        width: "calc(100% - 24px)",
-        maxWidth: "406px",
-        borderRadius: "36px",
-        padding: "8px 6px",
-        touchAction: "none",
-        // ── STYLE LIQUID GLASS ULTRA-PUR ET EFFET DE PROFONDEUR ──
-        background: isDarkMode
-          ? "linear-gradient(135deg, rgba(15, 23, 42, 0.78) 0%, rgba(30, 41, 59, 0.52) 100%)"
-          : "linear-gradient(135deg, rgba(255, 255, 255, 0.76) 0%, rgba(240, 248, 255, 0.48) 100%)",
-        backdropFilter: "blur(28px) saturate(200%)",
-        WebkitBackdropFilter: "blur(28px) saturate(200%)",
-        border: isDarkMode
-          ? "1px solid rgba(255, 255, 255, 0.14)"
-          : "1px solid rgba(255, 255, 255, 0.65)",
-        boxShadow: isDarkMode
-          ? "0 24px 48px -12px rgba(0, 0, 0, 0.75), inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.22), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4)"
-          : "0 20px 40px -10px rgba(0, 109, 119, 0.14), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.04)",
-        WebkitUserSelect: "none",
-      }}
-      onTouchStart={(e) => {
-        isDraggingRef.current = true;
-        const touch = e.touches[0];
-        handlePointerDrag(touch.clientX, touch.clientY);
-      }}
-      onTouchMove={(e) => {
-        if (!isDraggingRef.current) return;
-        const touch = e.touches[0];
-        handlePointerDrag(touch.clientX, touch.clientY);
-      }}
-      onTouchEnd={() => {
-        isDraggingRef.current = false;
-        setDragIndex(null);
-      }}
-      onPointerDown={(e) => {
-        if (e.pointerType === "mouse") {
+    <>
+      <nav
+        ref={navRef}
+        className="fixed left-1/2 -translate-x-1/2 z-50 select-none transition-all duration-300"
+        style={{
+          bottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
+          width: "calc(100% - 24px)",
+          maxWidth: "406px",
+          borderRadius: "36px",
+          padding: "8px 6px",
+          touchAction: "none",
+          // ── STYLE LIQUID GLASS ULTRA-PUR ET EFFET DE PROFONDEUR ──
+          background: isDarkMode
+            ? "linear-gradient(135deg, rgba(15, 23, 42, 0.78) 0%, rgba(30, 41, 59, 0.52) 100%)"
+            : "linear-gradient(135deg, rgba(255, 255, 255, 0.76) 0%, rgba(240, 248, 255, 0.48) 100%)",
+          backdropFilter: "blur(28px) saturate(200%)",
+          WebkitBackdropFilter: "blur(28px) saturate(200%)",
+          border: isDarkMode
+            ? "1px solid rgba(255, 255, 255, 0.14)"
+            : "1px solid rgba(255, 255, 255, 0.65)",
+          boxShadow: isDarkMode
+            ? "0 24px 48px -12px rgba(0, 0, 0, 0.75), inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.22), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4)"
+            : "0 20px 40px -10px rgba(0, 109, 119, 0.14), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.04)",
+          WebkitUserSelect: "none",
+        }}
+        onTouchStart={(e) => {
           isDraggingRef.current = true;
-          handlePointerDrag(e.clientX, e.clientY);
-        }
-      }}
-      onPointerMove={(e) => {
-        if (isDraggingRef.current && e.pointerType === "mouse") {
-          handlePointerDrag(e.clientX, e.clientY);
-        }
-      }}
-      onPointerUp={() => {
-        isDraggingRef.current = false;
-        setDragIndex(null);
-      }}
-    >
-      <div className="grid grid-cols-5 items-center relative w-full">
-        {/* ── CAPSULE GLISSANTE FLUIDE (SLIDING LIQUID GLASS PILL - 120 FPS) ── */}
-        <div
-          className="absolute top-0 bottom-0 pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] px-1 py-0.5"
-          style={{
-            width: "20%",
-            left: 0,
-            transform: `translateX(${displayedIndex * 100}%)`,
-            opacity: tabs[displayedIndex]?.isCenter ? 0 : 1,
-            zIndex: 1,
-          }}
-        >
+          const touch = e.touches[0];
+          handlePointerDrag(touch.clientX, touch.clientY);
+        }}
+        onTouchMove={(e) => {
+          if (!isDraggingRef.current) return;
+          const touch = e.touches[0];
+          handlePointerDrag(touch.clientX, touch.clientY);
+        }}
+        onTouchEnd={() => {
+          isDraggingRef.current = false;
+          setDragIndex(null);
+        }}
+      >
+        <div className="grid grid-cols-5 items-center relative w-full">
+          {/* ── CAPSULE GLISSANTE FLUIDE (SLIDING LIQUID GLASS PILL - 120 FPS) ── */}
           <div
-            className="w-full h-full rounded-2xl"
+            className="absolute top-0 bottom-0 pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] px-1 py-0.5"
             style={{
-              background: isDarkMode
-                ? "linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.08) 100%)"
-                : "linear-gradient(135deg, rgba(0, 109, 119, 0.14) 0%, rgba(0, 109, 119, 0.07) 100%)",
-              backdropFilter: "blur(14px) saturate(180%)",
-              WebkitBackdropFilter: "blur(14px) saturate(180%)",
-              boxShadow: isDarkMode
-                ? "inset 0 1px 1px rgba(255,255,255,0.22), 0 3px 10px rgba(0,0,0,0.3)"
-                : "inset 0 1px 1.5px rgba(255,255,255,0.9), 0 3px 10px rgba(0,109,119,0.12)",
-              border: isDarkMode
-                ? "1px solid rgba(255,255,255,0.18)"
-                : "1px solid rgba(255,255,255,0.85)",
+              width: "20%",
+              left: 0,
+              transform: `translateX(${displayedIndex * 100}%)`,
+              opacity: tabs[displayedIndex]?.isCenter ? 0 : 1,
+              zIndex: 1,
             }}
-          />
-        </div>
+          >
+            <div
+              className="w-full h-full rounded-2xl"
+              style={{
+                background: isDarkMode
+                  ? "linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.08) 100%)"
+                  : "linear-gradient(135deg, rgba(0, 109, 119, 0.14) 0%, rgba(0, 109, 119, 0.07) 100%)",
+                backdropFilter: "blur(14px) saturate(180%)",
+                WebkitBackdropFilter: "blur(14px) saturate(180%)",
+                boxShadow: isDarkMode
+                  ? "inset 0 1px 1px rgba(255,255,255,0.22), 0 3px 10px rgba(0,0,0,0.3)"
+                  : "inset 0 1px 1.5px rgba(255,255,255,0.9), 0 3px 10px rgba(0,109,119,0.12)",
+                border: isDarkMode
+                  ? "1px solid rgba(255,255,255,0.18)"
+                  : "1px solid rgba(255,255,255,0.85)",
+              }}
+            />
+          </div>
 
-        {tabs.map((tab, idx) => {
-          const isActive = displayedIndex === idx;
-          const Icon = tab.icon;
+          {tabs.map((tab, idx) => {
+            const isActive = displayedIndex === idx;
+            const Icon = tab.icon;
 
-          if (tab.isCenter) {
-            return (
-              <div
-                key={tab.id}
-                data-kauri-target={tab.target}
-                className="flex flex-col items-center justify-center relative cursor-pointer z-10 py-1"
-                style={{ userSelect: "none" }}
-                onMouseDown={() => handleGestureStart(tab.target)}
-                onTouchStart={() => handleGestureStart(tab.target)}
-              >
-                <div className="w-[20px] h-[20px] invisible pointer-events-none" />
-                <span className="text-[10px] font-bold invisible select-none pointer-events-none">
-                  Kauri
-                </span>
-
-                <button
-                  className="cursor-pointer border-none outline-none absolute pointer-events-none transition-transform active:scale-90"
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    top: -8,
-                    left: "50%",
-                    transform: `translateX(-50%) ${isActive ? "scale(1.08)" : "scale(1)"}`,
-                    transition: "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
-                    boxShadow:
-                      "0 8px 20px rgba(212,175,55,0.38), 0 3px 6px rgba(0,0,0,0.12)",
-                    border: isActive
-                      ? "2.5px solid #ffffff"
-                      : "2px solid rgba(255,255,255,0.6)",
-                    background:
-                      "linear-gradient(135deg, #D4AF37, #F59E0B)",
-                    zIndex: 10,
-                  }}
+            if (tab.isCenter) {
+              return (
+                <div
+                  key={tab.id}
+                  data-kauri-target={tab.target}
+                  className="flex flex-col items-center justify-center relative cursor-pointer z-10 py-1"
+                  style={{ userSelect: "none" }}
+                  onMouseDown={() =>
+                    handleGestureStart(tab.target, false, true)
+                  }
+                  onTouchStart={() =>
+                    handleGestureStart(tab.target, false, true)
+                  }
                 >
-                  <svg
-                    viewBox="0 0 100 100"
-                    style={{
-                      width: 24,
-                      height: 24,
-                      color: "#fff",
-                      display: "block",
-                      margin: "auto",
-                    }}
-                  >
-                    <path
-                      d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35"
-                      fill="currentColor"
-                    />
-                  </svg>
+                  <div className="w-[20px] h-[20px] invisible pointer-events-none" />
+                  <span className="text-[10px] font-bold invisible select-none pointer-events-none">
+                    Tontines
+                  </span>
 
-                  <div
+                  <button
+                    className="cursor-pointer border-none outline-none absolute pointer-events-none transition-transform active:scale-90"
                     style={{
-                      position: "absolute",
-                      top: -2,
-                      right: -2,
-                      width: 18,
-                      height: 18,
+                      width: 52,
+                      height: 52,
                       borderRadius: "50%",
-                      backgroundColor: isDarkMode
-                        ? "#0F172A"
-                        : "#006D77",
-                      border: "1.5px solid #ffffff",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+                      top: -8,
+                      left: "50%",
+                      transform: `translateX(-50%) ${isActive ? "scale(1.08)" : "scale(1)"}`,
+                      transition:
+                        "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                      boxShadow:
+                        "0 8px 20px rgba(212,175,55,0.38), 0 3px 6px rgba(0,0,0,0.12)",
+                      border: isActive
+                        ? "2.5px solid #ffffff"
+                        : "2px solid rgba(255,255,255,0.6)",
+                      background:
+                        "linear-gradient(135deg, #D4AF37, #F59E0B)",
+                      zIndex: 10,
                     }}
                   >
-                    <span
+                    <svg
+                      viewBox="0 0 100 100"
                       style={{
-                        color: "#ffffff",
-                        fontSize: 13,
-                        fontWeight: 900,
-                        lineHeight: 1,
-                        marginTop: -1,
+                        width: 24,
+                        height: 24,
+                        color: "#fff",
+                        display: "block",
+                        margin: "auto",
                       }}
                     >
-                      +
-                    </span>
-                  </div>
-                </button>
-              </div>
-            );
-          }
+                      <path
+                        d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35"
+                        fill="currentColor"
+                      />
+                    </svg>
 
-          return (
-            <button
-              key={tab.id}
-              data-kauri-target={tab.target}
-              onMouseDown={() =>
-                handleGestureStart(tab.target, (tab as any).isPlaceholder)
-              }
-              onTouchStart={() =>
-                handleGestureStart(tab.target, (tab as any).isPlaceholder)
-              }
-              className="flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer p-0 relative outline-none py-1.5 rounded-2xl select-none z-10 transition-colors duration-200"
-              style={{
-                color: isActive ? activeColor : inactiveColor,
-                WebkitTouchCallout: "none",
-              }}
-            >
-              <div
-                className="flex flex-col items-center gap-1 pointer-events-none transition-transform duration-200"
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: -2,
+                        right: -2,
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        backgroundColor: isDarkMode
+                          ? "#0F172A"
+                          : "#006D77",
+                        border: "1.5px solid #ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: "#ffffff",
+                          fontSize: 13,
+                          fontWeight: 900,
+                          lineHeight: 1,
+                          marginTop: -1,
+                        }}
+                      >
+                        +
+                      </span>
+                    </div>
+                  </button>
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={tab.id}
+                data-kauri-target={tab.target}
+                onMouseDown={() =>
+                  handleGestureStart(tab.target, (tab as any).isPlaceholder)
+                }
+                onTouchStart={() =>
+                  handleGestureStart(tab.target, (tab as any).isPlaceholder)
+                }
+                className="flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer p-0 relative outline-none py-1.5 rounded-2xl select-none z-10 transition-colors duration-200"
                 style={{
-                  transform: isActive ? "scale(1.08)" : "scale(1)",
+                  color: isActive ? activeColor : inactiveColor,
+                  WebkitTouchCallout: "none",
                 }}
               >
-                {tab.id === "social" ? (
-                  <SocialIcon
-                    color={isActive ? activeColor : inactiveColor}
-                    size={22}
-                  />
-                ) : (
-                  Icon && (
-                    <Icon
-                      className="w-[20px] h-[20px]"
-                      style={{
-                        strokeWidth: isActive ? 2.5 : 1.8,
-                      }}
-                    />
-                  )
-                )}
-                <span
-                  className="text-[10px] tracking-wide transition-all"
+                <div
+                  className="flex flex-col items-center gap-1 pointer-events-none transition-transform duration-200"
                   style={{
-                    fontWeight: isActive ? 800 : 600,
+                    transform: isActive ? "scale(1.08)" : "scale(1)",
                   }}
                 >
-                  {tab.label}
-                </span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </nav>
+                  {tab.id === "social" ? (
+                    <SocialIcon
+                      color={isActive ? activeColor : inactiveColor}
+                      size={22}
+                    />
+                  ) : (
+                    Icon && (
+                      <Icon
+                        className="w-[20px] h-[20px]"
+                        style={{
+                          strokeWidth: isActive ? 2.5 : 1.8,
+                        }}
+                      />
+                    )
+                  )}
+                  <span
+                    className="text-[10px] tracking-wide transition-all"
+                    style={{
+                      fontWeight: isActive ? 800 : 600,
+                    }}
+                  >
+                    {tab.label}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* ── MODALS CONTEXTUELS TONTINES ET DIDACTICIEL D'ONBOARDING ── */}
+      <TontineQuickActionsModal
+        isOpen={isQuickActionsOpen}
+        onClose={() => setIsQuickActionsOpen(false)}
+        onOpenTutorial={() => setIsTutorialOpen(true)}
+        isPro={isPro}
+      />
+
+      <OnboardingTutorialModal
+        isOpen={isTutorialOpen}
+        onClose={() => setIsTutorialOpen(false)}
+        onStartAction={(action) => {
+          setIsTutorialOpen(false);
+          if (action === "rejoindre") {
+            navigate("/kauri/rejoindre-circle");
+          } else if (action === "creer") {
+            navigate(
+              isPro
+                ? "/kauri/pro-creer-tontine"
+                : "/kauri/creer-tontine"
+            );
+          }
+        }}
+      />
+    </>
   );
 }
 

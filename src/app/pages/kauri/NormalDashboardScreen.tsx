@@ -20,6 +20,7 @@ import {
   Lock,
   ShieldAlert,
   ArrowRight,
+  Sparkles,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
@@ -27,6 +28,7 @@ import { useDarkMode } from "../../contexts/DarkModeContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { getSupabase } from "../../../utils/supabase";
 import { KauriBottomNav } from "../../layouts/MainLayout";
+import { OnboardingTutorialModal } from "../../components/OnboardingTutorialModal";
 
 export function NormalDashboardScreen() {
   const navigate = useNavigate();
@@ -40,6 +42,17 @@ export function NormalDashboardScreen() {
   const [investmentsCount, setInvestmentsCount] = useState<
     number | null
   >(null);
+  const [userTontines, setUserTontines] = useState<any[]>([]);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // Détection première visite pour lancer le didacticiel
+  useEffect(() => {
+    const hasSeen = localStorage.getItem("kauri_tutorial_seen");
+    if (!hasSeen) {
+      const timer = setTimeout(() => setShowTutorial(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const [rwaTotalAmount, setRwaTotalAmount] =
     useState<number>(0);
@@ -153,7 +166,10 @@ export function NormalDashboardScreen() {
             `
             tontine_id,
             tontines (
-              contribution_amount
+              id,
+              name,
+              contribution_amount,
+              status
             )
           `,
           )
@@ -161,6 +177,7 @@ export function NormalDashboardScreen() {
 
         if (!tError && tData) {
           setTontinesCount(tData.length);
+          setUserTontines(tData.map((d: any) => d.tontines).filter(Boolean));
           const totalTontineSum = tData.reduce(
             (acc, curr: any) =>
               acc +
@@ -439,6 +456,40 @@ export function NormalDashboardScreen() {
         )}
 
         <div className="px-6 py-6 space-y-6">
+          {/* ── BANNIÈRE D'ACCUEIL & DÉCOUVERTE POUR NOUVEAU CLIENT ── */}
+          <div
+            className={`rounded-2xl p-4 border transition-all ${
+              isDarkMode
+                ? "bg-gradient-to-r from-teal-950/40 to-slate-900 border-teal-800/40"
+                : "bg-gradient-to-r from-teal-50 to-emerald-50 border-teal-200/70"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider text-[#006D77] dark:text-[#0D9488]">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Guide rapide
+                </span>
+                <h4
+                  className={`text-sm font-black ${isDarkMode ? "text-white" : "text-slate-900"}`}
+                >
+                  Comment fonctionne la Tontine KAURI ?
+                </h4>
+                <p
+                  className={`text-xs ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}
+                >
+                  Découvrez en 1 minute comment épargner à plusieurs et toucher le pot en toute sécurité.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowTutorial(true)}
+                className="px-3.5 py-2 rounded-xl bg-[#006D77] hover:bg-[#005a63] text-white text-xs font-bold shrink-0 cursor-pointer border-none shadow-sm transition-transform active:scale-95"
+              >
+                Voir
+              </button>
+            </div>
+          </div>
+
           <div>
             <h3
               className={`mb-4 flex items-center gap-2 font-bold ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
@@ -541,46 +592,99 @@ export function NormalDashboardScreen() {
           </div>
 
           <div>
-            <h3
-              className={`mb-4 flex items-center gap-2 font-bold ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
-            >
-              <div className="w-1.5 h-5 bg-[#006D77] rounded-full"></div>
-              Mes Tontines Privées
-            </h3>
-
-            <div className="space-y-3">
-              <div
-                className={`rounded-xl p-4 shadow-md border ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
+            <div className="flex items-center justify-between mb-4">
+              <h3
+                className={`flex items-center gap-2 font-bold ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className="w-1.5 h-5 bg-[#006D77] rounded-full"></div>
+                Mes Tontines
+              </h3>
+              <button
+                onClick={() => navigate("/kauri/tontines-actives")}
+                className="text-xs font-bold text-[#006D77] dark:text-[#0D9488] bg-transparent border-none cursor-pointer hover:underline"
+              >
+                Tout voir
+              </button>
+            </div>
+
+            {userTontines.length > 0 ? (
+              <div className="space-y-3">
+                {userTontines.map((tontine: any) => (
+                  <div
+                    key={tontine.id}
+                    onClick={() => navigate(`/kauri/tontine/${tontine.id}`)}
+                    className={`rounded-xl p-4 shadow-md border cursor-pointer transition-all hover:scale-[1.01] ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h4
+                        className={`font-bold ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
+                      >
+                        {tontine.name}
+                      </h4>
+                      <span className="px-3 py-1 bg-[#D1FAE5] text-[#006D77] text-[10px] rounded-full font-bold uppercase tracking-wider">
+                        {tontine.status || "Actif"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span
+                        className={`font-medium ${isDarkMode ? "text-[#94A3B8]" : "text-[#64748B]"}`}
+                      >
+                        Cotisation
+                      </span>
+                      <span
+                        className={`font-black ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
+                      >
+                        {Number(tontine.contribution_amount || 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €
+                      </span>
+                    </div>
+                    <div
+                      className={`h-2 rounded-full overflow-hidden ${isDarkMode ? "bg-[#334155]" : "bg-[#F1F5F9]"}`}
+                    >
+                      <div className="h-full bg-gradient-to-r from-[#006D77] to-[#0D9488] w-4/5 rounded-full"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div
+                className={`rounded-2xl p-6 text-center border space-y-4 ${
+                  isDarkMode
+                    ? "bg-[#1E293B]/60 border-[#334155]"
+                    : "bg-white border-[#E2E8F0]"
+                }`}
+              >
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-[#006D77]/10 flex items-center justify-center text-[#006D77]">
+                  <Users className="w-7 h-7" />
+                </div>
+                <div className="space-y-1">
                   <h4
-                    className={`font-bold ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
+                    className={`font-black text-base ${isDarkMode ? "text-white" : "text-slate-900"}`}
                   >
-                    Cercle Familial
+                    Vous n'avez pas encore de tontine
                   </h4>
-                  <span className="px-3 py-1 bg-[#D1FAE5] text-[#006D77] text-[10px] rounded-full font-bold uppercase tracking-wider">
-                    Actif
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm mb-2">
-                  <span
-                    className={`font-medium ${isDarkMode ? "text-[#94A3B8]" : "text-[#64748B]"}`}
+                  <p
+                    className={`text-xs max-w-xs mx-auto ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}
                   >
-                    Prochain pot
-                  </span>
-                  <span
-                    className={`font-black ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
-                  >
-                    500,00 €
-                  </span>
+                    Rejoignez un cercle existant avec le code de vos proches ou lancez votre propre tontine en quelques clics.
+                  </p>
                 </div>
-                <div
-                  className={`h-2 rounded-full overflow-hidden ${isDarkMode ? "bg-[#334155]" : "bg-[#F1F5F9]"}`}
-                >
-                  <div className="h-full bg-gradient-to-r from-[#006D77] to-[#0D9488] w-4/5 rounded-full"></div>
+
+                <div className="flex items-center justify-center gap-2.5 pt-2">
+                  <button
+                    onClick={() => navigate("/kauri/rejoindre-circle")}
+                    className="flex-1 py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white text-xs font-bold hover:bg-slate-200 transition-all border-none cursor-pointer"
+                  >
+                    Rejoindre
+                  </button>
+                  <button
+                    onClick={() => navigate("/kauri/creer-tontine")}
+                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white text-xs font-bold shadow-md shadow-[#006D77]/20 transition-all active:scale-95 border-none cursor-pointer"
+                  >
+                    Créer un cercle
+                  </button>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           <button
@@ -669,6 +773,17 @@ export function NormalDashboardScreen() {
           </div>
         </div>
       )}
+
+      {/* ── MODAL DIDACTICIEL D'ACCUEIL POUR NOUVEAU CLIENT ── */}
+      <OnboardingTutorialModal
+        isOpen={showTutorial}
+        onClose={() => setShowTutorial(false)}
+        onStartAction={(action) => {
+          setShowTutorial(false);
+          if (action === "rejoindre") navigate("/kauri/rejoindre-circle");
+          if (action === "creer") navigate("/kauri/creer-tontine");
+        }}
+      />
 
       {/* INTÉGRATION DE LA BARRE CENTRALE */}
       <KauriBottomNav />
