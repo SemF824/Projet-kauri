@@ -162,7 +162,7 @@ export function KauriBottomNav() {
       currentPath === "/investments" ||
       currentPath.includes("/kauri/investissement")
     )
-      return "investissement";
+      return "bientot";
     if (
       currentPath === "/tontines" ||
       currentPath.includes("/kauri/tontines-actives") ||
@@ -229,56 +229,47 @@ export function KauriBottomNav() {
     },
   ];
 
-  useEffect(() => {
-    const handleGlobalRelease = () => {
-      isSlidingRef.current = false;
-    };
-    window.addEventListener("mouseup", handleGlobalRelease);
-    window.addEventListener("touchend", handleGlobalRelease);
-    return () => {
-      window.removeEventListener(
-        "mouseup",
-        handleGlobalRelease,
-      );
-      window.removeEventListener(
-        "touchend",
-        handleGlobalRelease,
-      );
-    };
-  }, []);
+  const activeIndex = tabs.findIndex((t) => t.id === active);
 
-  // ── ⚡ MOTEUR D'INTERCEPTION GÉOMÉTRIQUE CONTINU À HAUTE FLUIDITÉ ──
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isSlidingRef.current) return;
+  // Référence au conteneur nav pour le calcul géométrique du glissement de doigt
+  const navRef = useRef<HTMLElement>(null);
+  const isDraggingRef = useRef(false);
+  const lastActiveIndexRef = useRef<number>(activeIndex);
 
-    const touch = e.touches[0];
-    // Extraction immédiate de l'élément positionné sous le capteur de pression
-    const targetElement = document.elementFromPoint(
-      touch.clientX,
-      touch.clientY,
+  // ── ⚡ MOTEUR D'INTERCEPTION GÉOMÉTRIQUE FLUIDE & GLISSADE TACTILE (STYLE INSTAGRAM) ──
+  const handlePointerDrag = (clientX: number, clientY: number) => {
+    if (!navRef.current) return;
+    const navRect = navRef.current.getBoundingClientRect();
+
+    // Tolérance verticale pour la glissade au doigt
+    if (clientY < navRect.top - 35 || clientY > navRect.bottom + 35) return;
+
+    const relativeX = clientX - navRect.left;
+    if (navRect.width <= 0) return;
+
+    const segmentWidth = navRect.width / tabs.length;
+    const targetIndex = Math.min(
+      tabs.length - 1,
+      Math.max(0, Math.floor(relativeX / segmentWidth))
     );
-    if (!targetElement) return;
 
-    const buttonNode = targetElement.closest(
-      "[data-kauri-target]",
-    );
-    if (buttonNode) {
-      const targetPath = buttonNode.getAttribute(
-        "data-kauri-target",
-      );
+    if (targetIndex !== lastActiveIndexRef.current) {
+      lastActiveIndexRef.current = targetIndex;
+      const targetTab = tabs[targetIndex];
 
-      // 🛡️ SÉCURISATION CHIRURGICALE : Comparaison synchrone instantanée avec la référence cible
-      if (
-        targetPath &&
-        targetPath !== lastNavigatedPathRef.current
-      ) {
-        lastNavigatedPathRef.current = targetPath; // Verrouillage immédiat du chemin pour bloquer le prochain événement tactile
+      // Retour haptique tactile léger
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(8);
+      }
 
-        if (navigator.vibrate) {
-          navigator.vibrate(10); // Micro-vibration de retour haptique
-        }
-
-        navigate(targetPath); // Changement de page dynamique instantané
+      if (targetTab.isPlaceholder) {
+        toast.info("Espace en préparation", {
+          description: "Cette section est réservée pour une prochaine fonctionnalité.",
+          duration: 1500,
+        });
+      } else if (targetTab.target && targetTab.target !== currentPath) {
+        lastNavigatedPathRef.current = targetTab.target;
+        navigate(targetTab.target);
       }
     }
   };
@@ -286,7 +277,8 @@ export function KauriBottomNav() {
   const handleGestureStart = (targetPath: string, isPlaceholder?: boolean) => {
     if (isPlaceholder || targetPath === "#") {
       toast.info("Espace en préparation", {
-        description: "Cette section est réservée pour une prochaine fonctionnalité en cours de développement.",
+        description: "Cette section est réservée pour une prochaine fonctionnalité.",
+        duration: 1500,
       });
       return;
     }
@@ -297,26 +289,74 @@ export function KauriBottomNav() {
     }
   };
 
+  // Fin globale du geste tactile
+  useEffect(() => {
+    const handleGlobalRelease = () => {
+      isDraggingRef.current = false;
+      isSlidingRef.current = false;
+    };
+    window.addEventListener("mouseup", handleGlobalRelease);
+    window.addEventListener("touchend", handleGlobalRelease);
+    return () => {
+      window.removeEventListener("mouseup", handleGlobalRelease);
+      window.removeEventListener("touchend", handleGlobalRelease);
+    };
+  }, []);
+
   return (
     <nav
-      className="fixed left-1/2 -translate-x-1/2 z-50 backdrop-blur-xl transition-all select-none"
+      ref={navRef}
+      className="fixed left-1/2 -translate-x-1/2 z-50 select-none transition-all duration-300"
       style={{
-        backgroundColor: bg,
         bottom: "calc(16px + env(safe-area-inset-bottom, 0px))",
         width: "calc(100% - 24px)",
         maxWidth: "406px",
-        border: `1px solid ${border}`,
-        borderRadius: "32px",
-        paddingTop: "12px",
-        paddingBottom: "12px",
+        borderRadius: "36px",
+        padding: "8px 6px",
+        touchAction: "none",
+        // ── STYLE LIQUID GLASS ULTRA-PUR ET EFFET DE PROFONDEUR ──
+        background: isDarkMode
+          ? "linear-gradient(135deg, rgba(15, 23, 42, 0.78) 0%, rgba(30, 41, 59, 0.52) 100%)"
+          : "linear-gradient(135deg, rgba(255, 255, 255, 0.76) 0%, rgba(240, 248, 255, 0.48) 100%)",
+        backdropFilter: "blur(28px) saturate(200%)",
+        WebkitBackdropFilter: "blur(28px) saturate(200%)",
+        border: isDarkMode
+          ? "1px solid rgba(255, 255, 255, 0.14)"
+          : "1px solid rgba(255, 255, 255, 0.65)",
         boxShadow: isDarkMode
-          ? "0 16px 36px -6px rgba(0, 0, 0, 0.6), 0 4px 16px -4px rgba(0, 0, 0, 0.4)"
-          : "0 16px 36px -6px rgba(15, 23, 42, 0.06), 0 4px 16px -4px rgba(15, 23, 42, 0.03)",
+          ? "0 24px 48px -12px rgba(0, 0, 0, 0.75), inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.22), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4)"
+          : "0 20px 40px -10px rgba(0, 109, 119, 0.14), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.04)",
         WebkitUserSelect: "none",
       }}
-      onTouchMove={handleTouchMove}
+      onTouchStart={(e) => {
+        isDraggingRef.current = true;
+        const touch = e.touches[0];
+        handlePointerDrag(touch.clientX, touch.clientY);
+      }}
+      onTouchMove={(e) => {
+        if (!isDraggingRef.current) return;
+        const touch = e.touches[0];
+        handlePointerDrag(touch.clientX, touch.clientY);
+      }}
+      onTouchEnd={() => {
+        isDraggingRef.current = false;
+      }}
+      onPointerDown={(e) => {
+        if (e.pointerType === "mouse") {
+          isDraggingRef.current = true;
+          handlePointerDrag(e.clientX, e.clientY);
+        }
+      }}
+      onPointerMove={(e) => {
+        if (isDraggingRef.current && e.pointerType === "mouse") {
+          handlePointerDrag(e.clientX, e.clientY);
+        }
+      }}
+      onPointerUp={() => {
+        isDraggingRef.current = false;
+      }}
     >
-      <div className="flex items-center justify-around px-2 relative">
+      <div className="flex items-center justify-around px-1 relative">
         {tabs.map((tab) => {
           const isActive = active === tab.id;
           const Icon = tab.icon;
@@ -328,17 +368,8 @@ export function KauriBottomNav() {
                 data-kauri-target={tab.target}
                 className="flex flex-col items-center gap-1.5 relative cursor-pointer"
                 style={{ minWidth: 50, userSelect: "none" }}
-                onMouseDown={() =>
-                  handleGestureStart(tab.target)
-                }
-                onMouseEnter={() =>
-                  isSlidingRef.current &&
-                  currentPath !== tab.target &&
-                  navigate(tab.target)
-                }
-                onTouchStart={(e) => {
-                  handleGestureStart(tab.target);
-                }}
+                onMouseDown={() => handleGestureStart(tab.target)}
+                onTouchStart={() => handleGestureStart(tab.target)}
               >
                 <div className="w-[20px] h-[20px] invisible pointer-events-none" />
                 <span className="text-[10px] font-bold invisible select-none pointer-events-none">
@@ -346,10 +377,10 @@ export function KauriBottomNav() {
                 </span>
 
                 <button
-                  className="cursor-pointer border-none outline-none absolute pointer-events-none transition-all active:scale-90"
+                  className="cursor-pointer border-none outline-none absolute pointer-events-none transition-transform active:scale-90"
                   style={{
-                    width: 54,
-                    height: 54,
+                    width: 52,
+                    height: 52,
                     borderRadius: "50%",
                     display: "flex",
                     alignItems: "center",
@@ -358,10 +389,10 @@ export function KauriBottomNav() {
                     left: "50%",
                     transform: "translateX(-50%)",
                     boxShadow:
-                      "0 6px 16px rgba(212,175,55,0.30), 0 3px 6px rgba(0,0,0,0.08)",
+                      "0 8px 20px rgba(212,175,55,0.35), 0 3px 6px rgba(0,0,0,0.1)",
                     border: isActive
                       ? "2.5px solid #ffffff"
-                      : "2px solid rgba(255,255,255,0.45)",
+                      : "2px solid rgba(255,255,255,0.6)",
                     background:
                       "linear-gradient(135deg, #D4AF37, #F59E0B)",
                     zIndex: 10,
@@ -422,32 +453,33 @@ export function KauriBottomNav() {
             <button
               key={tab.id}
               data-kauri-target={tab.target}
-              onMouseDown={() => handleGestureStart(tab.target, (tab as any).isPlaceholder)}
-              onMouseEnter={() =>
-                isSlidingRef.current &&
-                !(tab as any).isPlaceholder &&
-                currentPath !== tab.target &&
-                navigate(tab.target)
+              onMouseDown={() =>
+                handleGestureStart(tab.target, (tab as any).isPlaceholder)
               }
-              onTouchStart={(e) => {
-                handleGestureStart(tab.target, (tab as any).isPlaceholder);
-              }}
-              className="flex flex-col items-center gap-1.5 bg-transparent border-none cursor-pointer p-0 relative outline-none py-2 px-3 rounded-2xl transition-all duration-300 select-none"
+              onTouchStart={() =>
+                handleGestureStart(tab.target, (tab as any).isPlaceholder)
+              }
+              className="flex flex-col items-center gap-1 bg-transparent border-none cursor-pointer p-0 relative outline-none py-2 px-3 rounded-2xl transition-all duration-300 select-none"
               style={{
                 color: isActive ? activeColor : inactiveColor,
                 minWidth: 58,
                 backgroundColor: isActive
-                  ? capsuleActiveBg
+                  ? isDarkMode
+                    ? "rgba(255, 255, 255, 0.12)"
+                    : "rgba(0, 109, 119, 0.10)"
                   : "transparent",
+                boxShadow: isActive
+                  ? isDarkMode
+                    ? "inset 0 1px 1px rgba(255,255,255,0.2), 0 2px 8px rgba(0,0,0,0.2)"
+                    : "inset 0 1px 1.5px rgba(255,255,255,0.8), 0 2px 8px rgba(0,109,119,0.08)"
+                  : "none",
                 WebkitTouchCallout: "none",
               }}
             >
               <div className="flex flex-col items-center gap-1 pointer-events-none">
                 {tab.id === "social" ? (
                   <SocialIcon
-                    color={
-                      isActive ? activeColor : inactiveColor
-                    }
+                    color={isActive ? activeColor : inactiveColor}
                     size={22}
                   />
                 ) : (

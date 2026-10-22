@@ -15,6 +15,7 @@ export default function App() {
         <RouterProvider router={router} />
         <Toaster
         position="bottom-center"
+        duration={1800}
         toastOptions={{
           style: {
             borderRadius: '14px',
