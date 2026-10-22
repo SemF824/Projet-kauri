@@ -212,19 +212,22 @@ export function NormalDashboardScreen() {
 
   return (
     <div
-      className={`min-h-screen pb-24 transition-colors relative ${isDarkMode ? "bg-[#0F172A]" : "bg-[#F9F9F9]"}`}
+      className={`min-h-screen pb-[calc(env(safe-area-inset-bottom,20px)+120px)] transition-colors relative ${isDarkMode ? "bg-[#0F172A]" : "bg-[#F9F9F9]"}`}
     >
       {/* ── CONTENU DU DASHBOARD (FLOUTÉ SI PAS VERIFIÉ) ── */}
       <div
         className={`transition-all duration-300 ${!isKycVerified ? "blur-[6px] pointer-events-none select-none opacity-40" : ""}`}
       >
         <div
-          className={`px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl ${isDarkMode ? "bg-gradient-to-br from-[#1E293B] to-[#334155]" : "bg-gradient-to-br from-[#006D77] to-[#0D9488]"}`}
+          className={`px-5 pt-[calc(env(safe-area-inset-top,20px)+16px)] pb-7 rounded-b-[2.5rem] shadow-xl ${isDarkMode ? "bg-gradient-to-br from-[#1E293B] to-[#334155]" : "bg-gradient-to-br from-[#006D77] to-[#0D9488]"}`}
         >
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-3 min-w-0">
               {/* ── 🖼️ AVATAR PROFIL OAUTH / INITIALES ── */}
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center border-2 border-white shadow-xl overflow-hidden shrink-0">
+              <div
+                onClick={() => navigate("/kauri/profil-particulier")}
+                className="w-12 h-12 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center border-2 border-white shadow-xl overflow-hidden shrink-0 cursor-pointer transition-transform active:scale-95"
+              >
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
@@ -236,56 +239,48 @@ export function NormalDashboardScreen() {
                     }}
                   />
                 ) : (
-                  <span className="text-white text-lg font-bold">
+                  <span className="text-white text-base font-bold">
                     {initials}
                   </span>
                 )}
               </div>
 
-              <div>
-                <h2 className="text-white text-lg font-semibold">
-                  Bonjour, {firstName}
-                </h2>
-                <p className="text-[#E0F2FE] text-sm">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h2 className="text-white text-base font-extrabold truncate leading-tight">
+                    Bonjour, {firstName}
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-bold text-white inline-flex items-center gap-1 shrink-0">
+                    <Crown className="w-3 h-3 text-[#D4AF37]" />
+                    {userStatus}
+                  </span>
+                </div>
+                <p className="text-[#E0F2FE] text-xs truncate mt-0.5 opacity-90">
                   Bon retour sur KAURI
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div
-                onClick={() => navigate("/kauri/portefeuille")}
-                className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-black cursor-pointer transition-transform active:scale-95 shadow-sm"
-              >
-                {availableLiquidity.toLocaleString("fr-FR", {
-                  minimumFractionDigits: 2,
-                })}{" "}
-                €
-              </div>
-              <div className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md flex items-center gap-1.5">
-                <Crown className="w-3.5 h-3.5 text-[#D4AF37]" />
-                <span className="text-xs font-medium text-white">
-                  {userStatus}
-                </span>
-              </div>
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={toggleDarkMode}
-                className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center cursor-pointer border-none"
+                className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer border-none transition-transform active:scale-95"
                 title={
                   isDarkMode ? "Mode Clair" : "Mode Sombre"
                 }
               >
                 {isDarkMode ? (
-                  <Sun className="w-5 h-5 text-white" />
+                  <Sun className="w-4 h-4 text-white" />
                 ) : (
-                  <Moon className="w-5 h-5 text-white" />
+                  <Moon className="w-4 h-4 text-white" />
                 )}
               </button>
               <button
                 onClick={() => navigate("/kauri/notifications")}
-                className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center cursor-pointer border-none"
+                className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer border-none transition-transform active:scale-95"
+                title="Notifications"
               >
-                <Bell className="w-5 h-5 text-white" />
+                <Bell className="w-4 h-4 text-white" />
               </button>
             </div>
           </div>

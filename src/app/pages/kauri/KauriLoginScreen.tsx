@@ -297,7 +297,7 @@ export function KauriLoginScreen() {
 
       {/* Brand Header */}
       <div
-        className="relative z-10 flex flex-col items-center pt-14 pb-8 px-6"
+        className="relative z-10 flex flex-col items-center pt-[calc(env(safe-area-inset-top,24px)+16px)] pb-3 px-6"
         style={{
           opacity: animateIn ? 1 : 0,
           transform: animateIn
@@ -306,7 +306,7 @@ export function KauriLoginScreen() {
           transition: "opacity 0.6s ease, transform 0.6s ease",
         }}
       >
-        <div className="relative mb-4">
+        <div className="relative mb-2">
           <div
             className="absolute inset-0 rounded-full"
             style={{
@@ -317,7 +317,7 @@ export function KauriLoginScreen() {
             }}
           />
           <div
-            className="relative w-20 h-20 rounded-full flex items-center justify-center shadow-2xl"
+            className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-xl"
             style={{
               background:
                 "linear-gradient(135deg, #D4AF37, #F59E0B)",
@@ -325,7 +325,7 @@ export function KauriLoginScreen() {
           >
             <svg
               viewBox="0 0 100 100"
-              className="w-12 h-12 text-white"
+              className="w-8 h-8 text-white"
             >
               <path
                 d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35"
@@ -335,23 +335,23 @@ export function KauriLoginScreen() {
           </div>
         </div>
         <h1
-          className="text-white tracking-widest mb-1"
+          className="text-white tracking-widest mb-0.5"
           style={{
-            fontSize: "2rem",
+            fontSize: "1.65rem",
             fontWeight: 700,
             letterSpacing: "0.2em",
           }}
         >
           KAURI
         </h1>
-        <p className="text-white/70 text-sm">
+        <p className="text-white/75 text-xs">
           L'Unité dans la Finance
         </p>
       </div>
 
       {/* Container Card */}
       <div
-        className="relative z-10 flex-1 mx-4 mb-6 rounded-3xl overflow-hidden max-w-md w-full sm:mx-auto"
+        className="relative z-10 flex-1 mx-4 mb-[calc(env(safe-area-inset-bottom,16px)+16px)] rounded-3xl overflow-hidden max-w-md w-full sm:mx-auto"
         style={{
           background: "#F9F9F9",
           boxShadow: "0 -4px 40px rgba(0,0,0,0.3)",
@@ -363,7 +363,7 @@ export function KauriLoginScreen() {
             "opacity 0.7s ease 0.15s, transform 0.7s ease 0.15s",
         }}
       >
-        <div className="p-6 flex flex-col h-full justify-between">
+        <div className="p-5 flex flex-col h-full justify-between">
           <div>
             {step !== "welcome" && (
               <button
@@ -401,8 +401,8 @@ export function KauriLoginScreen() {
                 </p>
 
                 {/* ── 🚀 MODULE DE CONNEXION SOCIALE RAPIDE ── */}
-                <div className="mb-5">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">
+                <div className="mb-3.5">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
                     Connexion rapide via Réseaux
                   </p>
                   <div className="grid grid-cols-3 gap-2">
@@ -411,14 +411,14 @@ export function KauriLoginScreen() {
                         handleSocialLogin("google")
                       }
                       disabled={isSocialLoading}
-                      className="py-3 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-1"
+                      className="py-2.5 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-1"
                     >
                       Google
                     </button>
                     <button
                       onClick={() => handleSocialLogin("apple")}
                       disabled={isSocialLoading}
-                      className="py-3 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-1"
+                      className="py-2.5 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-1"
                     >
                       Apple
                     </button>
@@ -427,14 +427,14 @@ export function KauriLoginScreen() {
                         handleSocialLogin("facebook")
                       }
                       disabled={isSocialLoading}
-                      className="py-3 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-1"
+                      className="py-2.5 rounded-xl border-2 border-slate-200 bg-white text-xs font-bold text-slate-700 cursor-pointer shadow-sm hover:bg-slate-50 transition-colors flex items-center justify-center gap-1"
                     >
                       Facebook
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 my-2 mb-4">
+                <div className="flex items-center gap-3 my-1.5 mb-3">
                   <div
                     className="flex-1 h-px"
                     style={{ background: "#E2E8F0" }}
@@ -455,31 +455,31 @@ export function KauriLoginScreen() {
                 <button
                   onClick={handleBiometricLoginClick}
                   disabled={isBioLoading}
-                  className="w-full flex items-center gap-4 p-4 rounded-2xl mb-3 border-2 transition-all active:scale-95 text-white cursor-pointer"
+                  className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl mb-2.5 border-2 transition-all active:scale-95 text-white cursor-pointer"
                   style={{
                     background:
                       "linear-gradient(135deg, #006D77, #0D9488)",
                     borderColor: "#006D77",
                   }}
                 >
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/20 shrink-0">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/20 shrink-0">
                     {isBioLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <Fingerprint className="w-5 h-5" />
+                      <Fingerprint className="w-4 h-4" />
                     )}
                   </div>
                   <div className="text-left flex-1 min-w-0">
                     <p
                       style={{
                         fontWeight: 600,
-                        fontSize: "0.875rem",
+                        fontSize: "0.825rem",
                       }}
                       className="truncate"
                     >
                       Clé d'accès biométrique
                     </p>
-                    <p className="text-white/80 text-[11px] truncate">
+                    <p className="text-white/80 text-[10px] truncate">
                       {isBioLoading
                         ? "Interrogation du capteur..."
                         : hasPasskey
@@ -493,15 +493,15 @@ export function KauriLoginScreen() {
                 {/* Option Identifiants Classiques */}
                 <button
                   onClick={() => setStep("email")}
-                  className="w-full flex items-center gap-4 p-4 rounded-2xl mb-4 border-2 transition-all active:scale-95 bg-white cursor-pointer"
+                  className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl mb-3 border-2 transition-all active:scale-95 bg-white cursor-pointer"
                   style={{ borderColor: "#006D77" }}
                 >
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                     style={{ background: "#E6F4F5" }}
                   >
                     <Mail
-                      className="w-5 h-5"
+                      className="w-4 h-4"
                       style={{ color: "#006D77" }}
                     />
                   </div>
@@ -509,14 +509,14 @@ export function KauriLoginScreen() {
                     <p
                       style={{
                         fontWeight: 600,
-                        fontSize: "0.875rem",
+                        fontSize: "0.825rem",
                         color: "#0F172A",
                       }}
                       className="truncate"
                     >
                       E-mail & Mot de passe
                     </p>
-                    <p className="text-[11px] text-gray-500 truncate">
+                    <p className="text-[10px] text-gray-500 truncate">
                       Connexion manuelle
                     </p>
                   </div>
@@ -527,7 +527,7 @@ export function KauriLoginScreen() {
                 </button>
 
                 {error && (
-                  <p className="text-xs text-center text-[#B05B3B] font-medium mb-4">
+                  <p className="text-xs text-center text-[#B05B3B] font-medium mb-3">
                     {error}
                   </p>
                 )}
@@ -691,18 +691,18 @@ export function KauriLoginScreen() {
           </div>
 
           <div
-            className="pt-4 mt-4"
+            className="pt-2.5 mt-2"
             style={{ borderTop: "1px solid #F1F5F9" }}
           >
             <p
-              className="text-center text-sm mb-3"
+              className="text-center text-xs mb-2"
               style={{ color: "#4A4A4A" }}
             >
               Pas encore de compte KAURI ?
             </p>
             <button
               onClick={() => navigate("/kauri")}
-              className="w-full py-3 rounded-2xl text-sm font-semibold text-white transition-all active:scale-95 cursor-pointer border-none"
+              className="w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all active:scale-95 cursor-pointer border-none shadow-md shadow-amber-500/20"
               style={{
                 background:
                   "linear-gradient(135deg, #D4AF37, #F59E0B)",
@@ -715,7 +715,7 @@ export function KauriLoginScreen() {
       </div>
 
       <p
-        className="relative z-10 text-center text-[10px] pb-6"
+        className="relative z-10 text-center text-[10px] pb-3"
         style={{ color: "rgba(255,255,255,0.4)" }}
       >
         KAURI · Fondé par Laura Monlouis-Bonnaire
