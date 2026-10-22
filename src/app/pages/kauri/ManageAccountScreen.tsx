@@ -59,10 +59,10 @@ export function ManageAccountScreen() {
         const jsonStr = savedCardPref.replace("cards_json:", "");
         setCards(JSON.parse(jsonStr));
       } else {
-        // Carte virtuelle Kauri par défaut rattachée au compte
+        // Carte virtuelle Kauree par défaut rattachée au compte
         const defaultCard: PaymentCard = {
           id: "kauri-virtuelle",
-          type: "Virtuelle KAURI",
+          type: "Virtuelle KAUREE",
           last4: profile.id ? profile.id.slice(-4).toUpperCase() : "9820",
           expires: "12/28",
           brand: "Mastercard",

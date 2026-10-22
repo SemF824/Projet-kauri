@@ -59,7 +59,7 @@ export default function AideSupportScreen() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <HelpCircle size={18} color="#fff" />
             <div>
-              <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>KAURI</p>
+              <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>KAUREE</p>
               <h1 style={{ margin: 0, color: '#fff', fontSize: 17, fontWeight: 800 }}>Aide & Support</h1>
             </div>
           </div>
@@ -111,7 +111,7 @@ export default function AideSupportScreen() {
 
         {/* Contact form */}
         <div style={{ padding: '16px 16px 8px' }}>
-          <p style={{ margin: '0 0 10px', fontSize: 12, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Contacter l'équipe KAURI</p>
+          <p style={{ margin: '0 0 10px', fontSize: 12, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Contacter l'équipe KAUREE</p>
           {sent ? (
             <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E8ECF0', padding: '24px', textAlign: 'center' }}>
               <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#05906914', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>

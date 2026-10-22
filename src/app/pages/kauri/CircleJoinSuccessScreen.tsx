@@ -136,7 +136,7 @@ export function CircleJoinSuccessScreen() {
               'Votre place dans le cercle est confirmée et enregistrée sur le smart contract.',
               `Votre prochaine cotisation de ${contribution} € sera prélevée automatiquement le 5 du mois prochain.`,
               `Vous recevrez ${finalPot} € lors de votre mois sélectionné (${slot}).`,
-              "Suivez l'avancement du cercle dans votre portefeuille KAURI.",
+              "Suivez l'avancement du cercle dans votre portefeuille KAUREE.",
             ].map((text, i) => (
               <div key={i} className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#4ADE80]" />
@@ -174,7 +174,7 @@ export function CircleJoinSuccessScreen() {
           </div>
 
           <p className="text-center text-xs text-[#94A3B8]">
-            🔒 Transaction sécurisée · Fonds protégés par l'escrow KAURI
+            🔒 Transaction sécurisée · Fonds protégés par l'escrow KAUREE
           </p>
         </div>
       </div>

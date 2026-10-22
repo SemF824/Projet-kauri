@@ -329,7 +329,7 @@ const SALONS: Record<string, Salon> = {
         author: "Vous",
         initials: "JD",
         authorColor: TERRA,
-        text: "KAURI intègre justement des smart contracts pour automatiser les tontines.",
+        text: "KAUREE intègre justement des smart contracts pour automatiser les tontines.",
         time: "10:33",
         isMine: true,
       },

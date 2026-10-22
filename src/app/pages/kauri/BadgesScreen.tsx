@@ -33,7 +33,7 @@ const BADGES: Badge[] = [
     name: "Premier Pas",
     description: "Premier dépôt effectué",
     detail:
-      "Vous avez effectué votre premier dépôt sur KAURI. Le début de votre aventure financière diaspora commence ici.",
+      "Vous avez effectué votre premier dépôt sur KAUREE. Le début de votre aventure financière diaspora commence ici.",
     color: GOLD,
     bg: `${GOLD}18`,
     unlocked: true,
@@ -47,7 +47,7 @@ const BADGES: Badge[] = [
     name: "Citoyen Vérifié",
     description: "KYC complet et validé",
     detail:
-      "Votre identité a été vérifiée avec succès. Vous accédez à toutes les fonctionnalités KAURI sans restriction.",
+      "Votre identité a été vérifiée avec succès. Vous accédez à toutes les fonctionnalités KAUREE sans restriction.",
     color: TEAL,
     bg: `${TEAL}14`,
     unlocked: true,
@@ -75,7 +75,7 @@ const BADGES: Badge[] = [
     name: "Diaspora Connect",
     description: "Profil social 100% complété",
     detail:
-      "Votre profil Hub Social est entièrement renseigné. Vous êtes visible et connecté à la communauté KAURI.",
+      "Votre profil Hub Social est entièrement renseigné. Vous êtes visible et connecté à la communauté KAUREE.",
     color: "#8B5CF6",
     bg: "#8B5CF614",
     unlocked: true,
@@ -145,7 +145,7 @@ const BADGES: Badge[] = [
     name: "Ambassadeur",
     description: "Parrainage de 5 membres actifs",
     detail:
-      "Cinq membres parrainés par vous sont actifs sur KAURI depuis au moins 30 jours. Vous êtes un pilier de la diaspora.",
+      "Cinq membres parrainés par vous sont actifs sur KAUREE depuis au moins 30 jours. Vous êtes un pilier de la diaspora.",
     color: TERRA,
     bg: `${TERRA}14`,
     unlocked: true,
@@ -171,9 +171,9 @@ const BADGES: Badge[] = [
     id: "fidele",
     emoji: "🏆",
     name: "Membre Fidèle",
-    description: "1 an sur KAURI",
+    description: "1 an sur KAUREE",
     detail:
-      "Cela fait exactement un an que vous avez rejoint KAURI. Votre fidélité est récompensée par des avantages exclusifs.",
+      "Cela fait exactement un an que vous avez rejoint KAUREE. Votre fidélité est récompensée par des avantages exclusifs.",
     color: GOLD,
     bg: `${GOLD}18`,
     unlocked: true,

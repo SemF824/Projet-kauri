@@ -88,7 +88,7 @@ export function Setup2FAScreen() {
         );
       }
 
-      const friendlyNameTarget = user?.email || "Compte Kauri";
+      const friendlyNameTarget = user?.email || "Compte Kauree";
 
       // Purge des résidus de facteurs pour éliminer les conflits 422
       const { data: factorList, error: listError } =
@@ -118,7 +118,7 @@ export function Setup2FAScreen() {
       const { data, error: enrollError } =
         await supabase.auth.mfa.enroll({
           factorType: "totp",
-          issuer: "KAURI Fintech",
+          issuer: "KAUREE Fintech",
           friendlyName: friendlyNameTarget,
         });
 
@@ -190,7 +190,7 @@ export function Setup2FAScreen() {
       if (verifyError) throw verifyError;
 
       setRecoveryCodes([
-        "KAURI-" +
+        "KAUREE-" +
           Math.random()
             .toString(36)
             .substring(2, 6)
@@ -200,7 +200,7 @@ export function Setup2FAScreen() {
             .toString(36)
             .substring(2, 6)
             .toUpperCase(),
-        "KAURI-" +
+        "KAUREE-" +
           Math.random()
             .toString(36)
             .substring(2, 6)
@@ -210,7 +210,7 @@ export function Setup2FAScreen() {
             .toString(36)
             .substring(2, 6)
             .toUpperCase(),
-        "KAURI-" +
+        "KAUREE-" +
           Math.random()
             .toString(36)
             .substring(2, 6)
@@ -220,7 +220,7 @@ export function Setup2FAScreen() {
             .toString(36)
             .substring(2, 6)
             .toUpperCase(),
-        "KAURI-" +
+        "KAUREE-" +
           Math.random()
             .toString(36)
             .substring(2, 6)
@@ -230,7 +230,7 @@ export function Setup2FAScreen() {
             .toString(36)
             .substring(2, 6)
             .toUpperCase(),
-        "KAURI-" +
+        "KAUREE-" +
           Math.random()
             .toString(36)
             .substring(2, 6)
@@ -240,7 +240,7 @@ export function Setup2FAScreen() {
             .toString(36)
             .substring(2, 6)
             .toUpperCase(),
-        "KAURI-" +
+        "KAUREE-" +
           Math.random()
             .toString(36)
             .substring(2, 6)

@@ -75,7 +75,7 @@ export function SwapMarketplaceScreen() {
 
             const pData = profileRes.data;
             const tData = tontineRes.data;
-            const name = pData?.full_name || `${pData?.first_name || ''} ${pData?.last_name || ''}`.trim() || 'Membre KAURI';
+            const name = pData?.full_name || `${pData?.first_name || ''} ${pData?.last_name || ''}`.trim() || 'Membre KAUREE';
             const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || 'MK';
 
             return {

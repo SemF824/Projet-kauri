@@ -11,7 +11,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
         <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-[#D4AF37] flex items-center justify-center">
           <span className="text-white text-2xl">K</span>
         </div>
-        <h1 className="text-white text-3xl mb-2">Bienvenue sur KAURI</h1>
+        <h1 className="text-white text-3xl mb-2">Bienvenue sur KAUREE</h1>
         <p className="text-[#F1F5F9] text-sm">L'Unité dans la Finance, la Force dans la Communauté</p>
       </div>
 

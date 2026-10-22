@@ -364,7 +364,7 @@ export default function ForumsScreen() {
               }}>
                 <Globe style={{ width: 16, height: 16, color: TEAL, flexShrink: 0 }} />
                 <p style={{ fontSize: 12, color: '#4A4A4A', margin: 0, lineHeight: 1.5 }}>
-                  Les salons sont <strong>publics</strong> — toute la communauté KAURI peut les rejoindre.
+                  Les salons sont <strong>publics</strong> — toute la communauté KAUREE peut les rejoindre.
                   Pour des échanges privés, utilisez les <strong>groupes privés</strong>.
                 </p>
               </div>

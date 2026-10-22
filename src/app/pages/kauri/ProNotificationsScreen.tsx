@@ -124,7 +124,7 @@ export function ProNotificationsScreen() {
       category: 'documents',
       title: 'Document requis',
       message: 'Rapport financier T2 à soumettre avant le 15 juin',
-      detail: "La plateforme KAURI requiert votre rapport financier du 2ème trimestre pour maintenir la conformité de votre compte Pro. Date limite : 15 juin.",
+      detail: "La plateforme KAUREE requiert votre rapport financier du 2ème trimestre pour maintenir la conformité de votre compte Pro. Date limite : 15 juin.",
       time: 'Il y a 2 jours',
       icon: FileText,
       read: true,

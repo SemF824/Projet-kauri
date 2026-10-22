@@ -68,7 +68,7 @@ const TONTINES: TontineOffer[] = [
   },
   {
     id: 't3',
-    name: 'Young Entrepreneurs KAURI',
+    name: 'Young Entrepreneurs KAUREE',
     description: 'Pour les 18–35 ans qui veulent financer leurs premiers projets pros.',
     organizer: 'Sophie L.',
     organizerAvatar: 'SL',
@@ -259,7 +259,7 @@ function JoinSheet({ tontine, onClose, onConfirm, isDarkMode }: JoinSheetProps) 
               {agreed && <CheckCircle2 size={14} color="#fff" />}
             </div>
             <p style={{ margin: 0, fontSize: 12, color: textMuted, lineHeight: 1.5 }}>
-              J'ai lu et j'accepte les <span style={{ color: tontine.categoryColor, fontWeight: 700 }}>règles de la tontine</span> et le <span style={{ color: tontine.categoryColor, fontWeight: 700 }}>contrat smart KAURI</span>. Je m'engage à effectuer mes contributions à temps.
+              J'ai lu et j'accepte les <span style={{ color: tontine.categoryColor, fontWeight: 700 }}>règles de la tontine</span> et le <span style={{ color: tontine.categoryColor, fontWeight: 700 }}>contrat smart KAUREE</span>. Je m'engage à effectuer mes contributions à temps.
             </p>
           </button>
 
@@ -325,7 +325,7 @@ function SuccessOverlay({ tontine, onDone, isDarkMode }: SuccessOverlayProps) {
       }}>
         <Zap size={20} color={tontine.categoryColor} />
         <p style={{ margin: 0, fontSize: 13, color: isDarkMode ? '#94A3B8' : '#475569', lineHeight: 1.5 }}>
-          La tontine est sécurisée par <strong style={{ color: isDarkMode ? '#F8FAFC' : '#0F172A' }}>smart contract KAURI</strong>. Tes fonds sont protégés.
+          La tontine est sécurisée par <strong style={{ color: isDarkMode ? '#F8FAFC' : '#0F172A' }}>smart contract KAUREE</strong>. Tes fonds sont protégés.
         </p>
       </div>
       <button
@@ -392,7 +392,7 @@ export function RejoindreTontineScreen() {
         </button>
 
         <div style={{ textAlign: 'center', paddingTop: 4 }}>
-          <p style={{ margin: '0 0 4px', fontSize: 11, color: 'rgba(255,255,255,0.65)', letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>KAURI TONTINES</p>
+          <p style={{ margin: '0 0 4px', fontSize: 11, color: 'rgba(255,255,255,0.65)', letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>KAUREE TONTINES</p>
           <h1 style={{ margin: 0, color: '#fff', fontSize: 22, fontWeight: 800 }}>Rejoindre une tontine</h1>
           <p style={{ margin: '4px 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
             {TONTINES.reduce((s, t) => s + t.spotsLeft, 0)} places disponibles · {TONTINES.length} tontines ouvertes

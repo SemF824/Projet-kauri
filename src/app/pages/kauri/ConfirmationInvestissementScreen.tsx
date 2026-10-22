@@ -163,7 +163,7 @@ export function ConfirmationInvestissementScreen() {
           <div className="flex items-start gap-3">
             <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5 text-[#16A34A]" />
             <p className="text-xs text-[#475569] leading-snug">
-              8% de rendement annuel versé via le <span className="font-semibold text-[#0F172A]">smart contract KAURI</span>.
+              8% de rendement annuel versé via le <span className="font-semibold text-[#0F172A]">smart contract KAUREE</span>.
             </p>
           </div>
 
@@ -182,7 +182,7 @@ export function ConfirmationInvestissementScreen() {
         >
           <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: GOLD_DARK }} />
           <div>
-            <p className="text-xs font-bold text-[#0F172A] mb-0.5">Smart contract audité · Escrow KAURI</p>
+            <p className="text-xs font-bold text-[#0F172A] mb-0.5">Smart contract audité · Escrow KAUREE</p>
             <p className="text-xs text-[#64748B] leading-relaxed">
               Votre investissement est sécurisé par un smart contract vérifié et des fonds placés en escrow jusqu'au déblocage contractuel.
             </p>
@@ -227,7 +227,7 @@ export function ConfirmationInvestissementScreen() {
         </button>
 
         <p className="text-center text-xs pb-2 text-[#94A3B8]">
-          🔒 Transaction sécurisée · Fonds protégés par l'escrow KAURI
+          🔒 Transaction sécurisée · Fonds protégés par l'escrow KAUREE
         </p>
       </div>
     </div>

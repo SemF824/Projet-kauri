@@ -781,7 +781,7 @@ export function ProCreerTontineScreen() {
                 color: "#7C3AED",
                 bg: "#7C3AED12",
                 label: "Groupe mixte",
-                sublabel: "Pro + Particuliers KAURI",
+                sublabel: "Pro + Particuliers KAUREE",
                 note: "Tarification standard applicable",
                 badge: null,
               },
@@ -870,7 +870,7 @@ export function ProCreerTontineScreen() {
               <p className="text-[#64748B] text-xs mb-2">
                 {groupType === "pro-only"
                   ? "Seuls les comptes Pro vérifiés (badge ✓) seront acceptés."
-                  : "Recherchez des membres Pro ou Particuliers KAURI."}
+                  : "Recherchez des membres Pro ou Particuliers KAUREE."}
               </p>
 
               {/* Statut tarifaire en temps réel */}

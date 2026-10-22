@@ -44,7 +44,7 @@ export function SplashScreen() {
         ))}
       </div>
 
-      {/* Logo KAURI */}
+      {/* Logo KAUREE */}
       <div className="relative z-10 text-center animate-fadeIn">
         {/* Icône Cowrie Shell */}
         <div className="w-32 h-32 mx-auto mb-6 relative">
@@ -60,9 +60,9 @@ export function SplashScreen() {
           </div>
         </div>
 
-        {/* Typographie KAURI */}
+        {/* Typographie KAUREE */}
         <h1 className="text-white text-5xl mb-3 tracking-wider" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-          KAURI
+          KAUREE
         </h1>
         <p className="text-[#E0F2FE] text-lg mb-2">L'Unité dans la Finance</p>
         <p className="text-[#E0F2FE]/80 text-sm">La Force dans la Communauté</p>
@@ -76,7 +76,7 @@ export function SplashScreen() {
 
         {/* Signature */}
         <div className="mt-8 text-white/60 text-xs">
-          <p>Fondé par Laura Monlouis-Bonnaire</p>
+          <p>Fondé par Kauree Family</p>
           <p className="mt-1">Une Initiative Citoyenne</p>
         </div>
       </div>

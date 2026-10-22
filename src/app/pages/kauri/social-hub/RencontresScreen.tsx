@@ -1408,7 +1408,7 @@ export default function RencontresScreen() {
               fontWeight: 700,
             }}
           >
-            KAURI
+            KAUREE
           </span>
           <span
             style={{
@@ -1472,7 +1472,7 @@ export default function RencontresScreen() {
         >
           <input
             type="text"
-            placeholder="Rechercher un membre Kauri..."
+            placeholder="Rechercher un membre Kauree..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleUserSearch()}

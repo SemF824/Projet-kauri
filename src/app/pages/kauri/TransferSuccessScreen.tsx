@@ -198,7 +198,7 @@ export function TransferSuccessScreen() {
               { label: 'Montant', value: `${formatAmount(amount)} €`, highlight: true },
               ...(message ? [{ label: 'Note', value: `"${message}"` }] : []),
               { label: 'Date', value: dateTime },
-              { label: 'Réseau', value: 'KAURI Chain · Instantané' },
+              { label: 'Réseau', value: 'KAUREE Chain · Instantané' },
               { label: 'Statut', value: 'Confirmé ✓', green: true },
             ].map((row: any, i, arr) => (
               <div key={row.label} style={{

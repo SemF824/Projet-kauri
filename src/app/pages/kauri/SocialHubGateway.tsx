@@ -271,17 +271,6 @@ function IconDiscussions({ active }: { active: boolean }) {
 
 const PILLARS = [
   {
-    id: "decouverte",
-    label: "Découverte",
-    tagline: "Bientôt disponible",
-    desc: "Vidéos, tendances & actualités en cours de développement.",
-    path: "#",
-    accentHex: "#94A3B8",
-    badge: "Bientôt",
-    Icon: IconDecouverte,
-    disabled: true,
-  },
-  {
     id: "rencontres",
     label: "Rencontres",
     tagline: "Mentors & partenaires",
@@ -490,7 +479,7 @@ export function SocialHubGateway() {
               opacity: 1,
             }}
           >
-            KAURI
+            KAUREE
           </p>
           <h1
             style={{
@@ -559,7 +548,7 @@ export function SocialHubGateway() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
         >
-          Le Portail de la Communauté Kauri
+          Le Portail de la Communauté Kauree
         </motion.p>
 
         <motion.div
@@ -655,7 +644,7 @@ export function SocialHubGateway() {
               margin: 0,
             }}
           >
-            Le Kauri
+            Le Kauree
           </p>
           <p
             style={{
@@ -664,7 +653,7 @@ export function SocialHubGateway() {
               margin: "3px 0 0",
             }}
           >
-            Symbole de connexion · Kauri
+            Symbole de connexion · Kauree
           </p>
         </motion.div>
 
@@ -745,7 +734,7 @@ export function SocialHubGateway() {
                 repeatDelay: 0.8,
               }}
             />
-            {[16.7, 50, 83.3].map((pos, i) => (
+            {[30, 70].map((pos, i) => (
               <motion.div
                 key={i}
                 style={{
@@ -798,7 +787,7 @@ export function SocialHubGateway() {
               textAlign: "center",
             }}
           >
-            Connexion Kauri
+            Connexion Kauree
           </p>
         </motion.div>
 

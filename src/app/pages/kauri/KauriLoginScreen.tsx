@@ -342,7 +342,7 @@ export function KauriLoginScreen() {
             letterSpacing: "0.2em",
           }}
         >
-          KAURI
+          KAUREE
         </h1>
         <p className="text-white/75 text-xs">
           L'Unité dans la Finance
@@ -397,7 +397,7 @@ export function KauriLoginScreen() {
                   className="text-sm mb-6"
                   style={{ color: "#4A4A4A" }}
                 >
-                  Connectez-vous à votre espace sécurisé KAURI.
+                  Connectez-vous à votre espace sécurisé KAUREE.
                 </p>
 
                 {/* ── 🚀 MODULE DE CONNEXION SOCIALE RAPIDE ── */}
@@ -698,7 +698,7 @@ export function KauriLoginScreen() {
               className="text-center text-xs mb-2"
               style={{ color: "#4A4A4A" }}
             >
-              Pas encore de compte KAURI ?
+              Pas encore de compte KAUREE ?
             </p>
             <button
               onClick={() => navigate("/kauri")}
@@ -718,7 +718,7 @@ export function KauriLoginScreen() {
         className="relative z-10 text-center text-[10px] pb-3"
         style={{ color: "rgba(255,255,255,0.4)" }}
       >
-        KAURI · Fondé par Laura Monlouis-Bonnaire
+        KAUREE · Fondé par Kauree Family
       </p>
 
       <style>{`

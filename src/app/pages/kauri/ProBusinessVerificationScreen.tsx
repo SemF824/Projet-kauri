@@ -385,7 +385,7 @@ export function ProBusinessVerificationScreen() {
           <>
             <p className="text-sm font-semibold" style={{ color: textP }}>Documents de la personne morale</p>
             <p className="text-xs -mt-3 mb-1" style={{ color: textS }}>
-              Ces documents permettent de valider votre {structure === 'asso' ? 'association' : 'entreprise'} sur KAURI Pro.
+              Ces documents permettent de valider votre {structure === 'asso' ? 'association' : 'entreprise'} sur KAUREE Pro.
               Vous pouvez les ajouter maintenant ou plus tard depuis vos paramètres.
             </p>
 

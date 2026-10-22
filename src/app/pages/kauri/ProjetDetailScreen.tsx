@@ -348,7 +348,7 @@ export function ProjetDetailScreen() {
         </button>
 
         <p className="text-center text-xs pb-2 text-[#94A3B8]">
-          🔒 Transaction sécurisée · Fonds protégés par l'escrow KAURI
+          🔒 Transaction sécurisée · Fonds protégés par l'escrow KAUREE
         </p>
       </div>
     </div>

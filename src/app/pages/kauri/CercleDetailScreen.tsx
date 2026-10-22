@@ -184,7 +184,7 @@ export function CercleDetailScreen() {
                   { label: 'Cotisation mensuelle', value: `${circle.contribution} €`, colored: false },
                   { label: 'Pot final épargné', value: `${circle.finalPot} €`, colored: true },
                   { label: 'Durée totale', value: `${circle.duration} mois`, colored: false },
-                  { label: 'Frais KAURI', value: 'Gratuits', colored: false },
+                  { label: 'Frais KAUREE', value: 'Gratuits', colored: false },
                   { label: 'Prochain démarrage', value: circle.nextStartDate, colored: false },
                 ].map(({ label, value, colored }, i) => (
                   <div key={i} className="px-4 py-3 flex items-center justify-between border-b border-gray-50 last:border-0">
@@ -239,7 +239,7 @@ export function CercleDetailScreen() {
               >
                 <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: TEAL }} />
                 <div>
-                  <p className="text-xs font-bold text-[#0F172A] mb-0.5">Smart contract KAURI · Escrow sécurisé</p>
+                  <p className="text-xs font-bold text-[#0F172A] mb-0.5">Smart contract KAUREE · Escrow sécurisé</p>
                   <p className="text-xs text-[#64748B] leading-relaxed">
                     Tous les fonds sont bloqués dans un smart contract audité. Les paiements sont automatiques et transparents sur la blockchain.
                   </p>
@@ -393,7 +393,7 @@ export function CercleDetailScreen() {
             </button>
           )}
           <p className="text-center text-xs mt-2 text-[#94A3B8]">
-            🔒 Sécurisé par KAURI Escrow · Smart contract audité
+            🔒 Sécurisé par KAUREE Escrow · Smart contract audité
           </p>
         </div>
       </div>

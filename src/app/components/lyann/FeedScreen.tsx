@@ -19,7 +19,7 @@ export function FeedScreen() {
       trustScore: 5,
     },
     {
-      user: 'KAURI Éducation',
+      user: 'KAUREE Éducation',
       avatar: 'KE',
       time: '5h ago',
       type: 'education',
@@ -67,7 +67,7 @@ export function FeedScreen() {
 
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-white text-2xl mb-1">Fil KAURI</h1>
+            <h1 className="text-white text-2xl mb-1">Fil KAUREE</h1>
             <p className="text-[#F1F5F9] text-sm">Histoires et réussites de la communauté</p>
           </div>
         </div>

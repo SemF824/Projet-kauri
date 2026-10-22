@@ -139,7 +139,7 @@ export function BiometricSetupScreen() {
             <p className="text-[#64748B] text-xs leading-relaxed px-2">
               Utilisez votre empreinte digitale ou
               reconnaissance faciale pour accéder instantanément
-              à votre compte Kauri.
+              à votre compte Kauree.
             </p>
           </div>
 

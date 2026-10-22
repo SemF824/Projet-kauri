@@ -53,7 +53,7 @@ const PRO_PUBLICATIONS = [
     pro: { name: 'Lolo Moderne', initials: 'LM', verified: true, category: 'Restauration', followers: 284 },
     type: 'image',
     media: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&q=80',
-    caption: "Notre Lolo Moderne ouvre ses portes à Fort-de-France ! 🎉 87 investisseurs KAURI ont cru en nous. Ce restaurant, c'est votre restaurant. Venez goûter la cuisine créole d'excellence qu'on a mise 3 ans à perfectionner.",
+    caption: "Notre Lolo Moderne ouvre ses portes à Fort-de-France ! 🎉 87 investisseurs KAUREE ont cru en nous. Ce restaurant, c'est votre restaurant. Venez goûter la cuisine créole d'excellence qu'on a mise 3 ans à perfectionner.",
     hashtags: ['#diaspora', '#martinique', '#kauri', '#restauration'],
     category: 'Restauration',
     cta: { type: 'decouvrir' as const, label: 'Découvrir le projet', color: '#006D77', bg: 'bg-[#006D77]' },
@@ -80,7 +80,7 @@ const PRO_PUBLICATIONS = [
     pro: { name: 'TechAfrika Hub', initials: 'TA', verified: true, category: 'Tech', followers: 512 },
     type: 'video',
     media: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&q=80',
-    caption: "200 jeunes développeurs formés cette année à Dakar 🚀 Notre incubateur est le seul en Afrique de l'Ouest 100% financé par la diaspora via KAURI. On ne cherche pas des philanthropes — on cherche des associés qui croient que la prochaine révolution tech vient d'Afrique.",
+    caption: "200 jeunes développeurs formés cette année à Dakar 🚀 Notre incubateur est le seul en Afrique de l'Ouest 100% financé par la diaspora via KAUREE. On ne cherche pas des philanthropes — on cherche des associés qui croient que la prochaine révolution tech vient d'Afrique.",
     hashtags: ['#tech', '#afrique', '#dakar', '#startup', '#ia'],
     category: 'Tech',
     cta: { type: 'decouvrir' as const, label: 'Découvrir le projet', color: '#006D77', bg: 'bg-[#006D77]' },
@@ -94,7 +94,7 @@ const PRO_PUBLICATIONS = [
     pro: { name: 'Maison Créole', initials: 'MC', verified: false, category: 'Immobilier', followers: 98 },
     type: 'image',
     media: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80',
-    caption: "30 appartements livrés. 70 en construction. 🏠 Notre programme de logements abordables pour la diaspora haïtienne avance malgré tout. Chaque investisseur KAURI est propriétaire d'une part de ce projet. Rejoignez les 140 familles qui font confiance à Maison Créole.",
+    caption: "30 appartements livrés. 70 en construction. 🏠 Notre programme de logements abordables pour la diaspora haïtienne avance malgré tout. Chaque investisseur KAUREE est propriétaire d'une part de ce projet. Rejoignez les 140 familles qui font confiance à Maison Créole.",
     hashtags: ['#immobilier', '#haiti', '#logement', '#diaspora', '#patrimoine'],
     category: 'Immobilier',
     cta: { type: 'decouvrir' as const, label: 'En savoir plus', color: '#D4AF37', bg: 'bg-[#D4AF37]' },
@@ -107,7 +107,7 @@ const PRO_PUBLICATIONS = [
     pro: { name: 'Bijoux Kréyol', initials: 'BK', verified: true, category: 'Artisanat', followers: 203 },
     type: 'image',
     media: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80',
-    caption: "L'artisanat créole rencontre le commerce digital 🧡 Nos bijoux en or antillais font maintenant le tour du monde grâce à KAURI et à notre boutique en ligne. 12 artisans de Martinique et Guadeloupe impliqués. Investissez dans leur savoir-faire.",
+    caption: "L'artisanat créole rencontre le commerce digital 🧡 Nos bijoux en or antillais font maintenant le tour du monde grâce à KAUREE et à notre boutique en ligne. 12 artisans de Martinique et Guadeloupe impliqués. Investissez dans leur savoir-faire.",
     hashtags: ['#artisanat', '#bijoux', '#créole', '#antilles', '#madeincaraïbes'],
     category: 'Artisanat',
     cta: { type: 'decouvrir' as const, label: 'Découvrir le projet', color: '#006D77', bg: 'bg-[#006D77]' },
@@ -216,7 +216,7 @@ export function SocialFeedScreen() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-white text-xl font-bold">Découverte</h1>
-              <p className="text-white/40 text-xs">Publications des pros KAURI</p>
+              <p className="text-white/40 text-xs">Publications des pros KAUREE</p>
             </div>
             <div className="flex items-center gap-2">
               <button

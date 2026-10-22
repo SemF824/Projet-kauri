@@ -55,7 +55,7 @@ export function CommunityMatchingScreen() {
 
         <div className="flex items-center gap-3 mb-2">
           <Sparkles className="w-8 h-8 text-white" />
-          <h1 className="text-white text-2xl">KAURI Social</h1>
+          <h1 className="text-white text-2xl">KAUREE Social</h1>
         </div>
         <p className="text-white/90 text-sm">
           Découvrez les 3 piliers de notre écosystème social
@@ -74,7 +74,7 @@ export function CommunityMatchingScreen() {
             </div>
             <div>
               <h3 className={`font-medium mb-1 ${isDarkMode ? 'text-white' : 'text-[#0F172A]'}`}>
-                Bienvenue sur KAURI Social
+                Bienvenue sur KAUREE Social
               </h3>
               <p className={`text-sm ${isDarkMode ? 'text-[#FDE68A]' : 'text-[#92400E]'}`}>
                 Notre plateforme sociale unique combine contenu viral, networking professionnel et discussions communautaires.
@@ -123,7 +123,7 @@ export function CommunityMatchingScreen() {
 
         <div className={`rounded-xl p-4 ${isDarkMode ? 'bg-[#006D77]/10 border border-[#006D77]/30' : 'bg-[#E0F2FE] border border-[#006D77]/30'}`}>
           <p className={`text-xs ${isDarkMode ? 'text-[#A7F3D0]' : 'text-[#075985]'}`}>
-            💡 <strong>Astuce :</strong> Explorez chaque pilier pour maximiser votre expérience KAURI Social et connecter avec la diaspora !
+            💡 <strong>Astuce :</strong> Explorez chaque pilier pour maximiser votre expérience KAUREE Social et connecter avec la diaspora !
           </p>
         </div>
       </div>

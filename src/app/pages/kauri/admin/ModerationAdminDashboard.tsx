@@ -129,7 +129,7 @@ export default function ModerationAdminDashboard() {
               </h1>
               <p className="text-xs text-slate-500">
                 Gestion des abus, fraudes financières et signalements de la
-                communauté Kauri
+                communauté Kauree
               </p>
             </div>
           </div>

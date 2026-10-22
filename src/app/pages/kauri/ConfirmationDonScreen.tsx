@@ -158,7 +158,7 @@ export function ConfirmationDonScreen() {
         >
           <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: TEAL }} />
           <div>
-            <p className="text-xs font-bold text-[#0F172A] mb-0.5">Paiement sécurisé par KAURI Escrow</p>
+            <p className="text-xs font-bold text-[#0F172A] mb-0.5">Paiement sécurisé par KAUREE Escrow</p>
             <p className="text-xs text-[#64748B] leading-relaxed">
               Votre don est transféré uniquement lorsque le projet atteint son seuil minimum. Sinon, vous êtes intégralement remboursé.
             </p>
@@ -181,7 +181,7 @@ export function ConfirmationDonScreen() {
         </button>
 
         <p className="text-center text-xs pb-2 text-[#94A3B8]">
-          🔒 Transaction sécurisée · Fonds protégés par l'escrow KAURI
+          🔒 Transaction sécurisée · Fonds protégés par l'escrow KAUREE
         </p>
       </div>
     </div>

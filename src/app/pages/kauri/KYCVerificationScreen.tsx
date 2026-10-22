@@ -520,7 +520,7 @@ export function KYCVerificationScreen() {
         </button>
 
         <h1 className="text-white text-2xl font-black tracking-tight">
-          {isPro ? "Vérification KYB Entreprise" : "Kauri KYC Hub"}
+          {isPro ? "Vérification KYB Entreprise" : "Kauree KYC Hub"}
         </h1>
         <p className="text-[#E0F2FE] text-xs opacity-90">
           {isPro

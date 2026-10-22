@@ -58,7 +58,7 @@ export default function PreferencesDiscussionScreen() {
             <ArrowLeft size={18} color="#fff" />
           </button>
           <div>
-            <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>KAURI</p>
+            <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>KAUREE</p>
             <h1 style={{ margin: 0, color: '#fff', fontSize: 17, fontWeight: 800 }}>Préférences de discussion</h1>
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function PreferencesDiscussionScreen() {
             {/* Aperçu */}
             <div style={{ background: '#F4F6F8', borderRadius: 10, padding: '12px 14px' }}>
               <p style={{ margin: 0, fontSize: FONT_SIZES.find(f => f.value === fontSize)?.preview, color: '#1E293B', lineHeight: 1.5 }}>
-                Aperçu du texte des discussions dans les salons KAURI.
+                Aperçu du texte des discussions dans les salons KAUREE.
               </p>
             </div>
           </div>

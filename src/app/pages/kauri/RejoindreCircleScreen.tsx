@@ -43,7 +43,7 @@ export function RejoindreCircleScreen() {
   const paymentMethods = [
     {
       id: 'wallet',
-      label: 'Portefeuille KAURI',
+      label: 'Portefeuille KAUREE',
       subtitle: `Solde disponible : ${(profile?.balance ?? 0).toFixed(2)} €`,
       icon: Wallet,
     },
@@ -290,7 +290,7 @@ export function RejoindreCircleScreen() {
               >
                 <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: TEAL }} />
                 <p className="text-xs text-[#475569] leading-relaxed">
-                  Votre paiement est protégé par l'escrow KAURI. Les fonds ne sont transférés qu'une fois le cercle complet et validé.
+                  Votre paiement est protégé par l'escrow KAUREE. Les fonds ne sont transférés qu'une fois le cercle complet et validé.
                 </p>
               </div>
 
@@ -309,7 +309,7 @@ export function RejoindreCircleScreen() {
                   {agreedToRules && <CheckCircle2 className="w-3 h-3 text-white" />}
                 </div>
                 <p className="text-xs text-[#64748B] leading-relaxed">
-                  J'accepte les règles du cercle, les conditions d'utilisation KAURI et je m'engage à respecter mes cotisations mensuelles sur toute la durée du contrat.
+                  J'accepte les règles du cercle, les conditions d'utilisation KAUREE et je m'engage à respecter mes cotisations mensuelles sur toute la durée du contrat.
                 </p>
               </button>
             </div>
@@ -364,7 +364,7 @@ export function RejoindreCircleScreen() {
             </button>
           )}
           <p className="text-center text-xs mt-2 text-[#94A3B8]">
-            🔒 Paiement sécurisé · Escrow KAURI
+            🔒 Paiement sécurisé · Escrow KAUREE
           </p>
         </div>
       </div>

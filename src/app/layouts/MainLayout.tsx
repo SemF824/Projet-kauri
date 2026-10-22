@@ -215,10 +215,11 @@ export function KauriBottomNav() {
     },
     {
       id: "social",
-      label: "Bientôt",
+      label: "Social",
       icon: null,
-      target: "#",
-      isPlaceholder: true,
+      target: currentPath.includes("/kauri/")
+        ? isPro ? "/kauri/pro-publish" : "/kauri/social-hub-gateway"
+        : "/feed",
     },
     {
       id: "profil",

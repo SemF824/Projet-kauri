@@ -34,7 +34,7 @@ export function PremiumPaywallScreen() {
       isPremiumHighlight: true,
     },
     {
-      name: 'Carte Physique KAURI',
+      name: 'Carte Physique KAUREE',
       icon: <CreditCard className="w-5 h-5" />,
       freemium: 'Option à 9,99 €',
       premium: 'Offerte d\'office',
@@ -74,7 +74,7 @@ export function PremiumPaywallScreen() {
           </div>
 
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-white mb-2">Passez à KAURI Premium</h1>
+            <h1 className="text-2xl font-bold text-white mb-2">Passez à KAUREE Premium</h1>
             <p className="text-sm text-white/90">
               Libérez la puissance de votre épargne
             </p>

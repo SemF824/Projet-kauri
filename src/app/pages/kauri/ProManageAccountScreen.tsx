@@ -353,7 +353,7 @@ export function ProManageAccountScreen() {
             <div className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] rounded-2xl p-6 text-white">
               <div className="flex justify-between items-start mb-8">
                 <div>
-                  <p className="text-white/60 text-xs uppercase tracking-widest">KAURI Pro</p>
+                  <p className="text-white/60 text-xs uppercase tracking-widest">KAUREE Pro</p>
                   <p className="font-bold mt-0.5">{raisonSociale}</p>
                 </div>
                 <div className="w-10 h-10 bg-[#D4AF37] rounded-full flex items-center justify-center">
@@ -373,7 +373,7 @@ export function ProManageAccountScreen() {
                 { label: 'Plafond mensuel', value: "Jusqu'à 100 000 €" },
                 { label: 'Retrait ATM', value: '5 000 € / jour' },
                 { label: 'Délai livraison', value: '5–7 jours ouvrés' },
-                { label: 'Coût annuel', value: 'Offert (KAURI Pro)' },
+                { label: 'Coût annuel', value: 'Offert (KAUREE Pro)' },
               ].map(({ label, value }) => (
                 <div key={label} className={`flex justify-between px-4 py-3 rounded-xl ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#F8FAFC]'}`}>
                   <span className={`text-xs ${sub}`}>{label}</span>

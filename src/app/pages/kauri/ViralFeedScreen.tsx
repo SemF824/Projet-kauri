@@ -30,7 +30,7 @@ export function ViralFeedScreen() {
       avatar: 'MC',
       type: 'video',
       content: '',
-      caption: 'Nouvelle levée de fonds pour notre Lolo Moderne ! 🎉 Merci à toute la communauté KAURI 🙏',
+      caption: 'Nouvelle levée de fonds pour notre Lolo Moderne ! 🎉 Merci à toute la communauté KAUREE 🙏',
       likes: 234,
       comments: 45,
       shares: 12,
@@ -57,7 +57,7 @@ export function ViralFeedScreen() {
       author: 'Sophie L.',
       avatar: 'SL',
       type: 'text',
-      content: 'Astuce KAURI : Diversifiez vos investissements entre tontines et projets communautaires pour maximiser vos rendements ! 💡',
+      content: 'Astuce KAUREE : Diversifiez vos investissements entre tontines et projets communautaires pour maximiser vos rendements ! 💡',
       caption: '',
       likes: 89,
       comments: 15,
@@ -120,7 +120,7 @@ export function ViralFeedScreen() {
 
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-white text-2xl mb-2">KAURI Social</h1>
+            <h1 className="text-white text-2xl mb-2">KAUREE Social</h1>
             <p className="text-white/90 text-sm">Feed communautaire</p>
           </div>
           <div className="flex items-center gap-2">

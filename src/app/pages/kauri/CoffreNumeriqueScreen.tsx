@@ -62,7 +62,7 @@ const CONTRACTS: ContractData[] = [
       { name: 'Jean Dupont', role: 'Administrateur', address: '0x4f2A...3c8E' },
       { name: 'Marie Kouassi', role: 'Membre', address: '0x9bC1...7aD2' },
       { name: 'Paul Traoré', role: 'Membre', address: '0x1eF3...0b5C' },
-      { name: 'KAURI Finance SAS', role: 'Opérateur Plateforme', address: '0xKauri...Platform' },
+      { name: 'KAUREE Finance SAS', role: 'Opérateur Plateforme', address: '0xKauri...Platform' },
     ],
     clauses: [
       {
@@ -75,19 +75,19 @@ const CONTRACTS: ContractData[] = [
       },
       {
         title: 'Article 3 — Smart Contract & Transparence Blockchain',
-        body: "Les fonds sont déposés dans un contrat intelligent audité et déployé sur la blockchain Polygon. Toute transaction est immutable, traçable et publiquement vérifiable. KAURI Finance agit en tant qu'opérateur neutre et ne peut accéder aux fonds sans signature multi-parties des membres.",
+        body: "Les fonds sont déposés dans un contrat intelligent audité et déployé sur la blockchain Polygon. Toute transaction est immutable, traçable et publiquement vérifiable. KAUREE Finance agit en tant qu'opérateur neutre et ne peut accéder aux fonds sans signature multi-parties des membres.",
       },
       {
         title: 'Article 4 — Responsabilité juridique',
-        body: "Chaque signataire reconnaît expressément engager sa responsabilité civile et financière. En cas de défaut persistant, KAURI Finance se réserve le droit de transmettre le dossier à un service de recouvrement agréé et/ou à la juridiction compétente du lieu de résidence du débiteur, conformément aux dispositions légales en vigueur.",
+        body: "Chaque signataire reconnaît expressément engager sa responsabilité civile et financière. En cas de défaut persistant, KAUREE Finance se réserve le droit de transmettre le dossier à un service de recouvrement agréé et/ou à la juridiction compétente du lieu de résidence du débiteur, conformément aux dispositions légales en vigueur.",
       },
       {
         title: "Article 5 — Pénalités pour défaut de paiement",
-        body: "En cas de retard de paiement au-delà du délai de grâce de 48 heures : (i) une pénalité de 5% du montant dû est appliquée automatiquement ; (ii) le membre concerné est suspendu de la rotation jusqu'à régularisation complète ; (iii) après 2 défauts consécutifs, le membre est exclu définitivement et son dossier transmis au médiateur KAURI.",
+        body: "En cas de retard de paiement au-delà du délai de grâce de 48 heures : (i) une pénalité de 5% du montant dû est appliquée automatiquement ; (ii) le membre concerné est suspendu de la rotation jusqu'à régularisation complète ; (iii) après 2 défauts consécutifs, le membre est exclu définitivement et son dossier transmis au médiateur KAUREE.",
       },
       {
         title: 'Article 6 — Résolution des litiges',
-        body: "Tout litige est soumis en premier lieu au système de médiation KAURI. À défaut de résolution amiable sous 15 jours, les parties s'engagent à recourir à l'arbitrage selon les règles de la Cour d'Arbitrage de Paris (CMAP). La langue de procédure est le français.",
+        body: "Tout litige est soumis en premier lieu au système de médiation KAUREE. À défaut de résolution amiable sous 15 jours, les parties s'engagent à recourir à l'arbitrage selon les règles de la Cour d'Arbitrage de Paris (CMAP). La langue de procédure est le français.",
       },
     ],
     penaltyRate: '5%',
@@ -110,7 +110,7 @@ const CONTRACTS: ContractData[] = [
     parties: [
       { name: 'Jean Dupont', role: 'Participant', address: '0x4f2A...3c8E' },
       { name: 'Cercle Diaspora Ouest-Africaine', role: 'Organisateur', address: '0xOrg...5D2F' },
-      { name: 'KAURI Finance SAS', role: 'Opérateur Plateforme', address: '0xKauri...Platform' },
+      { name: 'KAUREE Finance SAS', role: 'Opérateur Plateforme', address: '0xKauri...Platform' },
     ],
     clauses: [
       {
@@ -127,11 +127,11 @@ const CONTRACTS: ContractData[] = [
       },
       {
         title: 'Article 4 — Responsabilité et sanctions',
-        body: "Le Participant reconnaît que tout défaut de paiement cause un préjudice direct et mesurable aux autres membres du cercle. Il s'engage expressément à indemniser ces membres selon les modalités de l'Article 5. La récidive expose le Participant à une inscription sur la liste noire KAURI, rendant impossible toute adhésion future à un cercle sur la plateforme.",
+        body: "Le Participant reconnaît que tout défaut de paiement cause un préjudice direct et mesurable aux autres membres du cercle. Il s'engage expressément à indemniser ces membres selon les modalités de l'Article 5. La récidive expose le Participant à une inscription sur la liste noire KAUREE, rendant impossible toute adhésion future à un cercle sur la plateforme.",
       },
       {
         title: "Article 5 — Pénalités et recouvrement",
-        body: "Défaut simple (< 72h) : pénalité de 3% du montant dû. Défaut grave (> 72h) : pénalité de 8% + suspension. Défaut répété (2e occurrence) : exclusion + transmission au partenaire de recouvrement KAURI + signalement aux agences de crédit partenaires. Les frais de recouvrement sont intégralement à la charge du débiteur.",
+        body: "Défaut simple (< 72h) : pénalité de 3% du montant dû. Défaut grave (> 72h) : pénalité de 8% + suspension. Défaut répété (2e occurrence) : exclusion + transmission au partenaire de recouvrement KAUREE + signalement aux agences de crédit partenaires. Les frais de recouvrement sont intégralement à la charge du débiteur.",
       },
       {
         title: 'Article 6 — Confidentialité et données',
@@ -158,16 +158,16 @@ const CONTRACTS: ContractData[] = [
     parties: [
       { name: 'Jean Dupont', role: 'Investisseur', address: '0x4f2A...3c8E' },
       { name: 'SolarPay Sénégal SARL', role: 'Porteur de projet', address: '0xSolar...9F3C' },
-      { name: 'KAURI Finance SAS', role: 'Plateforme de financement', address: '0xKauri...Platform' },
+      { name: 'KAUREE Finance SAS', role: 'Plateforme de financement', address: '0xKauri...Platform' },
     ],
     clauses: [
       {
         title: "Article 1 — Nature de l'investissement",
-        body: "Le Participant investit 500 EUR dans le projet SolarPay Sénégal via la plateforme KAURI Finance, réglementée par l'AMF (Autorité des Marchés Financiers). Cet investissement prend la forme d'un token RWA (Real World Asset) représentatif d'une quote-part du projet, émis sur la blockchain Ethereum.",
+        body: "Le Participant investit 500 EUR dans le projet SolarPay Sénégal via la plateforme KAUREE Finance, réglementée par l'AMF (Autorité des Marchés Financiers). Cet investissement prend la forme d'un token RWA (Real World Asset) représentatif d'une quote-part du projet, émis sur la blockchain Ethereum.",
       },
       {
         title: 'Article 2 — Rendement et distribution',
-        body: "Le rendement cible est de 9,5% annuel, distribué trimestriellement en EUR sur le portefeuille KAURI de l'Investisseur. Les distributions sont automatisées via Smart Contract et ne peuvent être retenues ou retardées sans accord multi-signatures des parties prenantes.",
+        body: "Le rendement cible est de 9,5% annuel, distribué trimestriellement en EUR sur le portefeuille KAUREE de l'Investisseur. Les distributions sont automatisées via Smart Contract et ne peuvent être retenues ou retardées sans accord multi-signatures des parties prenantes.",
       },
       {
         title: 'Article 3 — Risques et avertissements légaux',
@@ -175,15 +175,15 @@ const CONTRACTS: ContractData[] = [
       },
       {
         title: "Article 4 — Obligations du porteur de projet",
-        body: "SolarPay Sénégal s'engage à : (i) publier un rapport de progression trimestriel sur la plateforme KAURI ; (ii) maintenir un compte séquestre couvrant 6 mois de distributions ; (iii) soumettre ses comptes à un audit annuel indépendant. Le non-respect de ces obligations constitue un événement de défaut activant le mécanisme de protection des Investisseurs.",
+        body: "SolarPay Sénégal s'engage à : (i) publier un rapport de progression trimestriel sur la plateforme KAUREE ; (ii) maintenir un compte séquestre couvrant 6 mois de distributions ; (iii) soumettre ses comptes à un audit annuel indépendant. Le non-respect de ces obligations constitue un événement de défaut activant le mécanisme de protection des Investisseurs.",
       },
       {
         title: 'Article 5 — Défaut du porteur et protection des investisseurs',
-        body: "En cas de défaut de paiement du porteur de projet : le Smart Contract active automatiquement le mécanisme de protection, les fonds du compte séquestre sont distribués aux Investisseurs au prorata de leur participation, et KAURI Finance engage une procédure de médiation puis, si nécessaire, de recouvrement judiciaire aux frais du porteur défaillant.",
+        body: "En cas de défaut de paiement du porteur de projet : le Smart Contract active automatiquement le mécanisme de protection, les fonds du compte séquestre sont distribués aux Investisseurs au prorata de leur participation, et KAUREE Finance engage une procédure de médiation puis, si nécessaire, de recouvrement judiciaire aux frais du porteur défaillant.",
       },
       {
         title: "Article 6 — Sortie et liquidité",
-        body: "Les tokens RWA peuvent être cédés sur le marché secondaire KAURI après une période de blocage de 6 mois. KAURI Finance garantit une liquidité minimale dans la limite de 10% de la valeur totale du projet par mois. Au terme du contrat (3 ans), le remboursement du principal est effectué dans un délai de 30 jours ouvrés.",
+        body: "Les tokens RWA peuvent être cédés sur le marché secondaire KAUREE après une période de blocage de 6 mois. KAUREE Finance garantit une liquidité minimale dans la limite de 10% de la valeur totale du projet par mois. Au terme du contrat (3 ans), le remboursement du principal est effectué dans un délai de 30 jours ouvrés.",
       },
     ],
     penaltyRate: 'Séquestre activé',
@@ -206,12 +206,12 @@ const CONTRACTS: ContractData[] = [
     parties: [
       { name: 'Jean Dupont', role: 'Investisseur', address: '0x4f2A...3c8E' },
       { name: 'AgroTech CI SA', role: 'Porteur de projet', address: '0xAgro...2B1A' },
-      { name: 'KAURI Finance SAS', role: 'Plateforme de financement', address: '0xKauri...Platform' },
+      { name: 'KAUREE Finance SAS', role: 'Plateforme de financement', address: '0xKauri...Platform' },
     ],
     clauses: [
       {
         title: "Article 1 — Nature de l'investissement",
-        body: "Investissement de 250 EUR dans le projet AgroTech CI via KAURI Finance. Token RWA émis sur Polygon représentant une quote-part du projet de modernisation agricole en Côte d'Ivoire.",
+        body: "Investissement de 250 EUR dans le projet AgroTech CI via KAUREE Finance. Token RWA émis sur Polygon représentant une quote-part du projet de modernisation agricole en Côte d'Ivoire.",
       },
       {
         title: 'Article 2 — Rendement et distribution',
@@ -223,7 +223,7 @@ const CONTRACTS: ContractData[] = [
       },
       {
         title: 'Article 4 — Obligations et défaut',
-        body: "En cas de non-exécution par le porteur, le mécanisme de protection est identique à celui prévu au contrat standard KAURI Investissement (version 2.1).",
+        body: "En cas de non-exécution par le porteur, le mécanisme de protection est identique à celui prévu au contrat standard KAUREE Investissement (version 2.1).",
       },
     ],
     penaltyRate: 'Séquestre activé',

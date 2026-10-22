@@ -80,7 +80,7 @@ function pubToPost(pub: ProPublication): Post {
     isLiked: false,
     isSaved: false,
     duration: '0:30',
-    audio: pub.music ? `${pub.music.title} — ${pub.music.artist}` : 'Son original · KAURI Pro',
+    audio: pub.music ? `${pub.music.title} — ${pub.music.artist}` : 'Son original · KAUREE Pro',
     category: pub.category,
     bgType: CAT_TO_BGTYPE[pub.category] ?? 'tontine',
     trustScore: 4.8,
@@ -104,7 +104,7 @@ const INITIAL_POSTS: Post[] = [
     avatarGrad: ['#006D77', '#D4AF37'],
     isVerified: true,
     isFollowing: false,
-    caption: "5 raisons pour lesquelles la diaspora africaine abandonne les banques classiques 🏦❌ Et ce qu'elle fait à la place. Thread complet 👇 #Kauri #FinanceAfricaine #Diaspora",
+    caption: "5 raisons pour lesquelles la diaspora africaine abandonne les banques classiques 🏦❌ Et ce qu'elle fait à la place. Thread complet 👇 #Kauree #FinanceAfricaine #Diaspora",
     likes: 12400,
     comments: 342,
     shares: 891,
@@ -132,7 +132,7 @@ const INITIAL_POSTS: Post[] = [
     avatarGrad: ['#1A5C33', '#D4AF37'],
     isVerified: false,
     isFollowing: true,
-    caption: "De Paris à ma ferme bio en Martinique 🌱 Comment j'ai transformé 2 000€ d'économies en une coopérative qui nourrit 50 familles. Avec KAURI, seul on va vite, ensemble on va loin. #AgriCaraïbes #Tontine",
+    caption: "De Paris à ma ferme bio en Martinique 🌱 Comment j'ai transformé 2 000€ d'économies en une coopérative qui nourrit 50 familles. Avec KAUREE, seul on va vite, ensemble on va loin. #AgriCaraïbes #Tontine",
     likes: 8920,
     comments: 671,
     shares: 345,
@@ -187,21 +187,21 @@ const INITIAL_POSTS: Post[] = [
     avatarGrad: ['#0A1628', '#006D77'],
     isVerified: true,
     isFollowing: false,
-    caption: "50 000€ levés en 30 jours via KAURI pour ma startup d'IA agricole 🚀 Le playbook complet — de la pitch deck aux 47 premiers investisseurs de la communauté. DM pour le PDF gratuit. #TechDiaspora #Startup #IA",
+    caption: "50 000€ levés en 30 jours via KAUREE pour ma startup d'IA agricole 🚀 Le playbook complet — de la pitch deck aux 47 premiers investisseurs de la communauté. DM pour le PDF gratuit. #TechDiaspora #Startup #IA",
     likes: 15600,
     comments: 892,
     shares: 2300,
     isLiked: false,
     isSaved: false,
     duration: '1:58',
-    audio: 'Future Vibes — KAURI FM',
+    audio: 'Future Vibes — KAUREE FM',
     category: 'Tech',
     bgType: 'tech',
     trustScore: 4.8,
     accountType: 'porteur',
     mediaUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600&q=80',
     commentsList: [
-      { id: 'c1', author: 'Kevin P.', initials: 'KP', color: '#006D77', text: 'Respect 🙌 La communauté KAURI est vraiment incroyable', time: '6h', likes: 89, isLiked: false },
+      { id: 'c1', author: 'Kevin P.', initials: 'KP', color: '#006D77', text: 'Respect 🙌 La communauté KAUREE est vraiment incroyable', time: '6h', likes: 89, isLiked: false },
       { id: 'c2', author: 'Carla S.', initials: 'CS', color: '#EC4899', text: "C'est exactement ce que l'éco-système tech afro-caribéen attendait !", time: '4h', likes: 134, isLiked: false },
       { id: 'c3', author: 'Léon T.', initials: 'LT', color: '#D4AF37', text: "C'est quoi votre secteur exactement ? App mobile ou SaaS B2B ?", time: '2h', likes: 21, isLiked: false },
     ],
@@ -214,7 +214,7 @@ const INITIAL_POSTS: Post[] = [
     avatarGrad: ['#B05B3B', '#D4AF37'],
     isVerified: true,
     isFollowing: false,
-    caption: "Mon premier appartement à Fort-de-France à 28 ans 🏠✨ Sans apport bancaire classique, grâce à 12 personnes de ma tontine KAURI. Je vous explique comment on a fait et ce que la banque ne veut pas que vous sachiez. #Immobilier #Patrimoine #Antilles",
+    caption: "Mon premier appartement à Fort-de-France à 28 ans 🏠✨ Sans apport bancaire classique, grâce à 12 personnes de ma tontine KAUREE. Je vous explique comment on a fait et ce que la banque ne veut pas que vous sachiez. #Immobilier #Patrimoine #Antilles",
     likes: 31200,
     comments: 2890,
     shares: 7600,
@@ -832,8 +832,8 @@ function ShareSheet({
                 ))}
               </div>
 
-              {/* KAURI internal */}
-              <p style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 10px' }}>Dans KAURI</p>
+              {/* KAUREE internal */}
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 0 10px' }}>Dans KAUREE</p>
               <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E8ECF0', overflow: 'hidden', marginBottom: 12 }}>
                 {[
                   {

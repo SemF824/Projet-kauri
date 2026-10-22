@@ -704,7 +704,7 @@ export function AccountTypeSelectionScreen() {
               renderInputField(
                 "businessName",
                 "Nom de l'entreprise",
-                "Kauri Corp",
+                "Kauree Corp",
                 Briefcase,
               )}
             {step === "email" &&
@@ -973,7 +973,7 @@ export function AccountTypeSelectionScreen() {
             </svg>
           </div>
           <h1 className="text-white text-3xl font-black tracking-tight">
-            KAURI
+            KAUREE
           </h1>
           <p className="text-[#E0F2FE] text-xs mt-2">
             L'union de la communauté, la force de l'investissement

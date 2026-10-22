@@ -201,7 +201,7 @@ function InviteSheet({ existingIds, onInvite, onClose }: {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 18px 10px' }}>
           <div>
             <p style={{ margin: 0, fontWeight: 800, fontSize: 16, color: '#1E293B' }}>Inviter des membres</p>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9CA3AF' }}>Parmi vos connexions KAURI</p>
+            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#9CA3AF' }}>Parmi vos connexions KAUREE</p>
           </div>
           <button onClick={onClose} style={{ background: '#F3F4F6', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={14} color="#64748B" />

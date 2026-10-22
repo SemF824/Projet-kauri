@@ -193,7 +193,7 @@ function KauriKYCGuardLayout() {
             <p className="text-[#475569] text-xs leading-relaxed px-2">
               {isKycRejected
                 ? "Vos pièces justificatives n'ont pas pu être validées par notre équipe de conformité. Veuillez soumettre à nouveau vos documents réglementaires."
-                : "Bonjour ! Vos pièces justificatives ont été transmises avec succès au registre central de KAURI. Votre dossier est en cours d'analyse."}
+                : "Bonjour ! Vos pièces justificatives ont été transmises avec succès au registre central de KAUREE. Votre dossier est en cours d'analyse."}
             </p>
           </div>
 

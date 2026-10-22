@@ -219,7 +219,7 @@ export function NormalDashboardScreen() {
         className={`transition-all duration-300 ${!isKycVerified ? "blur-[6px] pointer-events-none select-none opacity-40" : ""}`}
       >
         <div
-          className={`px-5 pt-[calc(env(safe-area-inset-top,20px)+16px)] pb-7 rounded-b-[2.5rem] shadow-xl ${isDarkMode ? "bg-gradient-to-br from-[#1E293B] to-[#334155]" : "bg-gradient-to-br from-[#006D77] to-[#0D9488]"}`}
+          className={`px-5 pt-[calc(env(safe-area-inset-top,47px)+16px)] pb-7 rounded-b-[2.5rem] shadow-xl ${isDarkMode ? "bg-gradient-to-br from-[#1E293B] to-[#334155]" : "bg-gradient-to-br from-[#006D77] to-[#0D9488]"}`}
         >
           <div className="flex items-center justify-between gap-3 mb-5">
             <div className="flex items-center gap-3 min-w-0">
@@ -256,7 +256,7 @@ export function NormalDashboardScreen() {
                   </span>
                 </div>
                 <p className="text-[#E0F2FE] text-xs truncate mt-0.5 opacity-90">
-                  Bon retour sur KAURI
+                  Bon retour sur KAUREE
                 </p>
               </div>
             </div>
@@ -468,7 +468,7 @@ export function NormalDashboardScreen() {
                 <h4
                   className={`text-sm font-black ${isDarkMode ? "text-white" : "text-slate-900"}`}
                 >
-                  Comment fonctionne la Tontine KAURI ?
+                  Comment fonctionne la Tontine KAUREE ?
                 </h4>
                 <p
                   className={`text-xs ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}
@@ -518,9 +518,12 @@ export function NormalDashboardScreen() {
               </button>
 
               <button
-                onClick={() =>
-                  navigate("/kauri/mes-investissements")
-                }
+                onClick={() => {
+                  toast.info("Espace Projets en préparation", {
+                    description: "Cette section sera disponible prochainement.",
+                    duration: 1500,
+                  });
+                }}
                 className={`rounded-xl p-4 text-center shadow-sm border hover:shadow-md transition-shadow cursor-pointer ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
               >
                 <div className="w-12 h-12 mx-auto mb-2 bg-[#D4AF37]/10 rounded-xl flex items-center justify-center">
@@ -720,7 +723,7 @@ export function NormalDashboardScreen() {
               >
                 {isKycRejected
                   ? "Vos pièces justificatives n'ont pas pu être validées par notre équipe de conformité. Veuillez soumettre à nouveau vos documents réglementaires."
-                  : "Bonjour ! Vos pièces justificatives ont été transmises avec succès au registre central de KAURI. Votre dossier est en cours d'analyse."}
+                  : "Bonjour ! Vos pièces justificatives ont été transmises avec succès au registre central de KAUREE. Votre dossier est en cours d'analyse."}
               </p>
             </div>
 

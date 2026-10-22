@@ -6,7 +6,7 @@ export function DesignSystemDemo() {
 
   const colors = [
     { name: 'Deep Caribbean Teal', hex: '#006D77', usage: 'Headers, Boutons Primaires, Navigation Active' },
-    { name: 'Antique Gold', hex: '#D4AF37', usage: 'Pot Kauri, Trust Score, Succès' },
+    { name: 'Antique Gold', hex: '#D4AF37', usage: 'Pot Kauree, Trust Score, Succès' },
     { name: 'Terracotta', hex: '#B05B3B', usage: 'Live Social, Impact, CTAs Communauté' },
     { name: 'Off-White', hex: '#F9F9F9', usage: 'Arrière-plans' },
     { name: 'Slate Grey', hex: '#4A4A4A', usage: 'Texte Secondaire' },
@@ -34,7 +34,7 @@ export function DesignSystemDemo() {
           <div className="w-20 h-20 mx-auto mb-4 bg-[#D4AF37] rounded-full flex items-center justify-center">
             <Palette className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-white text-2xl mb-2">Design System KAURI</h1>
+          <h1 className="text-white text-2xl mb-2">Design System KAUREE</h1>
           <p className="text-[#E0F2FE] text-sm">Nouvelle Identité de Marque "Ancestral Future"</p>
         </div>
       </div>
@@ -114,7 +114,7 @@ export function DesignSystemDemo() {
               />
             </svg>
           </div>
-          <p className="text-white text-lg mb-1">Logo Cowrie Shell KAURI</p>
+          <p className="text-white text-lg mb-1">Logo Cowrie Shell KAUREE</p>
           <p className="text-[#E0F2FE] text-sm">Identité Visuelle "Ancestral Future"</p>
         </div>
 
@@ -124,7 +124,7 @@ export function DesignSystemDemo() {
             <strong>Mission Éducative et Citoyenne</strong>
           </p>
           <p className="text-[#4A4A4A] text-center text-sm">
-            Fondé par Laura Monlouis-Bonnaire
+            Fondé par Kauree Family
           </p>
           <p className="text-[#4A4A4A] text-center text-xs mt-2">
             Tout le texte est en FRANÇAIS 🇫🇷

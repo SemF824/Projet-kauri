@@ -97,7 +97,7 @@ function computeBadges(
       id: "early",
       icon: Lock,
       label: "Pionnier Diaspora",
-      desc: "Membre fondateur de la plateforme KAURI",
+      desc: "Membre fondateur de la plateforme KAUREE",
       condition: "Membre depuis 2026",
       color: "#64748B",
       gradient: "from-[#475569] to-[#64748B]",
@@ -525,7 +525,7 @@ export function ProfilProScreen() {
                 >
                   <strong>SIRET, forme juridique et dirigeants</strong> ne sont
                   modifiables que via une nouvelle vérification KYB. Contactez
-                  le support KAURI.
+                  le support KAUREE.
                 </p>
               </div>
             </div>
@@ -614,7 +614,7 @@ export function ProfilProScreen() {
               >
                 <Info className="w-4 h-4 text-[#D4AF37] flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-[#92400E]">
-                  Continuez à développer votre activité sur KAURI pour débloquer
+                  Continuez à développer votre activité sur KAUREE pour débloquer
                   ce badge.
                 </p>
               </div>

@@ -199,7 +199,7 @@ export function TransferConfirmScreen() {
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textMain }}>{recipient}</p>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: textSub }}>Membre KAURI vérifié ✓</p>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: textSub }}>Membre KAUREE vérifié ✓</p>
             </div>
           </div>
         </div>
@@ -225,7 +225,7 @@ export function TransferConfirmScreen() {
             { label: 'Montant', value: `${formatAmount(amount)} €` },
             { label: 'Frais', value: feeAmount === 0 ? 'Gratuit' : `${feeAmount.toFixed(2)} €` },
             { label: 'Délai', value: 'Instantané' },
-            { label: 'Réseau', value: 'KAURI Chain' },
+            { label: 'Réseau', value: 'KAUREE Chain' },
           ].map((row, i, arr) => (
             <div key={row.label} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -258,7 +258,7 @@ export function TransferConfirmScreen() {
         }}>
           <Lock size={16} color="#D4AF37" style={{ flexShrink: 0 }} />
           <p style={{ margin: 0, fontSize: 12, color: isDarkMode ? '#FDE68A' : '#92400E', lineHeight: 1.5 }}>
-            Ce transfert est <strong>chiffré de bout en bout</strong> et sécurisé par la blockchain KAURI.
+            Ce transfert est <strong>chiffré de bout en bout</strong> et sécurisé par la blockchain KAUREE.
           </p>
         </div>
 

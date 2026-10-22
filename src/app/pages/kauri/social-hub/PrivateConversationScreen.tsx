@@ -45,7 +45,7 @@ const DM_CONVS: Record<string, {
     name: 'Marie-Claire Dubois', initials: 'MC', avatar: '👩🏾',
     color: '#8B5CF6', isOnline: true, role: 'Mentor & Investisseuse',
     messages: [
-      { id: 'm1', text: "Bonjour ! J'ai vu ton profil sur KAURI, tes projets en immobilier caribéen sont très intéressants.", time: '09:42', isMine: false, read: true },
+      { id: 'm1', text: "Bonjour ! J'ai vu ton profil sur KAUREE, tes projets en immobilier caribéen sont très intéressants.", time: '09:42', isMine: false, read: true },
       { id: 'm2', text: "Merci Marie-Claire ! Je cherche justement des conseils pour mon premier investissement en Martinique.", time: '09:45', isMine: true, read: true },
       { id: 'm3', text: "Je peux t'aider ! J'ai 10 ans d'expérience dans l'immobilier antillais. Tu vises quel budget ?", time: '09:48', isMine: false, read: true },
       { id: 'm4', text: "Entre 80 et 120K€. Je voudrais du locatif dans un quartier en développement.", time: '09:51', isMine: true, read: true },
@@ -114,7 +114,7 @@ function buildGroupConv(groupName: string, isNew: boolean): {
 function buildDefaultMessage(name: string, profession: string, tags: string[]): string {
   const firstName = name.split(' ')[0];
   const tag = tags[0] ?? 'collaboration';
-  return `Bonjour ${firstName} ! 👋\n\nJ'ai découvert votre profil dans KAURI Rencontres et je suis vraiment impressionné(e) par votre parcours en tant que ${profession}.\n\nJe pense que nos expertises pourraient se compléter, notamment autour de ${tag}. Je serais ravi(e) d'échanger avec vous.\n\nSeriez-vous disponible cette semaine ?\n\nBien à vous 🌿`;
+  return `Bonjour ${firstName} ! 👋\n\nJ'ai découvert votre profil dans KAUREE Rencontres et je suis vraiment impressionné(e) par votre parcours en tant que ${profession}.\n\nJe pense que nos expertises pourraient se compléter, notamment autour de ${tag}. Je serais ravi(e) d'échanger avec vous.\n\nSeriez-vous disponible cette semaine ?\n\nBien à vous 🌿`;
 }
 
 // ── Emoji picker ──────────────────────────────────────────────────────────────
@@ -528,12 +528,12 @@ export default function PrivateConversationScreen() {
           <div style={{ display: 'flex', gap: 8 }}>
             {isGroup ? (
               <span style={{ fontSize: 11, background: `${TERRA}18`, color: TERRA, padding: '4px 10px', borderRadius: 20, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Lock size={9} /> Groupe privé · KAURI
+                <Lock size={9} /> Groupe privé · KAUREE
               </span>
             ) : isNewMatch ? (
-              <span style={{ fontSize: 11, background: `${TEAL}18`, color: TEAL, padding: '4px 10px', borderRadius: 20, fontWeight: 700 }}>🤝 Nouvelle Alliance KAURI</span>
+              <span style={{ fontSize: 11, background: `${TEAL}18`, color: TEAL, padding: '4px 10px', borderRadius: 20, fontWeight: 700 }}>🤝 Nouvelle Alliance KAUREE</span>
             ) : (
-              <span style={{ fontSize: 11, background: conv.color + '18', color: conv.color, padding: '4px 10px', borderRadius: 20, fontWeight: 600 }}>Connexion KAURI</span>
+              <span style={{ fontSize: 11, background: conv.color + '18', color: conv.color, padding: '4px 10px', borderRadius: 20, fontWeight: 600 }}>Connexion KAUREE</span>
             )}
           </div>
         </div>

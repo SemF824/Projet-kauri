@@ -531,7 +531,7 @@ export default function SalonManagementScreen() {
                   </div>
                   <div>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#92400E' }}>Signaler le salon</p>
-                    <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#B45309' }}>Signaler un abus à la modération KAURI</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#B45309' }}>Signaler un abus à la modération KAUREE</p>
                   </div>
                 </button>
 
@@ -589,7 +589,7 @@ export default function SalonManagementScreen() {
               style={{ width: '100%', maxWidth: 430, background: '#fff', borderRadius: '24px 24px 0 0', padding: '24px 20px 36px' }}
               onClick={e => e.stopPropagation()}>
               <p style={{ fontWeight: 800, fontSize: 16, color: '#1E293B', margin: '0 0 6px' }}>Signaler ce membre</p>
-              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 18px', lineHeight: 1.5 }}>Choisissez la raison du signalement. La modération KAURI examinera votre demande.</p>
+              <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 18px', lineHeight: 1.5 }}>Choisissez la raison du signalement. La modération KAUREE examinera votre demande.</p>
               {['Spam ou publicité', 'Contenu inapproprié', 'Harcèlement', 'Usurpation d\'identité', 'Autre'].map((reason, i) => (
                 <button key={i} onClick={() => { toast.success('Signalement envoyé à la modération'); setReportMemberId(null); }}
                   style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 14px', borderRadius: 12, background: '#F9FAFB', border: '1px solid #E5E7EB', cursor: 'pointer', marginBottom: 8, textAlign: 'left' }}>

@@ -151,7 +151,7 @@ export function ProfilParticulierScreen() {
       const options: CredentialCreationOptions = {
         publicKey: {
           challenge,
-          rp: { name: "KAURI", id: window.location.hostname },
+          rp: { name: "KAUREE", id: window.location.hostname },
           user: {
             id: userIdBuffer,
             name: user.email,
@@ -326,7 +326,7 @@ export function ProfilParticulierScreen() {
             <p className="text-white/70 text-xs mt-0.5">
               {memberSince
                 ? `Membre depuis ${memberSince}`
-                : "Membre KAURI"}
+                : "Membre KAUREE"}
             </p>
           </div>
           <button
@@ -756,7 +756,7 @@ export function ProfilParticulierScreen() {
                   if (userCards.length === 0) {
                     userCards = [
                       {
-                        type: "Virtuelle KAURI",
+                        type: "Virtuelle KAUREE",
                         number: `•••• ${profile?.id ? profile.id.slice(-4).toUpperCase() : "9820"}`,
                         expires: "12/28",
                       },
@@ -972,7 +972,7 @@ export function ProfilParticulierScreen() {
                   </div>
                   <div>
                     <p className="text-white font-bold text-lg leading-tight">
-                      KAURI Premium
+                      KAUREE Premium
                     </p>
                     <p className="text-white/80 text-xs">
                       Débloquez tous les avantages

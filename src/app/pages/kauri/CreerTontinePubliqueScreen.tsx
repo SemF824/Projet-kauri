@@ -706,7 +706,7 @@ export function CreerTontinePubliqueScreen() {
           className="text-center text-xs pb-4"
           style={{ color: textSec }}
         >
-          Votre tontine sera visible par tous les membres KAURI
+          Votre tontine sera visible par tous les membres KAUREE
           ayant le Trust Score requis.
         </p>
       </div>

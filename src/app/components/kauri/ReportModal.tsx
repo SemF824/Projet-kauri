@@ -51,7 +51,7 @@ const REASONS: { id: ReportReason; label: string; desc: string }[] = [
   {
     id: "other",
     label: "Autre motif",
-    desc: "Ne respecte pas la charte de confiance Kauri.",
+    desc: "Ne respecte pas la charte de confiance Kauree.",
   },
 ];
 
@@ -101,7 +101,7 @@ export function ReportModal({
 
       if (error) throw error;
 
-      toast.success("Signalement transmis à l'équipe de modération Kauri.");
+      toast.success("Signalement transmis à l'équipe de modération Kauree.");
       onClose();
     } catch (err: any) {
       console.error("Erreur signalement:", err);

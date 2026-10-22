@@ -19,7 +19,7 @@ export function AnimatedIconsDemoScreen() {
         </button>
 
         <h1 className="text-white text-2xl mb-2">Icônes Animées</h1>
-        <p className="text-[#E0F2FE] text-sm">Démonstration des animations KAURI</p>
+        <p className="text-[#E0F2FE] text-sm">Démonstration des animations KAUREE</p>
       </div>
 
       <div className="px-6 py-6 space-y-8">

@@ -40,7 +40,7 @@ export default function ForumsMenuScreen() {
             <ArrowLeft size={18} color="#fff" />
           </button>
           <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>KAURI</p>
+            <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>KAUREE</p>
             <h1 style={{ margin: 0, color: '#fff', fontSize: 17, fontWeight: 800 }}>Paramètres Forums</h1>
           </div>
         </div>
@@ -183,7 +183,7 @@ export default function ForumsMenuScreen() {
               {[
                 { icon: <Settings size={17} color="#64748B" />, label: 'Préférences de discussion', sub: 'Langue, thème, taille du texte', route: '/kauri/social-hub/preferences-discussion' },
                 { icon: <Flag size={17} color="#EF4444" />, label: 'Signaler un abus', sub: 'Modération communautaire', route: '/kauri/social-hub/signaler-abus' },
-                { icon: <HelpCircle size={17} color={TEAL} />, label: 'Aide & support', sub: 'FAQ, contacter l\'équipe KAURI', route: '/kauri/social-hub/aide-support' },
+                { icon: <HelpCircle size={17} color={TEAL} />, label: 'Aide & support', sub: 'FAQ, contacter l\'équipe KAUREE', route: '/kauri/social-hub/aide-support' },
               ].map((item, i) => (
                 <button
                   key={i}

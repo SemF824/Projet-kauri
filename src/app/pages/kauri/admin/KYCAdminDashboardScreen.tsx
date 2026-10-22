@@ -680,7 +680,7 @@ export function KYCAdminDashboardScreen() {
           </div>
           <div>
             <h1 className="text-lg font-black tracking-wider text-white">
-              KAURI REGULATORY MATRIX
+              KAUREE REGULATORY MATRIX
             </h1>
             <p className="text-xs text-slate-400">
               Registre général de vérification (ECC P-256)
@@ -1142,7 +1142,7 @@ export function KYCAdminDashboardScreen() {
               <iframe
                 src={lightbox.url}
                 className="w-full h-[84vh] rounded-xl border-none bg-white"
-                title="Kauri Fullscreen Audit Frame"
+                title="Kauree Fullscreen Audit Frame"
               />
             ) : lightbox.type === "video" ? (
               <video

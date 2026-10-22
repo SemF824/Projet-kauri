@@ -43,7 +43,7 @@ export default function SauvegardesScreen() {
             <ArrowLeft size={18} color="#fff" />
           </button>
           <div>
-            <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>KAURI</p>
+            <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>KAUREE</p>
             <h1 style={{ margin: 0, color: '#fff', fontSize: 17, fontWeight: 800 }}>Sauvegardés</h1>
           </div>
         </div>

@@ -344,7 +344,7 @@ function StepIdentite({ p, set }: { p: SocialProfile; set: (k: keyof SocialProfi
 
         <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, margin: '8px 0 0', lineHeight: 1.5 }}>
           {p.useRealName
-            ? 'Votre prénom du compte KAURI sera affiché dans le Hub Social.'
+            ? 'Votre prénom du compte KAUREE sera affiché dans le Hub Social.'
             : 'Le pseudo remplace votre nom partout dans le réseau social.'}
         </p>
       </div>
@@ -555,7 +555,7 @@ function StepConfidentialite({ p, set }: { p: SocialProfile; set: (k: keyof Soci
       <div>
         <SectionTitle>Mode invisible</SectionTitle>
         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12.5, margin: '0 0 12px', lineHeight: 1.5 }}>
-          Activez le mode invisible pour disparaître d'un espace sans quitter KAURI.
+          Activez le mode invisible pour disparaître d'un espace sans quitter KAUREE.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -582,7 +582,7 @@ function StepConfidentialite({ p, set }: { p: SocialProfile; set: (k: keyof Soci
         <SectionTitle>Qui peut vous écrire ?</SectionTitle>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
-            { v: 'tous', label: 'Tout le monde', icon: '🌍', desc: 'Toute la communauté KAURI' },
+            { v: 'tous', label: 'Tout le monde', icon: '🌍', desc: 'Toute la communauté KAUREE' },
             { v: 'connexions', label: 'Mes connexions uniquement', icon: '🤝', desc: 'Personnes avec qui vous avez matché' },
             { v: 'personne', label: 'Personne', icon: '🔒', desc: 'Vous ne recevrez aucun message' },
           ].map(opt => (
@@ -713,7 +713,7 @@ export default function SocialProfilSetupScreen() {
             color: GOLD, fontSize: 11, fontWeight: 700,
             letterSpacing: '0.28em', textTransform: 'uppercase',
             margin: '0 0 10px',
-          }}>Hub Social · KAURI</p>
+          }}>Hub Social · KAUREE</p>
 
           <h1 style={{
             color: '#fff', fontSize: 28, fontWeight: 900,

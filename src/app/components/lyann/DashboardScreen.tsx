@@ -141,7 +141,7 @@ export function DashboardScreen() {
                 New
               </span>
             </div>
-            <h3 className="text-[#0F172A] mb-1">Fil KAURI</h3>
+            <h3 className="text-[#0F172A] mb-1">Fil KAUREE</h3>
             <p className="text-[#64748B] text-sm">Actualités communautaires et réussites financières</p>
           </button>
         </div>
@@ -157,7 +157,7 @@ export function DashboardScreen() {
               </svg>
             </div>
             <div>
-              <h4 className="text-white">Découvrez KAURI</h4>
+              <h4 className="text-white">Découvrez KAUREE</h4>
               <p className="text-white/80 text-xs">L'expérience complète diaspora</p>
             </div>
           </div>
@@ -165,7 +165,7 @@ export function DashboardScreen() {
             onClick={() => navigate('/kauri')}
             className="w-full bg-white text-[#006D77] py-3 rounded-xl text-sm"
           >
-            Explorer KAURI →
+            Explorer KAUREE →
           </button>
         </div>
 

@@ -54,7 +54,7 @@ export function SmartContractExplorerScreen() {
   const contractInfo = {
     address: '0x742d35Cc6634C0532925a3b844Bc9e3f9a',
     network: 'Ethereum Mainnet',
-    deployer: 'KAURI Protocol',
+    deployer: 'KAUREE Protocol',
     createdAt: '15 mars 2026',
     totalTransactions: 1247,
     totalValue: '€2,450,000',
@@ -195,7 +195,7 @@ export function SmartContractExplorerScreen() {
             Garantie de Transparence
           </h4>
           <p className="text-[#0369A1] text-sm leading-relaxed">
-            Toutes les transactions KAURI sont enregistrées sur la blockchain Ethereum, assurant
+            Toutes les transactions KAUREE sont enregistrées sur la blockchain Ethereum, assurant
             une traçabilité totale et immuable. Chaque mouvement de fonds est vérifiable
             publiquement.
           </p>

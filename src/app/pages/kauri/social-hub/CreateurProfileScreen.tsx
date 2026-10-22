@@ -68,7 +68,7 @@ const CREATORS: Record<string, {
     accountType: 'porteur',
     typeLabel: 'Porteur de projet · Agri-entrepreneur',
     typeColor: '#059669',
-    bio: "De Paris à la Martinique, j'ai créé ma ferme bio grâce à la communauté KAURI. Porteur de projet depuis 2022, je partage mon parcours en transparence.",
+    bio: "De Paris à la Martinique, j'ai créé ma ferme bio grâce à la communauté KAUREE. Porteur de projet depuis 2022, je partage mon parcours en transparence.",
     location: 'Martinique',
     followers: 22800,
     totalLikes: 145000,
@@ -117,7 +117,7 @@ const CREATORS: Record<string, {
     accountType: 'porteur',
     typeLabel: 'Porteur de projet · Startup Tech',
     typeColor: TEAL,
-    bio: "Co-fondateur d'une startup tech caribéenne. J'ai levé 50k€ via KAURI en 30 jours. Je partage mon playbook pour les entrepreneurs de la diaspora.",
+    bio: "Co-fondateur d'une startup tech caribéenne. J'ai levé 50k€ via KAUREE en 30 jours. Je partage mon playbook pour les entrepreneurs de la diaspora.",
     location: 'Guadeloupe · Londres',
     website: 'marcustech.dev',
     followers: 67300,
@@ -302,7 +302,7 @@ export default function CreateurProfileScreen() {
         {/* Trust score */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontSize: 12, color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Score de confiance KAURI</span>
+            <span style={{ fontSize: 12, color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Score de confiance KAUREE</span>
             <span style={{ fontSize: 12, color: GOLD, fontWeight: 700 }}>{creator.trustScore}/5</span>
           </div>
           <TrustScoreBar score={creator.trustScore} />

@@ -55,7 +55,7 @@ export function WalletCreationScreen() {
             {[
               { threshold: 30, label: 'Génération des clés de sécurité' },
               { threshold: 60, label: 'Configuration multi-devises (EUR, CAD, USD)' },
-              { threshold: 90, label: 'Activation du portefeuille KAURI' },
+              { threshold: 90, label: 'Activation du portefeuille KAUREE' },
             ].map(({ threshold, label }) => (
               <div key={label} className="flex items-center gap-3">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${progress >= threshold ? 'bg-[#D4AF37]' : 'bg-white/20'}`}>

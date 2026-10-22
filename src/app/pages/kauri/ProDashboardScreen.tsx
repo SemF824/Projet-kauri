@@ -156,7 +156,7 @@ function ProBottomNav({
     },
     {
       id: "kauri",
-      label: "Kauri",
+      label: "Kauree",
       path: "/kauri/pro-creer-tontine",
       isCenter: true,
     },
@@ -197,10 +197,10 @@ function ProBottomNav({
               >
                 <div className="w-[20px] h-[20px] invisible pointer-events-none" />
                 <span className="text-[10px] font-bold invisible select-none pointer-events-none">
-                  Kauri
+                  Kauree
                 </span>
                 <button
-                  aria-label="Kauri Pro"
+                  aria-label="Kauree Pro"
                   className="cursor-pointer border-none outline-none absolute pointer-events-none transition-all active:scale-90"
                   style={{
                     width: 54,
