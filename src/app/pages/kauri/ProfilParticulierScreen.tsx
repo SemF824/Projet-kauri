@@ -718,72 +718,83 @@ export function ProfilParticulierScreen() {
                 className="text-xs font-bold uppercase tracking-wider mb-3"
                 style={{ color: textS }}
               >
-                Paramètres de la carte
+                Moyens de paiement & Cartes
               </p>
               <div className="space-y-2.5">
-                {[
-                  {
-                    type: "Virtuelle",
-                    number: "**** 8762",
-                    expires: "12/27",
-                  },
-                  {
-                    type: "Physique",
-                    number: "**** 3421",
-                    expires: "08/28",
-                  },
-                ].map((card_) => (
-                  <button
-                    key={card_.number}
-                    onClick={() =>
-                      navigate("/kauri/portefeuille")
+                {(() => {
+                  let userCards: { type: string; number: string; expires: string }[] = [];
+                  try {
+                    const saved = profile?.preferences?.find((p: string) => p.startsWith("cards_json:"));
+                    if (saved) {
+                      const parsed = JSON.parse(saved.replace("cards_json:", ""));
+                      userCards = parsed.map((c: any) => ({
+                        type: c.type || "Bancaire",
+                        number: `•••• ${c.last4 || "0000"}`,
+                        expires: c.expires || "12/28",
+                      }));
                     }
-                    className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none"
-                    style={{
-                      backgroundColor: card,
-                      border: `1.5px solid ${border}`,
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center"
-                        style={{
-                          background: `linear-gradient(135deg, ${TEAL}, #0D9488)`,
-                        }}
-                      >
-                        <CreditCard
-                          style={{
-                            width: 18,
-                            height: 18,
-                            color: "#fff",
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <p
-                          className="text-sm font-medium"
-                          style={{ color: textP }}
-                        >
-                          Carte {card_.type}
-                        </p>
-                        <p
-                          className="text-xs"
-                          style={{ color: textS }}
-                        >
-                          {card_.number} · Expire{" "}
-                          {card_.expires}
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronRight
+                  } catch (_) {}
+
+                  if (userCards.length === 0) {
+                    userCards = [
+                      {
+                        type: "Virtuelle KAURI",
+                        number: `•••• ${profile?.id ? profile.id.slice(-4).toUpperCase() : "9820"}`,
+                        expires: "12/28",
+                      },
+                    ];
+                  }
+
+                  return userCards.map((card_) => (
+                    <button
+                      key={card_.number}
+                      onClick={() => navigate("/kauri/manage-account")}
+                      className="w-full rounded-2xl p-4 flex items-center justify-between cursor-pointer text-left border-none outline-none"
                       style={{
-                        width: 16,
-                        height: 16,
-                        color: inactive,
+                        backgroundColor: card,
+                        border: `1.5px solid ${border}`,
                       }}
-                    />
-                  </button>
-                ))}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center"
+                          style={{
+                            background: `linear-gradient(135deg, ${TEAL}, #0D9488)`,
+                          }}
+                        >
+                          <CreditCard
+                            style={{
+                              width: 18,
+                              height: 18,
+                              color: "#fff",
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <p
+                            className="text-sm font-medium"
+                            style={{ color: textP }}
+                          >
+                            Carte {card_.type}
+                          </p>
+                          <p
+                            className="text-xs"
+                            style={{ color: textS }}
+                          >
+                            {card_.number} · Expire {card_.expires}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight
+                        style={{
+                          width: 16,
+                          height: 16,
+                          color: inactive,
+                        }}
+                      />
+                    </button>
+                  ));
+                })()}
               </div>
             </div>
 

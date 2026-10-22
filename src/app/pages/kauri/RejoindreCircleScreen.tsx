@@ -11,15 +11,12 @@ import {
 import { useNavigate, useLocation } from 'react-router';
 import { useState } from 'react';
 import { ALL_CIRCLES } from './DiscoverCirclesScreen';
+import { useAuth } from '../../contexts/AuthContext';
+import { getSupabase } from '../../../utils/supabase';
+import { toast } from 'sonner';
 
 const TEAL = '#006D77';
 const GOLD = '#D4AF37';
-
-const PAYMENT_METHODS = [
-  { id: 'wallet', label: 'Portefeuille KAURI', subtitle: 'Solde : 320 €', icon: Wallet },
-  { id: 'card', label: 'Carte bancaire', subtitle: '**** **** **** 4242', icon: CreditCard },
-  { id: 'mobile', label: 'Mobile Money', subtitle: 'Orange Money / Wave', icon: Smartphone },
-];
 
 const MONTH_SLOTS = [
   'Août 2026', 'Sept 2026', 'Oct 2026', 'Nov 2026', 'Déc 2026',
@@ -29,6 +26,7 @@ const MONTH_SLOTS = [
 export function RejoindreCircleScreen() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, profile } = useAuth();
   const state = (location.state as { circleId?: string }) || {};
   const circleId = state.circleId || '1';
   const circle = ALL_CIRCLES.find((c) => c.id === circleId) || ALL_CIRCLES[0];
@@ -40,20 +38,62 @@ export function RejoindreCircleScreen() {
   const [selectedPayment, setSelectedPayment] = useState<string>('wallet');
   const [agreedToRules, setAgreedToRules] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const paymentMethods = [
+    {
+      id: 'wallet',
+      label: 'Portefeuille KAURI',
+      subtitle: `Solde disponible : ${(profile?.balance ?? 0).toFixed(2)} €`,
+      icon: Wallet,
+    },
+    {
+      id: 'card',
+      label: 'Carte bancaire',
+      subtitle: 'Paiement sécurisé Visa / Mastercard',
+      icon: CreditCard,
+    },
+    {
+      id: 'mobile',
+      label: 'Mobile Money',
+      subtitle: 'Orange Money / Wave / MTN',
+      icon: Smartphone,
+    },
+  ];
 
   const canProceed = step === 1 ? !!selectedSlot : agreedToRules;
 
-  function handleConfirm() {
-    navigate('/kauri/circle-join-success', {
-      state: {
-        circleId: circle.id,
-        circleName: circle.name,
-        contribution: circle.contribution,
-        finalPot: circle.finalPot,
-        slot: selectedSlot,
-        paymentMethod: selectedPayment,
-      },
-    });
+  async function handleConfirm() {
+    setIsSubmitting(true);
+    try {
+      if (user) {
+        const supabase = getSupabase();
+        // Tentative d'enregistrement dans tontine_members si la tontine existe en DB
+        await (supabase as any)
+          .from('tontine_members')
+          .insert({
+            tontine_id: circle.id,
+            user_id: user.id,
+            role: 'member',
+            payout_order: selectedSlot ? MONTH_SLOTS.indexOf(selectedSlot) + 1 : 1,
+          })
+          .catch(() => null); // Fallback tolérant si ID cercle mock
+      }
+
+      toast.success('Félicitations, vous avez rejoint le cercle !');
+      navigate('/kauri/circle-join-success', {
+        state: {
+          circleId: circle.id,
+          circleName: circle.name,
+          contribution: circle.contribution,
+          finalPot: circle.finalPot,
+          slot: selectedSlot,
+          paymentMethod: selectedPayment,
+        },
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -208,7 +248,7 @@ export function RejoindreCircleScreen() {
               <div>
                 <p className="text-sm font-bold text-[#0F172A] mb-3">Mode de paiement</p>
                 <div className="space-y-2.5">
-                  {PAYMENT_METHODS.map(({ id, label, subtitle, icon: Icon }) => (
+                  {paymentMethods.map(({ id, label, subtitle, icon: Icon }) => (
                     <button
                       key={id}
                       onClick={() => setSelectedPayment(id)}

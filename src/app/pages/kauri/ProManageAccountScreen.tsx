@@ -4,8 +4,10 @@ import {
   AlertTriangle, Pencil, Lock, Sliders, Webhook, Key, Upload
 } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useDarkMode } from '../../contexts/DarkModeContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { getSupabase } from '../../../utils/supabase';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Panel =
@@ -36,6 +38,8 @@ const DEFAULT_DOCS = [
 export function ProManageAccountScreen() {
   const navigate  = useNavigate();
   const { isDarkMode } = useDarkMode();
+  const { user, profile, refreshProfile } = useAuth();
+  const supabase = getSupabase();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [panel,       setPanel]       = useState<Panel>(null);
@@ -44,8 +48,14 @@ export function ProManageAccountScreen() {
   const [docs,        setDocs]        = useState(DEFAULT_DOCS);
 
   // Raison sociale
-  const [raisonSociale, setRaisonSociale] = useState('SARL Innovation Caraïbes');
+  const [raisonSociale, setRaisonSociale] = useState(profile?.businessName || profile?.dirigeant || 'SARL Innovation Caraïbes');
   const [raisonDraft,   setRaisonDraft]   = useState('');
+
+  useEffect(() => {
+    if (profile?.businessName) {
+      setRaisonSociale(profile.businessName);
+    }
+  }, [profile]);
 
   // Multi-sig
   const [seuilMultiSig, setSeuilMultiSig] = useState(10000);
@@ -162,7 +172,7 @@ export function ProManageAccountScreen() {
                 </div>
                 <div>
                   <p className={`font-semibold text-sm ${txt}`}>Carte Business</p>
-                  <p className={`text-xs ${sub}`}>**** **** **** 5678</p>
+                  <p className={`text-xs ${sub}`}>•••• •••• •••• {profile?.id ? profile.id.slice(-4).toUpperCase() : 'PRO1'}</p>
                 </div>
               </div>
               <span className="text-xs font-medium px-2.5 py-1 bg-[#D1FAE5] text-[#059669] rounded-full">Active</span>
@@ -350,9 +360,9 @@ export function ProManageAccountScreen() {
                   <CreditCard className="w-5 h-5 text-white" />
                 </div>
               </div>
-              <p className="font-mono text-lg tracking-widest text-white/70">•••• •••• •••• ????</p>
+              <p className="font-mono text-lg tracking-widest text-white/70">•••• •••• •••• {profile?.id ? profile.id.slice(-4).toUpperCase() : 'PRO1'}</p>
               <div className="flex justify-between mt-4 text-xs text-white/50">
-                <span>Marie Céleste</span>
+                <span>{profile?.dirigeant || `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || 'Dirigeant'}</span>
                 <span>Mastercard Business</span>
               </div>
             </div>

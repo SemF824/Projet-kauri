@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getSupabase } from '../../utils/supabase';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
+import { toast } from 'sonner';
 
 export function ProjectCrowdfundingScreen() {
   const navigate = useNavigate();
@@ -50,7 +51,9 @@ export function ProjectCrowdfundingScreen() {
     if (!user || !profile) return;
 
     if (profile.balance < project.minInvestment) {
-      alert(`Solde insuffisant pour investir le montant minimum de ${project.minInvestment} €. Veuillez recharger votre portefeuille.`);
+      toast.error("Solde insuffisant", {
+        description: `Il vous faut au moins ${project.minInvestment} € pour investir. Veuillez recharger votre portefeuille.`,
+      });
       return;
     }
 
@@ -109,10 +112,15 @@ export function ProjectCrowdfundingScreen() {
       // 2. Rafraîchir les données de session du profile
       await refreshProfile();
 
+      toast.success("Investissement confirmé !", {
+        description: `Vous avez investi ${project.minInvestment} € dans le projet ${project.name} avec succès.`,
+      });
       setSuccessMsg(`Félicitations ! Vous avez investi ${project.minInvestment} € dans le projet ${project.name} avec succès.`);
     } catch (err) {
       console.error("Erreur d'investissement:", err);
-      alert("Une erreur s'est produite lors de l'enregistrement de l'investissement.");
+      toast.error("Échec de l'investissement", {
+        description: "Une erreur s'est produite lors de l'enregistrement de l'investissement.",
+      });
     } finally {
       setIsInvesting(false);
     }
