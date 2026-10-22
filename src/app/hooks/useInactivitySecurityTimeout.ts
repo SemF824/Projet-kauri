@@ -11,6 +11,7 @@ const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes d'inactivité avant 
 export function useInactivitySecurityTimeout() {
   const navigate = useNavigate();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
 
   const resetTimer = () => {
     if (timerRef.current) {
@@ -44,13 +45,18 @@ export function useInactivitySecurityTimeout() {
       "touchstart",
     ];
 
+    // Throttle l'enregistrement d'activité toutes les 10 secondes pour éviter de surcharger le processeur
     const handleUserActivity = () => {
-      resetTimer();
+      const now = Date.now();
+      if (now - lastActivityRef.current > 10000) {
+        lastActivityRef.current = now;
+        resetTimer();
+      }
     };
 
     // Démarrer l'écoute des événements
     events.forEach((event) => {
-      window.addEventListener(event, handleUserActivity);
+      window.addEventListener(event, handleUserActivity, { passive: true });
     });
 
     // Initialiser le timer

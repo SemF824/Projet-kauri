@@ -1,3 +1,4 @@
+import React, { Suspense, lazy } from "react";
 import {
   createBrowserRouter,
   Navigate,
@@ -7,6 +8,7 @@ import {
 } from "react-router";
 import { MainLayout } from "./layouts/MainLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import { AccountTypeGuard } from "./components/AccountTypeGuard";
 import { OnboardingWrapper } from "./components/OnboardingWrapper";
 import { DashboardScreen } from "./components/lyann/DashboardScreen";
@@ -24,7 +26,6 @@ import { SwapMarketplaceScreen } from "./pages/SwapMarketplaceScreen";
 import { InvestorAcademyScreen } from "./pages/InvestorAcademyScreen";
 import { ProjectCrowdfundingScreen } from "./pages/ProjectCrowdfundingScreen";
 import { AccountTypeSelectionScreen } from "./pages/kauri/AccountTypeSelectionScreen";
-import { KYCVerificationScreen } from "./pages/kauri/KYCVerificationScreen";
 import { BiometricSetupScreen } from "./pages/kauri/BiometricSetupScreen";
 import { ProBusinessVerificationScreen } from "./pages/kauri/ProBusinessVerificationScreen";
 import { WalletCreationScreen } from "./pages/kauri/WalletCreationScreen";
@@ -36,11 +37,7 @@ import { PotCommunScreen } from "./pages/kauri/PotCommunScreen";
 import { ProProjectFormScreen } from "./pages/kauri/ProProjectFormScreen";
 import { SuspendedAccountScreen } from "./pages/kauri/SuspendedAccountScreen";
 import { MultiSignatureValidationScreen } from "./pages/kauri/MultiSignatureValidationScreen";
-import { AnimatedIconsDemoScreen } from "./pages/kauri/AnimatedIconsDemoScreen";
 import { TrustScoreIntroScreen } from "./pages/kauri/TrustScoreIntroScreen";
-import { SmartContractExplorerScreen } from "./pages/kauri/SmartContractExplorerScreen";
-import { MediationSystemScreen } from "./pages/kauri/MediationSystemScreen";
-import { DesignSystemDemo } from "./pages/kauri/DesignSystemDemo";
 import { KauriLoginScreen } from "./pages/kauri/KauriLoginScreen";
 import { SplashScreen } from "./pages/kauri/SplashScreen";
 import { NotificationsScreen } from "./pages/kauri/NotificationsScreen";
@@ -108,12 +105,33 @@ import { RejoindreCircleScreen } from "./pages/kauri/RejoindreCircleScreen";
 import { CircleJoinSuccessScreen } from "./pages/kauri/CircleJoinSuccessScreen";
 import { ProCreerTontineScreen } from "./pages/kauri/ProCreerTontineScreen";
 import { BadgesScreen } from "./pages/kauri/BadgesScreen";
-import { Setup2FAScreen } from "./pages/kauri/Setup2FAScreen";
-import { KYCAdminDashboardScreen } from "./pages/kauri/admin/KYCAdminDashboardScreen";
-import ModerationAdminDashboard from "./pages/kauri/admin/ModerationAdminDashboard";
 import { useAuth } from "./contexts/AuthContext";
 import { useInactivitySecurityTimeout } from "./hooks/useInactivitySecurityTimeout";
 import { Lock, ShieldAlert, ArrowRight, User as UserIcon } from "lucide-react";
+
+// ── ⚡ COMPOSANTS CHARGÉS EN LAZY-LOADING POUR ALLÉGER LE BUNDLE INITIAL ──
+const KYCVerificationScreen = lazy(() => import("./pages/kauri/KYCVerificationScreen").then(m => ({ default: m.KYCVerificationScreen })));
+const Setup2FAScreen = lazy(() => import("./pages/kauri/Setup2FAScreen").then(m => ({ default: m.Setup2FAScreen })));
+const AnimatedIconsDemoScreen = lazy(() => import("./pages/kauri/AnimatedIconsDemoScreen").then(m => ({ default: m.AnimatedIconsDemoScreen })));
+const SmartContractExplorerScreen = lazy(() => import("./pages/kauri/SmartContractExplorerScreen").then(m => ({ default: m.SmartContractExplorerScreen })));
+const MediationSystemScreen = lazy(() => import("./pages/kauri/MediationSystemScreen").then(m => ({ default: m.MediationSystemScreen })));
+const DesignSystemDemo = lazy(() => import("./pages/kauri/DesignSystemDemo").then(m => ({ default: m.DesignSystemDemo })));
+const KYCAdminDashboardScreen = lazy(() => import("./pages/kauri/admin/KYCAdminDashboardScreen").then(m => ({ default: m.KYCAdminDashboardScreen })));
+const ModerationAdminDashboard = lazy(() => import("./pages/kauri/admin/ModerationAdminDashboard"));
+
+function LazyRoute({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#0F172A]">
+          <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[#006D77] animate-spin" />
+        </div>
+      }
+    >
+      {children}
+    </Suspense>
+  );
+}
 
 // ── 🎯 ECOUTEUR ET BARRIÈRE DE PROTECTION FINANCIÈRE GLOBAL ──
 function KauriKYCGuardLayout() {
@@ -335,7 +353,9 @@ export const router = createBrowserRouter([
             path: "kyc-verification",
             element: (
               <ProtectedRoute>
-                <KYCVerificationScreen />
+                <LazyRoute>
+                  <KYCVerificationScreen />
+                </LazyRoute>
               </ProtectedRoute>
             ),
           },
@@ -367,7 +387,9 @@ export const router = createBrowserRouter([
             path: "setup-2fa",
             element: (
               <ProtectedRoute>
-                <Setup2FAScreen />
+                <LazyRoute>
+                  <Setup2FAScreen />
+                </LazyRoute>
               </ProtectedRoute>
             ),
           },
@@ -993,7 +1015,9 @@ export const router = createBrowserRouter([
             path: "animated-icons",
             element: (
               <ProtectedRoute>
-                <AnimatedIconsDemoScreen />
+                <LazyRoute>
+                  <AnimatedIconsDemoScreen />
+                </LazyRoute>
               </ProtectedRoute>
             ),
           },
@@ -1017,7 +1041,9 @@ export const router = createBrowserRouter([
             path: "smart-contract-explorer",
             element: (
               <ProtectedRoute>
-                <SmartContractExplorerScreen />
+                <LazyRoute>
+                  <SmartContractExplorerScreen />
+                </LazyRoute>
               </ProtectedRoute>
             ),
           },
@@ -1025,7 +1051,9 @@ export const router = createBrowserRouter([
             path: "mediation-system",
             element: (
               <ProtectedRoute>
-                <MediationSystemScreen />
+                <LazyRoute>
+                  <MediationSystemScreen />
+                </LazyRoute>
               </ProtectedRoute>
             ),
           },
@@ -1033,7 +1061,9 @@ export const router = createBrowserRouter([
             path: "design-system",
             element: (
               <ProtectedRoute>
-                <DesignSystemDemo />
+                <LazyRoute>
+                  <DesignSystemDemo />
+                </LazyRoute>
               </ProtectedRoute>
             ),
           },
@@ -1044,17 +1074,21 @@ export const router = createBrowserRouter([
   {
     path: "/kauri/admin/kyc",
     element: (
-      <ProtectedRoute>
-        <KYCAdminDashboardScreen />
-      </ProtectedRoute>
+      <AdminRoute>
+        <LazyRoute>
+          <KYCAdminDashboardScreen />
+        </LazyRoute>
+      </AdminRoute>
     ),
   },
   {
     path: "/kauri/admin/moderation",
     element: (
-      <ProtectedRoute>
-        <ModerationAdminDashboard />
-      </ProtectedRoute>
+      <AdminRoute>
+        <LazyRoute>
+          <ModerationAdminDashboard />
+        </LazyRoute>
+      </AdminRoute>
     ),
   },
   {

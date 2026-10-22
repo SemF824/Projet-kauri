@@ -215,31 +215,95 @@ app.post("/make-server-3612691c/wallet/send", async (c) => {
   if (!user) return c.json({ error: "Unauthorized" }, 401);
 
   try {
-    const { amount, recipient, description = "Virement" } = await c.req.json();
-    if (!amount || amount <= 0) return c.json({ error: "Invalid amount" }, 400);
+    const { amount, recipient, description = "Virement", pin } = await c.req.json();
+    const numAmount = Number(amount);
+    if (!numAmount || numAmount <= 0) return c.json({ error: "Invalid amount" }, 400);
 
+    const supabase = serviceClient();
+
+    // 1. Vérification dans la table relationnelle PostgreSQL wallets
+    const { data: senderWallet, error: fetchErr } = await supabase
+      .from("wallets")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const currentBalance = senderWallet ? Number(senderWallet.balance_eur) : 0;
+    if (currentBalance < numAmount) {
+      return c.json({ error: "Solde insuffisant" }, 400);
+    }
+
+    // 2. Débit de l'expéditeur
+    const newSenderBalance = Math.round((currentBalance - numAmount) * 100) / 100;
+    await supabase
+      .from("wallets")
+      .update({ balance_eur: newSenderBalance, updated_at: new Date().toISOString() })
+      .eq("user_id", user.id);
+
+    // 3. Enregistrement transaction débit
+    await supabase.from("transactions").insert({
+      user_id: user.id,
+      amount: numAmount,
+      currency: "EUR",
+      type: "transfer",
+      description: `${description}${recipient ? ` → ${recipient}` : ""}`,
+      status: "completed",
+    });
+
+    // 4. Recherche et crédit du destinataire s'il existe
+    if (recipient) {
+      const cleanPhone = recipient.replace(/[\s\-\(\)]/g, "");
+      const { data: recipientProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .or(`id.eq.${recipient},phone_number.eq.${cleanPhone},full_name.ilike.%${recipient}%`)
+        .limit(1)
+        .maybeSingle();
+
+      if (recipientProfile?.id) {
+        const { data: recipientWallet } = await supabase
+          .from("wallets")
+          .select("*")
+          .eq("user_id", recipientProfile.id)
+          .maybeSingle();
+
+        if (recipientWallet) {
+          const newRecipientBalance = Math.round((Number(recipientWallet.balance_eur) + numAmount) * 100) / 100;
+          await supabase
+            .from("wallets")
+            .update({ balance_eur: newRecipientBalance, updated_at: new Date().toISOString() })
+            .eq("user_id", recipientProfile.id);
+
+          await supabase.from("transactions").insert({
+            user_id: recipientProfile.id,
+            amount: numAmount,
+            currency: "EUR",
+            type: "transfer",
+            description: `Reçu de ${user.email || "Membre Kauri"}`,
+            status: "completed",
+          });
+        }
+      }
+    }
+
+    // Mise à jour de synchronisation KV store pour compatibilité existante
     const wallet = await kv.get(`user:${user.id}:wallet`) || { balance: 0, currency: "EUR", transactions: [] };
-    if ((wallet.balance || 0) < amount) return c.json({ error: "Solde insuffisant" }, 400);
-
-    wallet.balance -= amount;
+    wallet.balance = newSenderBalance;
     wallet.transactions = [
       {
         id: uid(),
         type: "debit",
-        amount,
+        amount: numAmount,
         description: `${description}${recipient ? ` → ${recipient}` : ""}`,
         date: new Date().toISOString(),
       },
       ...(wallet.transactions || []).slice(0, 49),
     ];
-
     await kv.set(`user:${user.id}:wallet`, wallet);
-    const profile = await kv.get(`user:${user.id}:profile`) || {};
-    profile.balance = wallet.balance;
-    await kv.set(`user:${user.id}:profile`, profile);
 
-    return c.json(wallet);
+    return c.json({ success: true, balance: newSenderBalance, wallet });
   } catch (e) {
+    console.error("Wallet send error:", e);
     return c.json({ error: `Send failed: ${e}` }, 500);
   }
 });

@@ -116,7 +116,8 @@ export function KauriLoginScreen() {
       await signIn(email.trim(), password);
 
       localStorage.setItem("kauri_rememberED_email", email.trim());
-      localStorage.setItem(`kauri_token_vault_${email.trim()}`, btoa(password));
+      // Sécurité : suppression des reliquats de mots de passe stockés en clair/base64
+      localStorage.removeItem(`kauri_token_vault_${email.trim()}`);
     } catch (e: any) {
       console.error("Login error:", e);
       if (e.message === "EMAIL_NOT_CONFIRMED_OR_WRONG_CREDS") {
@@ -144,22 +145,13 @@ export function KauriLoginScreen() {
       return;
     }
 
-    const encryptedSecret = localStorage.getItem(
-      `kauri_token_vault_${targetEmail}`,
-    );
-    if (!encryptedSecret) {
-      setError(
-        "Aucune clé locale n'est disponible. Connectez-vous une première fois manuellement.",
-      );
-      return;
-    }
-
     setIsBioLoading(true);
 
     try {
-      const challenge = crypto.getRandomValues(
-        new Uint8Array(32),
-      );
+      // Nettoyage de tout token vault base64 résiduel
+      localStorage.removeItem(`kauri_token_vault_${targetEmail}`);
+
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
       const options: CredentialRequestOptions = {
         publicKey: {
           challenge,
@@ -169,25 +161,31 @@ export function KauriLoginScreen() {
         },
       };
 
-      const assertion =
-        await navigator.credentials.get(options);
+      const assertion = await navigator.credentials.get(options);
 
       if (!assertion) {
         throw new Error("Authentification matérielle refusée.");
       }
 
-      const decryptedPassword = atob(encryptedSecret);
-      toast.success(
-        "Clé d’accès vérifiée via Face ID / Touch ID",
-      );
+      // Vérifier si une session Supabase active existe déjà pour ce compte
+      const supabase = getSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
 
-      await signIn(targetEmail, decryptedPassword);
+      if (session && session.user.email?.toLowerCase() === targetEmail.toLowerCase()) {
+        toast.success("Authentification biométrique réussie.");
+        navigate(profile?.accountType === "professionnel" ? "/kauri/pro-dashboard" : "/kauri/normal-dashboard");
+      } else {
+        // Pour des raisons de sécurité, si aucune session active n'est enregistrée, demander la saisie du mot de passe
+        toast.info("Veuillez saisir votre mot de passe pour renouveler la session sécurisée.");
+        setStep("email");
+        setEmail(targetEmail);
+      }
     } catch (e: any) {
-      console.error("Biometric authentication crash:", e);
+      console.error("Biometric authentication error:", e);
       setError(
         "Vérification biométrique annulée ou clé d'accès introuvable.",
       );
-      toast.error("Authentification biométrique échouée");
+      toast.error("Authentification biométrique annulée");
     } finally {
       setIsBioLoading(false);
     }

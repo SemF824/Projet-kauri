@@ -34,7 +34,7 @@ export function TransferConfirmScreen() {
     .toUpperCase()
     .slice(0, 2);
 
-  const { refreshProfile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
 
   const handleDigit = (d: string) => {
     if (pinDigits.length >= 4) return;
@@ -52,32 +52,46 @@ export function TransferConfirmScreen() {
   };
 
   const confirmTransfer = async (pin: string) => {
-    // Validate PIN has at least 4 digits (any digits accepted, real PIN stored in Supabase auth)
-    if (pin.length < 4) {
+    if (pin.length !== 4) {
       setPinError(true);
       setPinDigits([]);
       return;
     }
     setIsConfirming(true);
     try {
-      const headers = await authHeaders();
-      const res = await fetch(`${SERVER_URL}/wallet/send`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          amount: parseFloat(amount),
-          recipient,
-          description: message || `Virement à ${recipient}`,
-        }),
+      const supabase = (await import('../../../utils/supabase')).getSupabase();
+      const sendAmount = parseFloat(amount);
+
+      // 1. Tenter l'exécution sécurisée par RPC PostgreSQL dans Supabase
+      const { data: rpcRes, error: rpcErr } = await (supabase as any).rpc('process_wallet_transfer', {
+        p_recipient_identifier: recipient,
+        p_amount: sendAmount,
+        p_description: message || `Virement à ${recipient}`,
+        p_pin: pin,
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        setPinError(true);
-        setPinDigits([]);
-        setIsConfirming(false);
-        console.error('Transfer error:', data.error);
-        return;
+      if (rpcErr) {
+        // Fallback vers Edge Function avec transmission du PIN pour vérification
+        const headers = await authHeaders();
+        const res = await fetch(`${SERVER_URL}/wallet/send`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            amount: sendAmount,
+            recipient,
+            pin,
+            description: message || `Virement à ${recipient}`,
+          }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          setPinError(true);
+          setPinDigits([]);
+          setIsConfirming(false);
+          console.error('Transfer error:', data.error);
+          return;
+        }
       }
 
       await refreshProfile();

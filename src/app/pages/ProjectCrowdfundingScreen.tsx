@@ -58,32 +58,55 @@ export function ProjectCrowdfundingScreen() {
     try {
       const supabase = getSupabase();
 
-      // 1. Débiter le wallet de l'utilisateur
-      const { error: walletErr } = await supabase
-        .from('wallets')
-        .update({
-          balance_eur: profile.balance - project.minInvestment,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id);
+      // 1. Tenter d'exécuter la procédure stockée sécurisée côté PostgreSQL (Atomic RPC)
+      const { data: rpcSuccess, error: rpcErr } = await (supabase as any).rpc('invest_in_rwa_project', {
+        p_project_name: project.name,
+        p_sector_id: project.category || 'general',
+        p_sub_sector: 'RWA Crowdfunding',
+        p_amount: project.minInvestment,
+      });
 
-      if (walletErr) throw walletErr;
+      if (rpcErr) {
+        // Fallback transactionnel standard
+        // A. Débiter le wallet de l'utilisateur
+        const { error: walletErr } = await supabase
+          .from('wallets')
+          .update({
+            balance_eur: profile.balance - project.minInvestment,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id);
 
-      // 2. Enregistrer la transaction de type 'withdrawal' avec libellé investissement
-      const { error: txErr } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          amount: project.minInvestment,
-          currency: 'EUR',
-          type: 'withdrawal',
-          description: `Investissement RWA - ${project.name}`,
-          status: 'completed',
-        });
+        if (walletErr) throw walletErr;
 
-      if (txErr) throw txErr;
+        // B. Enregistrer la transaction
+        const { error: txErr } = await supabase
+          .from('transactions')
+          .insert({
+            user_id: user.id,
+            amount: project.minInvestment,
+            currency: 'EUR',
+            type: 'withdrawal',
+            description: `Investissement RWA - ${project.name}`,
+            status: 'completed',
+          });
 
-      // 3. Rafraîchir les données de session du profile
+        if (txErr) throw txErr;
+
+        // C. Enregistrer l'investissement dans rwa_investments
+        await (supabase as any)
+          .from('rwa_investments')
+          .insert({
+            user_id: user.id,
+            name: project.name,
+            sector_id: project.category || 'general',
+            sub_sector: 'RWA Crowdfunding',
+            amount: project.minInvestment,
+            status: 'En cours',
+          });
+      }
+
+      // 2. Rafraîchir les données de session du profile
       await refreshProfile();
 
       setSuccessMsg(`Félicitations ! Vous avez investi ${project.minInvestment} € dans le projet ${project.name} avec succès.`);

@@ -74,7 +74,7 @@ export async function authHeaders(): Promise<Record<string, string>> {
     data: { session },
   } = await supabase.auth.getSession();
   const token =
-    session?.access_token ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    session?.access_token ?? SUPABASE_ANON_KEY;
   return {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
