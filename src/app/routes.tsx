@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import {
   createBrowserRouter,
   Navigate,
@@ -141,6 +141,29 @@ function KauriKYCGuardLayout() {
 
   // Verrouillage proactif contre le vol d'appareil ou l'inactivité prolongée
   useInactivitySecurityTimeout();
+
+  // ── 🔝 ANCRAGE SYSTÉMATIQUE TOUT EN HAUT DE PAGE SUR CHAQUE ÉCRAN ──
+  useEffect(() => {
+    // 1. Fenêtre principale
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    // 2. Éléments racine HTML & BODY
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    // 3. Tous conteneurs scrollables internes
+    const scrollContainers = document.querySelectorAll(
+      '[data-scroll-container="true"], .overflow-y-auto, .overflow-y-scroll, main'
+    );
+    scrollContainers.forEach((el) => {
+      el.scrollTop = 0;
+    });
+    // 4. Double passe après le rendu du DOM pour les contenus dynamiques
+    const rafId = requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [location.pathname]);
 
   if (loading) {
     return (

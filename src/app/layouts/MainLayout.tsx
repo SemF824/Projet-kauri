@@ -193,10 +193,10 @@ export function KauriBottomNav() {
   const tabs = [
     {
       id: "accueil",
-      label: "Home",
+      label: "Accueil",
       icon: LayoutDashboard,
       target: currentPath.includes("/kauri/")
-        ? "/kauri/normal-dashboard"
+        ? isPro ? "/kauri/pro-dashboard" : "/kauri/normal-dashboard"
         : "/dashboard",
     },
     {
@@ -223,7 +223,7 @@ export function KauriBottomNav() {
     },
     {
       id: "profil",
-      label: "Profile",
+      label: "Profil",
       icon: User,
       target: currentPath.includes("/kauri/")
         ? isPro ? "/kauri/profil-pro" : "/kauri/profil-particulier"
@@ -378,31 +378,32 @@ export function KauriBottomNav() {
         }}
       >
         <div className="grid grid-cols-5 items-center relative w-full">
-          {/* ── CAPSULE GLISSANTE FLUIDE (SLIDING LIQUID GLASS PILL - 120 FPS) ── */}
+          {/* ── CAPSULE GLISSANTE FLUIDE (SLIDING LIQUID GLASS PILL) ── */}
           <div
-            className="absolute top-0 bottom-0 pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] px-1 py-0.5"
+            className="absolute top-0 bottom-0 pointer-events-none transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
             style={{
               width: "20%",
               left: 0,
               transform: `translateX(${displayedIndex * 100}%)`,
               opacity: tabs[displayedIndex]?.isCenter ? 0 : 1,
               zIndex: 1,
+              padding: "4px 6px",
             }}
           >
             <div
               className="w-full h-full rounded-2xl"
               style={{
                 background: isDarkMode
-                  ? "linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.08) 100%)"
-                  : "linear-gradient(135deg, rgba(10, 92, 122, 0.14) 0%, rgba(10, 92, 122, 0.06) 100%)",
-                backdropFilter: "blur(14px) saturate(180%)",
-                WebkitBackdropFilter: "blur(14px) saturate(180%)",
+                  ? "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 100%)"
+                  : "linear-gradient(135deg, rgba(10, 92, 122, 0.12) 0%, rgba(10, 92, 122, 0.05) 100%)",
+                backdropFilter: "blur(10px)",
+                WebkitBackdropFilter: "blur(10px)",
                 boxShadow: isDarkMode
-                  ? "inset 0 1px 1px rgba(255,255,255,0.22), 0 3px 10px rgba(0,0,0,0.3)"
-                  : "inset 0 1px 1.5px rgba(255,255,255,0.9), 0 3px 10px rgba(10,92,122,0.12)",
+                  ? "inset 0 1px 1px rgba(255,255,255,0.18), 0 2px 6px rgba(0,0,0,0.25)"
+                  : "inset 0 1px 1px rgba(255,255,255,0.85), 0 2px 6px rgba(10,92,122,0.08)",
                 border: isDarkMode
-                  ? "1px solid rgba(255,255,255,0.18)"
-                  : "1px solid rgba(255,255,255,0.85)",
+                  ? "1px solid rgba(255, 255, 255, 0.14)"
+                  : "1px solid rgba(10, 92, 122, 0.14)",
               }}
             />
           </div>
@@ -569,7 +570,7 @@ export function KauriBottomNav() {
                 <div
                   className="flex flex-col items-center gap-1 pointer-events-none transition-transform duration-200"
                   style={{
-                    transform: isActive ? "scale(1.08)" : "scale(1)",
+                    transform: isActive ? "scale(1.02)" : "scale(1)",
                   }}
                 >
                   {tab.id === "social" ? (
@@ -637,6 +638,8 @@ export function MainLayout() {
   // Scroll systématique en haut de page à chaque changement de route
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
   }, [pathname]);
 
   return (
