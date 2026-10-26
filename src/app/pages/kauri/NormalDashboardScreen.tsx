@@ -251,13 +251,13 @@ export function NormalDashboardScreen() {
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <h2
-                    className={`text-base font-extrabold truncate leading-tight font-serif tracking-tight ${
+                    className={`text-base font-extrabold truncate leading-tight ${
                       isDarkMode ? "text-white" : "text-[#0F172A]"
                     }`}
                   >
                     Bonjour, {firstName}
                   </h2>
-                  <span className="px-2 py-0.5 rounded-full bg-[#F5EFE3] text-[#0a5c7a] dark:bg-slate-800 dark:text-[#D4AF37] border border-[#D4AF37]/40 text-[10px] font-black inline-flex items-center gap-1 shrink-0 shadow-xs">
+                  <span className="px-2 py-0.5 rounded-full bg-[#F5EFE3] text-[#0a5c7a] dark:bg-slate-800 dark:text-[#D4AF37] border border-[#D4AF37]/40 text-[10px] font-bold inline-flex items-center gap-1 shrink-0 shadow-xs">
                     <Crown className="w-3 h-3 text-[#D4AF37]" />
                     {userStatus}
                   </span>
@@ -348,10 +348,10 @@ export function NormalDashboardScreen() {
                 </button>
               </div>
 
-              <h1 className="text-white text-3xl sm:text-4xl mb-5 font-black tracking-tight font-serif">
+              <h1 className="text-white text-3xl mb-4 font-black tracking-tight">
                 {balanceVisible
                   ? `${totalCombinedWealth.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`
-                  : "••••••"}
+                  : "*****"}
               </h1>
 
               <div className="grid grid-cols-2 gap-3">
@@ -426,7 +426,7 @@ export function NormalDashboardScreen() {
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <p
-                      className={`text-base font-extrabold font-serif ${
+                      className={`text-xl font-bold ${
                         isDarkMode ? "text-white" : "text-[#0F172A]"
                       }`}
                     >
@@ -435,11 +435,11 @@ export function NormalDashboardScreen() {
                   </div>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  <p className="text-xs font-medium text-slate-500">
                     Trust Score
                   </p>
                   <p
-                    className={`text-base font-black truncate font-serif ${
+                    className={`text-lg font-bold truncate ${
                       isDarkMode ? "text-white" : "text-[#0F172A]"
                     }`}
                   >
@@ -461,11 +461,11 @@ export function NormalDashboardScreen() {
                   <Flame className="w-6 h-6 text-[#D4AF37]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  <p className="text-xs font-medium text-slate-500">
                     Série Active
                   </p>
                   <p
-                    className={`text-base font-black truncate font-serif ${
+                    className={`text-lg font-bold truncate ${
                       isDarkMode ? "text-white" : "text-[#0F172A]"
                     }`}
                   >
@@ -491,7 +491,7 @@ export function NormalDashboardScreen() {
               />
               <div>
                 <p
-                  className={`text-sm font-bold mb-0.5 font-serif ${
+                  className={`text-sm font-bold mb-1 ${
                     isDarkMode ? "text-white" : "text-[#0F172A]"
                   }`}
                 >
@@ -551,7 +551,7 @@ export function NormalDashboardScreen() {
                   Guide rapide
                 </span>
                 <h4
-                  className={`text-sm font-black font-serif ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
+                  className={`text-sm font-black ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
                 >
                   Comment fonctionne la Tontine KAUREE ?
                 </h4>
@@ -572,7 +572,7 @@ export function NormalDashboardScreen() {
 
           <div>
             <h3
-              className={`mb-4 flex items-center gap-2 font-bold font-serif ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
+              className={`mb-4 flex items-center gap-2 font-bold ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
             >
               <div className="w-1.5 h-5 bg-[#D4AF37] rounded-full"></div>
               Tableau de bord

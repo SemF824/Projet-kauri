@@ -387,10 +387,10 @@ export function KauriLoginScreen() {
               <div className="flex flex-col">
                 <div className="text-center mb-5">
                   <h2
-                    className="mb-1 font-serif"
+                    className="mb-1"
                     style={{
                       color: "#0F172A",
-                      fontSize: "1.45rem",
+                      fontSize: "1.4rem",
                       fontWeight: 700,
                     }}
                   >
