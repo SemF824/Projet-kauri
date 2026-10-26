@@ -131,7 +131,7 @@ export function KauriBottomNav() {
     isPro = false;
   }
 
-  const activeColor = "#0D9488";
+  const activeColor = "#0a5c7a";
   const inactiveColor = "#94A3B8";
 
   const bg = isDarkMode
@@ -348,7 +348,7 @@ export function KauriBottomNav() {
             : "1px solid rgba(255, 255, 255, 0.65)",
           boxShadow: isDarkMode
             ? "0 24px 48px -12px rgba(0, 0, 0, 0.75), inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.22), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4)"
-            : "0 20px 40px -10px rgba(0, 109, 119, 0.14), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.04)",
+            : "0 20px 40px -10px rgba(10, 92, 122, 0.16), inset 0 1px 2px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.04)",
           WebkitUserSelect: "none",
         }}
         onTouchStart={(e) => {
@@ -383,12 +383,12 @@ export function KauriBottomNav() {
               style={{
                 background: isDarkMode
                   ? "linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.08) 100%)"
-                  : "linear-gradient(135deg, rgba(0, 109, 119, 0.14) 0%, rgba(0, 109, 119, 0.07) 100%)",
+                  : "linear-gradient(135deg, rgba(10, 92, 122, 0.14) 0%, rgba(10, 92, 122, 0.06) 100%)",
                 backdropFilter: "blur(14px) saturate(180%)",
                 WebkitBackdropFilter: "blur(14px) saturate(180%)",
                 boxShadow: isDarkMode
                   ? "inset 0 1px 1px rgba(255,255,255,0.22), 0 3px 10px rgba(0,0,0,0.3)"
-                  : "inset 0 1px 1.5px rgba(255,255,255,0.9), 0 3px 10px rgba(0,109,119,0.12)",
+                  : "inset 0 1px 1.5px rgba(255,255,255,0.9), 0 3px 10px rgba(10,92,122,0.12)",
                 border: isDarkMode
                   ? "1px solid rgba(255,255,255,0.18)"
                   : "1px solid rgba(255,255,255,0.85)",
@@ -419,27 +419,28 @@ export function KauriBottomNav() {
                     Tontines
                   </span>
 
+                  {/* ── FORME PROPRIÉTAIRE INSPIRÉE DU COQUILLAGE KAURI (SILHOUETTE GALBÉE ORGANIQUE) ── */}
                   <button
                     className="cursor-pointer border-none outline-none absolute pointer-events-none transition-transform active:scale-90"
                     style={{
                       width: 52,
-                      height: 52,
-                      borderRadius: "50%",
+                      height: 56,
+                      borderRadius: "48% 48% 45% 45% / 58% 58% 42% 42%",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      top: -8,
+                      top: -10,
                       left: "50%",
                       transform: `translateX(-50%) ${isActive ? "scale(1.08)" : "scale(1)"}`,
                       transition:
                         "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
                       boxShadow:
-                        "0 8px 20px rgba(212,175,55,0.38), 0 3px 6px rgba(0,0,0,0.12)",
+                        "0 10px 24px rgba(212,175,55,0.45), 0 4px 10px rgba(10,92,122,0.22)",
                       border: isActive
-                        ? "2.5px solid #ffffff"
-                        : "2px solid rgba(255,255,255,0.6)",
+                        ? "2.5px solid #F5EFE3"
+                        : "2px solid rgba(245, 239, 227, 0.8)",
                       background:
-                        "linear-gradient(135deg, #D4AF37, #F59E0B)",
+                        "linear-gradient(145deg, #F5EFE3 0%, #D4AF37 34%, #B8860B 100%)",
                       zIndex: 10,
                     }}
                   >
@@ -448,7 +449,7 @@ export function KauriBottomNav() {
                       style={{
                         width: 24,
                         height: 24,
-                        color: "#fff",
+                        color: "#0F172A",
                         display: "block",
                         margin: "auto",
                       }}
@@ -469,12 +470,12 @@ export function KauriBottomNav() {
                         borderRadius: "50%",
                         backgroundColor: isDarkMode
                           ? "#0F172A"
-                          : "#006D77",
-                        border: "1.5px solid #ffffff",
+                          : "#0a5c7a",
+                        border: "1.5px solid #F5EFE3",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+                        boxShadow: "0 2px 5px rgba(0,0,0,0.25)",
                       }}
                     >
                       <span

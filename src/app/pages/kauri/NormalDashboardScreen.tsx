@@ -218,15 +218,18 @@ export function NormalDashboardScreen() {
       <div
         className={`transition-all duration-300 ${!isKycVerified ? "blur-[6px] pointer-events-none select-none opacity-40" : ""}`}
       >
+        {/* ── EN-TÊTE AÉRIEN SUR FOND CLAIR / RESPIRANT (SILHOUETTE DÉSTRUCTURÉE) ── */}
         <div
-          className={`px-5 pt-[calc(env(safe-area-inset-top,47px)+16px)] pb-7 rounded-b-[2.5rem] shadow-xl ${isDarkMode ? "bg-gradient-to-br from-[#1E293B] to-[#334155]" : "bg-gradient-to-br from-[#006D77] to-[#0D9488]"}`}
+          className={`px-5 pt-[calc(env(safe-area-inset-top,47px)+16px)] pb-3 transition-colors ${
+            isDarkMode ? "bg-[#0B1120]" : "bg-[#F8FAFC]"
+          }`}
         >
-          <div className="flex items-center justify-between gap-3 mb-5">
+          <div className="flex items-center justify-between gap-3 mb-2">
             <div className="flex items-center gap-3 min-w-0">
-              {/* ── 🖼️ AVATAR PROFIL OAUTH / INITIALES ── */}
+              {/* ── 🖼️ AVATAR PROFIL OAUTH / INITIALES AVEC CERCLAGE OR ROYAL ── */}
               <div
                 onClick={() => navigate("/kauri/profil-particulier")}
-                className="w-12 h-12 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center border-2 border-white shadow-xl overflow-hidden shrink-0 cursor-pointer transition-transform active:scale-95"
+                className="w-12 h-12 rounded-full bg-gradient-to-br from-[#D4AF37] via-[#E6C668] to-[#B8860B] flex items-center justify-center border-2 border-[#D4AF37] shadow-md overflow-hidden shrink-0 cursor-pointer transition-transform active:scale-95"
               >
                 {avatarUrl ? (
                   <img
@@ -239,7 +242,7 @@ export function NormalDashboardScreen() {
                     }}
                   />
                 ) : (
-                  <span className="text-white text-base font-bold">
+                  <span className="text-[#0F172A] text-base font-black">
                     {initials}
                   </span>
                 )}
@@ -247,15 +250,23 @@ export function NormalDashboardScreen() {
 
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <h2 className="text-white text-base font-extrabold truncate leading-tight">
+                  <h2
+                    className={`text-base font-extrabold truncate leading-tight font-serif tracking-tight ${
+                      isDarkMode ? "text-white" : "text-[#0F172A]"
+                    }`}
+                  >
                     Bonjour, {firstName}
                   </h2>
-                  <span className="px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-bold text-white inline-flex items-center gap-1 shrink-0">
+                  <span className="px-2 py-0.5 rounded-full bg-[#F5EFE3] text-[#0a5c7a] dark:bg-slate-800 dark:text-[#D4AF37] border border-[#D4AF37]/40 text-[10px] font-black inline-flex items-center gap-1 shrink-0 shadow-xs">
                     <Crown className="w-3 h-3 text-[#D4AF37]" />
                     {userStatus}
                   </span>
                 </div>
-                <p className="text-[#E0F2FE] text-xs truncate mt-0.5 opacity-90">
+                <p
+                  className={`text-xs truncate mt-0.5 ${
+                    isDarkMode ? "text-slate-400" : "text-slate-500"
+                  }`}
+                >
                   Bon retour sur KAUREE
                 </p>
               </div>
@@ -264,55 +275,136 @@ export function NormalDashboardScreen() {
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={toggleDarkMode}
-                className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer border-none transition-transform active:scale-95"
+                className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer border transition-transform active:scale-95 shadow-xs ${
+                  isDarkMode
+                    ? "bg-slate-800 border-slate-700 text-[#D4AF37]"
+                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
                 title={
                   isDarkMode ? "Mode Clair" : "Mode Sombre"
                 }
               >
                 {isDarkMode ? (
-                  <Sun className="w-4 h-4 text-white" />
+                  <Sun className="w-4 h-4 text-[#D4AF37]" />
                 ) : (
-                  <Moon className="w-4 h-4 text-white" />
+                  <Moon className="w-4 h-4 text-[#0a5c7a]" />
                 )}
               </button>
               <button
                 onClick={() => navigate("/kauri/notifications")}
-                className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center cursor-pointer border-none transition-transform active:scale-95"
+                className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer border transition-transform active:scale-95 shadow-xs ${
+                  isDarkMode
+                    ? "bg-slate-800 border-slate-700 text-white"
+                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
                 title="Notifications"
               >
-                <Bell className="w-4 h-4 text-white" />
+                <Bell className="w-4 h-4 text-[#0a5c7a] dark:text-white" />
               </button>
             </div>
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-4">
+        {/* ── CARTE DE SOLDE MAÎTRESSE EN NAVY & BLEU PÉTROLE FLOTTANTE (FILIGRANE KAURI) ── */}
+        <div className="px-5 pt-2 pb-2">
+          <div
+            className="relative rounded-[2rem] p-6 overflow-hidden border border-[#D4AF37]/35 shadow-[0_18px_40px_-10px_rgba(10,92,122,0.32)] transition-all"
+            style={{
+              background:
+                "linear-gradient(145deg, #0F172A 0%, #0A2635 50%, #0a5c7a 100%)",
+            }}
+          >
+            {/* ── SYMBOLE PROPRIÉTAIRE : MOTIF KAURI EN FILIGRANE SACRÉ ── */}
+            <div className="absolute -right-6 -bottom-8 pointer-events-none opacity-10">
+              <svg
+                viewBox="0 0 100 100"
+                className="w-48 h-48 text-[#D4AF37]"
+                fill="currentColor"
+              >
+                <path d="M50 15 C30 25 22 45 22 60 C22 75 32 85 50 85 C68 85 78 75 78 60 C78 45 70 25 50 15 Z M50 30 C58 36 60 48 58 60 C56 70 52 74 50 74 C48 74 44 70 42 60 C40 48 42 36 50 30 Z" />
+                <line x1="45" y1="42" x2="55" y2="42" stroke="#0F172A" strokeWidth="2.5" />
+                <line x1="44" y1="50" x2="56" y2="50" stroke="#0F172A" strokeWidth="2.5" />
+                <line x1="45" y1="58" x2="55" y2="58" stroke="#0F172A" strokeWidth="2.5" />
+              </svg>
+            </div>
+
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[#F5EFE3]/80 text-xs font-semibold tracking-wider uppercase flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]" />
+                  Solde total (Patrimoine)
+                </span>
+                <button
+                  onClick={() =>
+                    setBalanceVisible(!balanceVisible)
+                  }
+                  className="text-[#F5EFE3]/80 hover:text-white cursor-pointer bg-white/10 hover:bg-white/20 p-1.5 rounded-lg border-none transition-colors"
+                >
+                  {balanceVisible ? (
+                    <Eye className="w-4 h-4" />
+                  ) : (
+                    <EyeOff className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+
+              <h1 className="text-white text-3xl sm:text-4xl mb-5 font-black tracking-tight font-serif">
+                {balanceVisible
+                  ? `${totalCombinedWealth.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`
+                  : "••••••"}
+              </h1>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => navigate("/kauri/portefeuille")}
+                  className="bg-[#F5EFE3] hover:bg-white text-[#0F172A] py-3 rounded-xl text-xs font-extrabold uppercase tracking-wider cursor-pointer border border-[#D4AF37]/35 transition-transform active:scale-95 shadow-sm"
+                >
+                  Détails
+                </button>
+                <button
+                  onClick={() => navigate("/kauri/send-money")}
+                  className="bg-gradient-to-r from-[#D4AF37] via-[#E6C668] to-[#B8860B] text-[#0F172A] py-3 rounded-xl text-xs font-extrabold uppercase tracking-wider cursor-pointer border-none transition-transform active:scale-95 shadow-md shadow-[#D4AF37]/25"
+                >
+                  Envoyer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── INDICATEURS DE CONFIANCE & SÉRIE EN IVOIRE NACRÉ (#F5EFE3) & NAVY ── */}
+        <div className="px-5 pt-1 pb-2">
+          <div className="grid grid-cols-2 gap-3 mb-2">
             <div
-              className="bg-white/10 backdrop-blur-xl rounded-2xl p-3 border border-white/20 cursor-pointer"
+              className={`rounded-2xl p-3 border transition-all cursor-pointer shadow-xs ${
+                isDarkMode
+                  ? "bg-slate-900/90 border-[#D4AF37]/25 hover:border-[#D4AF37]/50"
+                  : "bg-[#F5EFE3]/80 border-[#D4AF37]/30 hover:border-[#D4AF37]/60"
+              }`}
               onClick={() =>
                 navigate("/kauri/trust-score-intro")
               }
             >
               <div className="flex items-center gap-3">
-                <div className="relative w-16 h-16 flex-shrink-0">
+                <div className="relative w-14 h-14 flex-shrink-0">
                   <svg className="w-full h-full -rotate-90">
                     <circle
-                      cx="32"
-                      cy="32"
-                      r="28"
-                      stroke="#E0F2FE"
-                      strokeWidth="6"
+                      cx="28"
+                      cy="28"
+                      r="24"
+                      stroke={isDarkMode ? "#1E293B" : "#E2E8F0"}
+                      strokeWidth="5"
                       fill="none"
-                      opacity="0.3"
                     />
                     <circle
-                      cx="32"
-                      cy="32"
-                      r="28"
+                      cx="28"
+                      cy="28"
+                      r="24"
                       stroke="url(#miniTrustGradient)"
-                      strokeWidth="6"
+                      strokeWidth="5"
                       fill="none"
-                      strokeDasharray={circumference}
-                      strokeDashoffset={strokeDashoffset}
+                      strokeDasharray={2 * Math.PI * 24}
+                      strokeDashoffset={2 * Math.PI * 24 - (trustScore / 100) * (2 * Math.PI * 24)}
                       strokeLinecap="round"
                       className="transition-all duration-1000 ease-out"
                     />
@@ -327,38 +419,56 @@ export function NormalDashboardScreen() {
                         <stop offset="0%" stopColor="#D4AF37" />
                         <stop
                           offset="100%"
-                          stopColor="#B8860B"
+                          stopColor="#0a5c7a"
                         />
                       </linearGradient>
                     </defs>
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <p className="text-xl font-bold text-white">
+                    <p
+                      className={`text-base font-extrabold font-serif ${
+                        isDarkMode ? "text-white" : "text-[#0F172A]"
+                      }`}
+                    >
                       {trustScore}
                     </p>
                   </div>
                 </div>
-                <div>
-                  <p className="text-xs text-white/80">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     Trust Score
                   </p>
-                  <p className="text-lg font-bold text-white">
+                  <p
+                    className={`text-base font-black truncate font-serif ${
+                      isDarkMode ? "text-white" : "text-[#0F172A]"
+                    }`}
+                  >
                     {trustScore}/100
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-3 border border-white/20">
+            <div
+              className={`rounded-2xl p-3 border transition-all shadow-xs ${
+                isDarkMode
+                  ? "bg-slate-900/90 border-[#D4AF37]/25"
+                  : "bg-[#F5EFE3]/80 border-[#D4AF37]/30"
+              }`}
+            >
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#B05B3B] to-[#DC2626] rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Flame className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border border-[#D4AF37]/30">
+                  <Flame className="w-6 h-6 text-[#D4AF37]" />
                 </div>
-                <div>
-                  <p className="text-xs text-white/80">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     Série Active
                   </p>
-                  <p className="text-lg font-bold text-white">
+                  <p
+                    className={`text-base font-black truncate font-serif ${
+                      isDarkMode ? "text-white" : "text-[#0F172A]"
+                    }`}
+                  >
                     {paymentStreak} mois
                   </p>
                 </div>
@@ -366,57 +476,32 @@ export function NormalDashboardScreen() {
             </div>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/20">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[#E0F2FE] text-sm">
-                Solde total (Patrimoine)
-              </span>
-              <button
-                onClick={() =>
-                  setBalanceVisible(!balanceVisible)
-                }
-                className="text-white cursor-pointer bg-transparent border-none"
-              >
-                {balanceVisible ? (
-                  <Eye className="w-4 h-4" />
-                ) : (
-                  <EyeOff className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-            <h1 className="text-white text-3xl mb-4 font-black tracking-tight">
-              {balanceVisible
-                ? `${totalCombinedWealth.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`
-                : "•••••"}
-            </h1>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => navigate("/kauri/portefeuille")}
-                className="bg-white text-[#006D77] py-3 rounded-xl text-sm font-bold cursor-pointer border-none transition-transform active:scale-95 shadow-md"
-              >
-                Détails
-              </button>
-              <button
-                onClick={() => navigate("/kauri/send-money")}
-                className="bg-[#D4AF37] text-white py-3 rounded-xl text-sm font-bold cursor-pointer border-none transition-transform active:scale-95 shadow-md"
-              >
-                Envoyer
-              </button>
-            </div>
-          </div>
-
           <div
-            className={`bg-white/10 backdrop-blur-xl rounded-2xl p-4 border transition-all mt-3 ${trustScore >= 85 ? "border-[#D4AF37]/50" : "border-white/10 opacity-50"}`}
+            className={`rounded-2xl p-3.5 border transition-all ${
+              isDarkMode
+                ? "bg-slate-900/90 border-[#D4AF37]/25"
+                : "bg-[#F5EFE3]/60 border-[#D4AF37]/30"
+            }`}
           >
             <div className="flex items-start gap-3">
               <CheckCircle
-                className={`w-5 h-5 flex-shrink-0 mt-0.5 ${trustScore >= 85 ? "text-[#D4AF37]" : "text-white/30"}`}
+                className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                  trustScore >= 85 ? "text-[#D4AF37]" : "text-slate-400"
+                }`}
               />
               <div>
-                <p className="text-white text-sm font-bold mb-1">
+                <p
+                  className={`text-sm font-bold mb-0.5 font-serif ${
+                    isDarkMode ? "text-white" : "text-[#0F172A]"
+                  }`}
+                >
                   Avantage Membre Émérite
                 </p>
-                <p className="text-white/80 text-xs leading-relaxed">
+                <p
+                  className={`text-xs leading-relaxed ${
+                    isDarkMode ? "text-slate-300" : "text-slate-600"
+                  }`}
+                >
                   {trustScore >= 85 ? (
                     <>
                       <span className="font-bold text-[#D4AF37]">
@@ -451,34 +536,34 @@ export function NormalDashboardScreen() {
         )}
 
         <div className="px-6 py-6 space-y-6">
-          {/* ── BANNIÈRE D'ACCUEIL & DÉCOUVERTE POUR NOUVEAU CLIENT ── */}
+          {/* ── BANNIÈRE D'ACCUEIL & DÉCOUVERTE EN IVOIRE NACRÉ (#F5EFE3) & NAVY (#0F172A) ── */}
           <div
-            className={`rounded-2xl p-4 border transition-all ${
+            className={`rounded-2xl p-4.5 border transition-all shadow-xs ${
               isDarkMode
-                ? "bg-gradient-to-r from-teal-950/40 to-slate-900 border-teal-800/40"
-                : "bg-gradient-to-r from-teal-50 to-emerald-50 border-teal-200/70"
+                ? "bg-slate-900/90 border-[#D4AF37]/30"
+                : "bg-[#F5EFE3] border-[#D4AF37]/40"
             }`}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
-                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider text-[#006D77] dark:text-[#0D9488]">
-                  <Sparkles className="w-3.5 h-3.5" />
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-[#0a5c7a] dark:text-[#D4AF37]">
+                  <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
                   Guide rapide
                 </span>
                 <h4
-                  className={`text-sm font-black ${isDarkMode ? "text-white" : "text-slate-900"}`}
+                  className={`text-sm font-black font-serif ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
                 >
                   Comment fonctionne la Tontine KAUREE ?
                 </h4>
                 <p
-                  className={`text-xs ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}
+                  className={`text-xs leading-relaxed ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}
                 >
                   Découvrez en 1 minute comment épargner à plusieurs et toucher le pot en toute sécurité.
                 </p>
               </div>
               <button
                 onClick={() => setShowTutorial(true)}
-                className="px-3.5 py-2 rounded-xl bg-[#006D77] hover:bg-[#005a63] text-white text-xs font-bold shrink-0 cursor-pointer border-none shadow-sm transition-transform active:scale-95"
+                className="px-4 py-2.5 rounded-xl bg-[#0a5c7a] hover:bg-[#084860] text-white text-xs font-bold shrink-0 cursor-pointer border-none shadow-sm transition-transform active:scale-95"
               >
                 Voir
               </button>
@@ -487,7 +572,7 @@ export function NormalDashboardScreen() {
 
           <div>
             <h3
-              className={`mb-4 flex items-center gap-2 font-bold ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
+              className={`mb-4 flex items-center gap-2 font-bold font-serif ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
             >
               <div className="w-1.5 h-5 bg-[#D4AF37] rounded-full"></div>
               Tableau de bord
@@ -500,8 +585,8 @@ export function NormalDashboardScreen() {
                 }
                 className={`rounded-xl p-4 text-center shadow-sm border hover:shadow-md transition-shadow cursor-pointer ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
               >
-                <div className="w-12 h-12 mx-auto mb-2 bg-[#006D77]/10 rounded-xl flex items-center justify-center">
-                  <Users className="w-6 h-6 text-[#006D77]" />
+                <div className="w-12 h-12 mx-auto mb-2 bg-[#0a5c7a]/10 rounded-xl flex items-center justify-center">
+                  <Users className="w-6 h-6 text-[#0a5c7a]" />
                 </div>
                 <p
                   className={`text-xs font-medium ${isDarkMode ? "text-[#94A3B8]" : "text-[#4A4A4A]"}`}

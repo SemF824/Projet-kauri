@@ -268,7 +268,7 @@ export function KauriLoginScreen() {
       className="min-h-[100dvh] w-full flex flex-col justify-center items-center overflow-x-hidden overflow-y-auto font-sans relative px-4 py-[calc(env(safe-area-inset-top,16px)+16px)] pb-[calc(env(safe-area-inset-bottom,16px)+16px)]"
       style={{
         background:
-          "linear-gradient(165deg, #006D77 0%, #004E57 55%, #003A42 100%)",
+          "linear-gradient(165deg, #0a5c7a 0%, #07384a 45%, #0F172A 100%)",
       }}
     >
       {/* Background elements */}
@@ -374,7 +374,7 @@ export function KauriLoginScreen() {
                   setError("");
                 }}
                 className="flex items-center gap-1 mb-4 cursor-pointer bg-transparent border-none outline-none"
-                style={{ color: "#006D77" }}
+                style={{ color: "#0a5c7a" }}
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span className="text-sm font-medium">
@@ -387,10 +387,10 @@ export function KauriLoginScreen() {
               <div className="flex flex-col">
                 <div className="text-center mb-5">
                   <h2
-                    className="mb-1"
+                    className="mb-1 font-serif"
                     style={{
                       color: "#0F172A",
-                      fontSize: "1.4rem",
+                      fontSize: "1.45rem",
                       fontWeight: 700,
                     }}
                   >
@@ -462,15 +462,15 @@ export function KauriLoginScreen() {
                   className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl mb-2.5 border-2 transition-all active:scale-95 text-white cursor-pointer"
                   style={{
                     background:
-                      "linear-gradient(135deg, #006D77, #0D9488)",
-                    borderColor: "#006D77",
+                      "linear-gradient(135deg, #0a5c7a, #0F172A)",
+                    borderColor: "#0a5c7a",
                   }}
                 >
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/20 shrink-0">
                     {isBioLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <Fingerprint className="w-4 h-4" />
+                      <Fingerprint className="w-4 h-4 text-[#D4AF37]" />
                     )}
                   </div>
                   <div className="text-left flex-1 min-w-0">
@@ -498,15 +498,15 @@ export function KauriLoginScreen() {
                 <button
                   onClick={() => setStep("email")}
                   className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl mb-3 border-2 transition-all active:scale-95 bg-white cursor-pointer"
-                  style={{ borderColor: "#006D77" }}
+                  style={{ borderColor: "#0a5c7a" }}
                 >
                   <div
                     className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: "#E6F4F5" }}
+                    style={{ background: "#F5EFE3" }}
                   >
                     <Mail
                       className="w-4 h-4"
-                      style={{ color: "#006D77" }}
+                      style={{ color: "#0a5c7a" }}
                     />
                   </div>
                   <div className="text-left flex-1 min-w-0">
@@ -526,7 +526,7 @@ export function KauriLoginScreen() {
                   </div>
                   <ArrowRight
                     className="w-4 h-4 shrink-0"
-                    style={{ color: "#006D77" }}
+                    style={{ color: "#0a5c7a" }}
                   />
                 </button>
 
@@ -662,7 +662,7 @@ export function KauriLoginScreen() {
                             toast.error("Impossible de renvoyer l'e-mail.");
                           }
                         }}
-                        className="w-full py-2 rounded-xl text-xs font-semibold border border-[#006D77] text-[#006D77] bg-white/60 transition-opacity disabled:opacity-50"
+                        className="w-full py-2 rounded-xl text-xs font-semibold border border-[#0a5c7a] text-[#0a5c7a] bg-white/60 transition-opacity disabled:opacity-50"
                       >
                         {resendCooldown > 0
                           ? `Renvoyer dans ${resendCooldown}s`
@@ -678,7 +678,7 @@ export function KauriLoginScreen() {
                   className="w-full py-4 rounded-2xl text-white text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer border-none"
                   style={{
                     background: isFormValid
-                      ? "linear-gradient(135deg, #006D77, #0D9488)"
+                      ? "linear-gradient(135deg, #0a5c7a 0%, #0F172A 100%)"
                       : "#CBD5E1",
                   }}
                 >
