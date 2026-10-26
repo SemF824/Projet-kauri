@@ -38,7 +38,7 @@ export function TontineQuickActionsModal({
       bgLight: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400",
       action: () => {
         onClose();
-        navigate("/kauri/rejoindre-circle");
+        navigate("/kauri/rejoindre-tontine");
       },
     },
     {
@@ -49,7 +49,7 @@ export function TontineQuickActionsModal({
       bgLight: "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400",
       action: () => {
         onClose();
-        navigate(isPro ? "/kauri/pro-creer-tontine" : "/kauri/creer-tontine");
+        navigate(isPro ? "/kauri/pro-creer-tontine" : "/kauri/creer-tontine-publique");
       },
     },
     {
@@ -78,7 +78,7 @@ export function TontineQuickActionsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div

@@ -132,6 +132,7 @@ const TONTINES: TontineOffer[] = [
     members: 10,
     maxMembers: 15,
     contribution: 2000,
+    frequency: 'Mensuelle',
     duration: 24,
     nextStart: '1 septembre 2026',
     category: 'Investissement',

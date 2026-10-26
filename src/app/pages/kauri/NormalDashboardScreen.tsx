@@ -754,13 +754,13 @@ export function NormalDashboardScreen() {
 
                 <div className="flex items-center justify-center gap-2.5 pt-2">
                   <button
-                    onClick={() => navigate("/kauri/rejoindre-circle")}
+                    onClick={() => navigate("/kauri/rejoindre-tontine")}
                     className="flex-1 py-3 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white text-xs font-bold hover:bg-slate-200 transition-all border-none cursor-pointer"
                   >
                     Rejoindre
                   </button>
                   <button
-                    onClick={() => navigate("/kauri/creer-tontine")}
+                    onClick={() => navigate("/kauri/creer-tontine-publique")}
                     className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white text-xs font-bold shadow-md shadow-[#0a5c7a]/20 transition-all active:scale-95 border-none cursor-pointer"
                   >
                     Créer un cercle
@@ -863,8 +863,8 @@ export function NormalDashboardScreen() {
         onClose={() => setShowTutorial(false)}
         onStartAction={(action) => {
           setShowTutorial(false);
-          if (action === "rejoindre") navigate("/kauri/rejoindre-circle");
-          if (action === "creer") navigate("/kauri/creer-tontine");
+          if (action === "rejoindre") navigate("/kauri/rejoindre-tontine");
+          if (action === "creer") navigate("/kauri/creer-tontine-publique");
         }}
       />
 

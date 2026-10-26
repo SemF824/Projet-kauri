@@ -241,6 +241,7 @@ export function KauriBottomNav() {
   // Référence au conteneur nav pour le calcul géométrique du glissement de doigt
   const navRef = useRef<HTMLElement>(null);
   const isDraggingRef = useRef(false);
+  const touchStartPosRef = useRef({ x: 0, y: 0 });
   const lastActiveIndexRef = useRef<number>(activeIndex);
 
   useEffect(() => {
@@ -279,7 +280,10 @@ export function KauriBottomNav() {
           description: "Cette section est réservée pour une prochaine fonctionnalité.",
           duration: 1500,
         });
+      } else if (targetTab.isCenter) {
+        setIsQuickActionsOpen((prev) => !prev);
       } else if (targetTab.target && targetTab.target !== currentPath) {
+        setIsQuickActionsOpen(false);
         lastNavigatedPathRef.current = targetTab.target;
         navigate(targetTab.target);
       }
@@ -293,9 +297,11 @@ export function KauriBottomNav() {
   ) => {
     setDragIndex(null);
     if (isCenter) {
-      setIsQuickActionsOpen(true);
+      setIsQuickActionsOpen((prev) => !prev);
       return;
     }
+    // Fermer le modal d'actions rapides si l'on clique sur un autre onglet
+    setIsQuickActionsOpen(false);
     if (isPlaceholder || targetPath === "#") {
       toast.info("Espace en préparation", {
         description: "Cette section est réservée pour une prochaine fonctionnalité.",
@@ -352,14 +358,19 @@ export function KauriBottomNav() {
           WebkitUserSelect: "none",
         }}
         onTouchStart={(e) => {
-          isDraggingRef.current = true;
           const touch = e.touches[0];
-          handlePointerDrag(touch.clientX, touch.clientY);
+          touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
         }}
         onTouchMove={(e) => {
-          if (!isDraggingRef.current) return;
           const touch = e.touches[0];
-          handlePointerDrag(touch.clientX, touch.clientY);
+          const dist = Math.hypot(
+            touch.clientX - touchStartPosRef.current.x,
+            touch.clientY - touchStartPosRef.current.y
+          );
+          if (dist > 15) {
+            isDraggingRef.current = true;
+            handlePointerDrag(touch.clientX, touch.clientY);
+          }
         }}
         onTouchEnd={() => {
           isDraggingRef.current = false;
@@ -407,12 +418,13 @@ export function KauriBottomNav() {
                   data-kauri-target={tab.target}
                   className="flex flex-col items-center justify-center relative cursor-pointer z-10 py-1"
                   style={{ userSelect: "none" }}
-                  onMouseDown={() =>
+                  onClick={() =>
                     handleGestureStart(tab.target, false, true)
                   }
-                  onTouchStart={() =>
-                    handleGestureStart(tab.target, false, true)
-                  }
+                  onTouchStart={(e) => {
+                    e.stopPropagation();
+                    handleGestureStart(tab.target, false, true);
+                  }}
                 >
                   <div className="w-[20px] h-[20px] invisible pointer-events-none" />
                   <span className="text-[10px] font-bold invisible select-none pointer-events-none">
@@ -421,12 +433,18 @@ export function KauriBottomNav() {
 
                   {/* ── BOUTON SIGNATURE : LE COQUILLAGE KAURI EST LE BOUTON ── */}
                   <button
-                    className="kauree-fab cursor-pointer outline-none absolute pointer-events-none"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleGestureStart(tab.target, false, true);
+                    }}
+                    className="kauree-fab cursor-pointer outline-none absolute"
                     style={{
                       left: "50%",
                       top: 0,
                       transform: `translateX(-50%) ${isActive ? "scale(1.06)" : "scale(1)"}`,
                       zIndex: 10,
+                      pointerEvents: "auto",
                     }}
                   >
                     <svg
@@ -530,13 +548,18 @@ export function KauriBottomNav() {
             return (
               <button
                 key={tab.id}
+                type="button"
                 data-kauri-target={tab.target}
+                onClick={() =>
+                  handleGestureStart(tab.target, (tab as any).isPlaceholder)
+                }
                 onMouseDown={() =>
                   handleGestureStart(tab.target, (tab as any).isPlaceholder)
                 }
-                onTouchStart={() =>
-                  handleGestureStart(tab.target, (tab as any).isPlaceholder)
-                }
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  handleGestureStart(tab.target, (tab as any).isPlaceholder);
+                }}
                 className="flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer p-0 relative outline-none py-1.5 rounded-2xl select-none z-10 transition-colors duration-200"
                 style={{
                   color: isActive ? activeColor : inactiveColor,
@@ -593,12 +616,12 @@ export function KauriBottomNav() {
         onStartAction={(action) => {
           setIsTutorialOpen(false);
           if (action === "rejoindre") {
-            navigate("/kauri/rejoindre-circle");
+            navigate("/kauri/rejoindre-tontine");
           } else if (action === "creer") {
             navigate(
               isPro
                 ? "/kauri/pro-creer-tontine"
-                : "/kauri/creer-tontine"
+                : "/kauri/creer-tontine-publique"
             );
           }
         }}

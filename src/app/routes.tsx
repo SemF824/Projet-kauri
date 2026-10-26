@@ -818,6 +818,30 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "rejoindre-circle",
+            element: (
+              <ProtectedRoute>
+                <RejoindreTontineScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "creer-tontine",
+            element: (
+              <ProtectedRoute>
+                <CreerTontinePubliqueScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "creer-cercle",
+            element: (
+              <ProtectedRoute>
+                <CreerTontinePubliqueScreen />
+              </ProtectedRoute>
+            ),
+          },
+          {
             path: "transfer-confirm",
             element: (
               <ProtectedRoute>
