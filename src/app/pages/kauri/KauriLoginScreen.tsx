@@ -265,9 +265,8 @@ export function KauriLoginScreen() {
 
   return (
     <div
-      className="flex flex-col overflow-hidden font-sans"
+      className="min-h-[100dvh] w-full flex flex-col justify-center items-center overflow-x-hidden overflow-y-auto font-sans relative px-4 py-[calc(env(safe-area-inset-top,16px)+16px)] pb-[calc(env(safe-area-inset-bottom,16px)+16px)]"
       style={{
-        minHeight: "100dvh",
         background:
           "linear-gradient(165deg, #006D77 0%, #004E57 55%, #003A42 100%)",
       }}
@@ -296,76 +295,77 @@ export function KauriLoginScreen() {
         ))}
       </div>
 
-      {/* Brand Header */}
-      <div
-        className="relative z-10 flex flex-col items-center pt-[calc(env(safe-area-inset-top,24px)+16px)] pb-3 px-6"
-        style={{
-          opacity: animateIn ? 1 : 0,
-          transform: animateIn
-            ? "translateY(0)"
-            : "translateY(-20px)",
-          transition: "opacity 0.6s ease, transform 0.6s ease",
-        }}
-      >
-        <div className="relative mb-2">
-          <div
-            className="absolute inset-0 rounded-full"
-            style={{
-              background: "#D4AF37",
-              opacity: 0.25,
-              transform: "scale(1.35)",
-              animation: "pulse 2.5s ease-in-out infinite",
-            }}
-          />
-          <div
-            className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-xl"
-            style={{
-              background:
-                "linear-gradient(135deg, #D4AF37, #F59E0B)",
-            }}
-          >
-            <svg
-              viewBox="0 0 100 100"
-              className="w-8 h-8 text-white"
-            >
-              <path
-                d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35"
-                fill="currentColor"
-              />
-            </svg>
-          </div>
-        </div>
-        <h1
-          className="text-white tracking-widest mb-0.5"
-          style={{
-            fontSize: "1.65rem",
-            fontWeight: 700,
-            letterSpacing: "0.2em",
-          }}
-        >
-          KAUREE
-        </h1>
-        <p className="text-white/75 text-xs">
-          L'Unité dans la Finance
-        </p>
-      </div>
-
-      {/* Container Card — flex-1 centers card, card itself sizes to content */}
-      <div className="relative z-10 flex-1 flex flex-col justify-end mx-4 mb-[calc(env(safe-area-inset-bottom,16px)+8px)] max-w-md w-full sm:mx-auto">
+      {/* Main Centered Symmetrical Wrapper */}
+      <div className="relative z-10 w-full max-w-md my-auto flex flex-col items-center">
+        {/* Brand Header */}
         <div
-          className="rounded-3xl overflow-hidden"
+          className="flex flex-col items-center mb-4 text-center"
           style={{
-            background: "#F9F9F9",
-            boxShadow: "0 -4px 40px rgba(0,0,0,0.3)",
             opacity: animateIn ? 1 : 0,
             transform: animateIn
               ? "translateY(0)"
-              : "translateY(30px)",
+              : "translateY(-20px)",
+            transition: "opacity 0.6s ease, transform 0.6s ease",
+          }}
+        >
+          <div className="relative mb-2">
+            <div
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: "#D4AF37",
+                opacity: 0.25,
+                transform: "scale(1.35)",
+                animation: "pulse 2.5s ease-in-out infinite",
+              }}
+            />
+            <div
+              className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-xl"
+              style={{
+                background:
+                  "linear-gradient(135deg, #D4AF37, #F59E0B)",
+              }}
+            >
+              <svg
+                viewBox="0 0 100 100"
+                className="w-8 h-8 text-white"
+              >
+                <path
+                  d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35"
+                  fill="currentColor"
+                />
+              </svg>
+            </div>
+          </div>
+          <h1
+            className="text-white tracking-widest mb-0.5"
+            style={{
+              fontSize: "1.65rem",
+              fontWeight: 700,
+              letterSpacing: "0.2em",
+            }}
+          >
+            KAUREE
+          </h1>
+          <p className="text-white/75 text-xs">
+            L'Unité dans la Finance
+          </p>
+        </div>
+
+        {/* Container Card */}
+        <div
+          className="w-full rounded-3xl overflow-hidden"
+          style={{
+            background: "#F9F9F9",
+            boxShadow: "0 10px 40px rgba(0,0,0,0.25)",
+            opacity: animateIn ? 1 : 0,
+            transform: animateIn
+              ? "translateY(0)"
+              : "translateY(20px)",
             transition:
               "opacity 0.7s ease 0.15s, transform 0.7s ease 0.15s",
           }}
         >
-          <div className="p-5 flex flex-col">
+          <div className="p-5 sm:p-6 flex flex-col">
             <div>
             {step !== "welcome" && (
               <button
@@ -385,26 +385,28 @@ export function KauriLoginScreen() {
 
             {step === "welcome" ? (
               <div className="flex flex-col">
-                <h2
-                  className="mb-1"
-                  style={{
-                    color: "#0F172A",
-                    fontSize: "1.4rem",
-                    fontWeight: 700,
-                  }}
-                >
-                  Bon retour ! 👋
-                </h2>
-                <p
-                  className="text-sm mb-6"
-                  style={{ color: "#4A4A4A" }}
-                >
-                  Connectez-vous à votre espace sécurisé KAUREE.
-                </p>
+                <div className="text-center mb-5">
+                  <h2
+                    className="mb-1"
+                    style={{
+                      color: "#0F172A",
+                      fontSize: "1.4rem",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Bon retour ! 👋
+                  </h2>
+                  <p
+                    className="text-sm"
+                    style={{ color: "#4A4A4A" }}
+                  >
+                    Connectez-vous à votre espace sécurisé KAUREE.
+                  </p>
+                </div>
 
                 {/* ── 🚀 MODULE DE CONNEXION SOCIALE RAPIDE ── */}
                 <div className="mb-3.5">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 text-center">
                     Connexion rapide via Réseaux
                   </p>
                   <div className="grid grid-cols-3 gap-2">
@@ -540,19 +542,20 @@ export function KauriLoginScreen() {
                 onSubmit={handleEmailLogin}
                 className="flex flex-col space-y-5"
               >
-                <h2
-                  style={{
-                    color: "#0F172A",
-                    fontSize: "1.4rem",
-                    fontWeight: 700,
-                  }}
-                >
-                  Identifiants
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Renseignez vos accès pour ouvrir votre
-                  session.
-                </p>
+                <div className="text-center mb-1">
+                  <h2
+                    style={{
+                      color: "#0F172A",
+                      fontSize: "1.4rem",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Identifiants
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Renseignez vos accès pour ouvrir votre session.
+                  </p>
+                </div>
 
                 <div>
                   <label className="text-xs font-semibold mb-1.5 block text-gray-500">
@@ -637,7 +640,7 @@ export function KauriLoginScreen() {
 
                 {error && (
                   <div className="space-y-2">
-                    <p className="text-xs text-[#B05B3B] font-medium">
+                    <p className="text-xs text-[#B05B3B] font-medium text-center">
                       {error}
                     </p>
                     {needsConfirmation && (
@@ -714,18 +717,16 @@ export function KauriLoginScreen() {
             </button>
           </div>
         </div>
-        {/* end card inner */}
         </div>
-        {/* end card */}
-      </div>
-      {/* end card wrapper */}
 
-      <p
-        className="relative z-10 text-center text-[10px] py-2"
-        style={{ color: "rgba(255,255,255,0.4)" }}
-      >
-        KAUREE · Fondé par Kauree Family
-      </p>
+        {/* Footer */}
+        <p
+          className="text-center text-[10px] mt-4"
+          style={{ color: "rgba(255,255,255,0.4)" }}
+        >
+          KAUREE · Fondé par Kauree Family
+        </p>
+      </div>
 
       <style>{`
         @keyframes cowrieFloat { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-15px) rotate(5deg); } }
