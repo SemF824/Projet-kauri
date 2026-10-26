@@ -431,8 +431,8 @@ export function KauriBottomNav() {
                   >
                     <svg
                       viewBox="0 0 100 120"
-                      width="60"
-                      height="72"
+                      width="44"
+                      height="53"
                       xmlns="http://www.w3.org/2000/svg"
                       aria-label="Kauree"
                     >
@@ -484,7 +484,7 @@ export function KauriBottomNav() {
                         fill="url(#kLips)"
                       />
 
-                      {/* Bandes plus claires de chaque côté de la fente pour l'effet bombé des lèvres */}
+                      {/* Bande claire gauche : effet bombé de la lèvre */}
                       <path
                         d="M40 18 C33 38 33 62 35 80 C36 90 40 98 44 104"
                         stroke="#FFFDF0"
@@ -493,6 +493,7 @@ export function KauriBottomNav() {
                         strokeOpacity="0.45"
                         fill="none"
                       />
+                      {/* Bande claire droite : effet bombé de la lèvre */}
                       <path
                         d="M60 18 C67 38 67 62 65 80 C64 90 60 98 56 104"
                         stroke="#FFFDF0"
@@ -502,7 +503,7 @@ export function KauriBottomNav() {
                         fill="none"
                       />
 
-                      {/* Fente affinée de moitié avec une élégante courbe en S */}
+                      {/* Fente affinée avec courbe en S */}
                       <path
                         d="M 51 13 C 45 40, 46 54, 48 64 C 50 74, 53.5 86, 49.5 107"
                         fill="none"
@@ -510,49 +511,6 @@ export function KauriBottomNav() {
                         strokeWidth="3.5"
                         strokeLinecap="round"
                       />
-
-                      {/* Dents : bourrelets dorés clairs sculptés qui sortent des lèvres et mordent sur la fente */}
-                      {/* Sous-couche d'ombrage pour l'effet de relief 3D des bourrelets */}
-                      <g stroke="#8F6A1C" strokeWidth="3" strokeLinecap="round" opacity="0.38">
-                        <line x1="34" y1="29.2" x2="48.5" y2="29.2" />
-                        <line x1="66" y1="29.2" x2="50.8" y2="29.2" />
-
-                        <line x1="33" y1="41.2" x2="46.5" y2="41.2" />
-                        <line x1="67" y1="41.2" x2="48.8" y2="41.2" />
-
-                        <line x1="32" y1="53.2" x2="45.8" y2="53.2" />
-                        <line x1="68" y1="53.2" x2="48.0" y2="53.2" />
-
-                        <line x1="32" y1="65.2" x2="47.0" y2="65.2" />
-                        <line x1="68" y1="65.2" x2="49.2" y2="65.2" />
-
-                        <line x1="33" y1="77.2" x2="49.8" y2="77.2" />
-                        <line x1="67" y1="77.2" x2="52.0" y2="77.2" />
-
-                        <line x1="35" y1="89.2" x2="51.0" y2="89.2" />
-                        <line x1="65" y1="89.2" x2="53.2" y2="89.2" />
-                      </g>
-
-                      {/* Bourrelets dorés clairs en volume */}
-                      <g stroke="#FFF6D8" strokeWidth="2.6" strokeLinecap="round">
-                        <line x1="34" y1="28.5" x2="48.5" y2="28.5" />
-                        <line x1="66" y1="28.5" x2="50.8" y2="28.5" />
-
-                        <line x1="33" y1="40.5" x2="46.5" y2="40.5" />
-                        <line x1="67" y1="40.5" x2="48.8" y2="40.5" />
-
-                        <line x1="32" y1="52.5" x2="45.8" y2="52.5" />
-                        <line x1="68" y1="52.5" x2="48.0" y2="52.5" />
-
-                        <line x1="32" y1="64.5" x2="47.0" y2="64.5" />
-                        <line x1="68" y1="64.5" x2="49.2" y2="64.5" />
-
-                        <line x1="33" y1="76.5" x2="49.8" y2="76.5" />
-                        <line x1="67" y1="76.5" x2="52.0" y2="76.5" />
-
-                        <line x1="35" y1="88.5" x2="51.0" y2="88.5" />
-                        <line x1="65" y1="88.5" x2="53.2" y2="88.5" />
-                      </g>
 
                       {/* Reflet brillant coquille */}
                       <ellipse
@@ -651,6 +609,13 @@ export function KauriBottomNav() {
 
 // ── Layout de Structure Racine ───────────────────────────────────────────────
 export function MainLayout() {
+  const { pathname } = useLocation();
+
+  // Scroll systématique en haut de page à chaque changement de route
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [pathname]);
+
   return (
     <div className="max-w-md mx-auto bg-white shadow-2xl min-h-screen relative pb-36">
       <Outlet />

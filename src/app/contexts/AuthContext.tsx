@@ -71,7 +71,17 @@ function profileFromMeta(
     formeJuridique: dbProfile?.forme_juridique ?? m.formeJuridique ?? "",
     dirigeant: dbProfile?.dirigeant ?? m.dirigeant ?? "",
     kybStatus: dbProfile?.kyb_status ?? "verified",
-    trustScore: dbProfile?.trust_score ? Number(dbProfile.trust_score) : 100,
+    // ── Trust Score réel sur 100 ─────────────────────────────────────────────
+    // Règle de calcul automatique :
+    //   40 pts base KYC (vérification d'identité + vivacité + biométrie)
+    //    0 pts par défaut si aucune donnée en BDD (compte tout neuf)
+    // Les points supplémentaires (transactions, cycles, assiduité…) sont
+    // enregistrés dans profiles.trust_score et pris directement depuis la BDD.
+    trustScore: dbProfile?.trust_score
+      ? Math.min(100, Math.max(0, Number(dbProfile.trust_score)))
+      : dbProfile?.kyc_completed
+      ? 40   // KYC complet mais pas encore de score enregistré → 40 pts de départ
+      : 0,   // Nouveau compte non vérifié
     balance: wallet?.balance_eur !== undefined && wallet?.balance_eur !== null ? Number(wallet.balance_eur) : 0,
     balanceXof: wallet?.balance_xof !== undefined && wallet?.balance_xof !== null ? Number(wallet.balance_xof) : 0,
     balanceUsdt: wallet?.balance_usdt !== undefined && wallet?.balance_usdt !== null ? Number(wallet.balance_usdt) : 0,

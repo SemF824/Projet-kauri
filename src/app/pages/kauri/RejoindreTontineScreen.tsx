@@ -1,6 +1,6 @@
 import {
   ArrowLeft, Search, Users, TrendingUp, Calendar, Shield,
-  Star, Filter, ChevronRight, X, CheckCircle2, Lock,
+  Filter, ChevronRight, X, CheckCircle2, Lock,
   Globe, Zap, Clock, AlertCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router';
@@ -35,7 +35,7 @@ const TONTINES: TontineOffer[] = [
     description: 'Épargne collective pour projets immobiliers et entrepreneuriaux en Martinique & Guadeloupe.',
     organizer: 'Marie Laurent',
     organizerAvatar: 'ML',
-    trustScore: 4.9,
+    trustScore: 92,
     members: 14,
     maxMembers: 20,
     contribution: 300,
@@ -54,7 +54,7 @@ const TONTINES: TontineOffer[] = [
     description: 'Tontine communautaire pour la diaspora africaine en Île-de-France. Esprit d\'entraide garanti.',
     organizer: 'Jean-Baptiste D.',
     organizerAvatar: 'JB',
-    trustScore: 4.7,
+    trustScore: 85,
     members: 8,
     maxMembers: 12,
     contribution: 150,
@@ -72,7 +72,7 @@ const TONTINES: TontineOffer[] = [
     description: 'Pour les 18–35 ans qui veulent financer leurs premiers projets pros.',
     organizer: 'Sophie L.',
     organizerAvatar: 'SL',
-    trustScore: 4.8,
+    trustScore: 88,
     members: 5,
     maxMembers: 10,
     contribution: 100,
@@ -91,7 +91,7 @@ const TONTINES: TontineOffer[] = [
     description: 'Financement collectif pour projets agricoles et maraîchers en zones insulaires.',
     organizer: 'Pierre Morel',
     organizerAvatar: 'PM',
-    trustScore: 5.0,
+    trustScore: 95,
     members: 18,
     maxMembers: 20,
     contribution: 500,
@@ -110,7 +110,7 @@ const TONTINES: TontineOffer[] = [
     description: 'Tontine familiale ouverte aux proches. Cycle court, ambiance chaleureuse.',
     organizer: 'Claire Beaumont',
     organizerAvatar: 'CB',
-    trustScore: 4.6,
+    trustScore: 78,
     members: 6,
     maxMembers: 8,
     contribution: 250,
@@ -128,11 +128,10 @@ const TONTINES: TontineOffer[] = [
     description: 'Tontine haute contribution pour membres émérites. Rendements et projets d\'envergure.',
     organizer: 'Thomas Koffi',
     organizerAvatar: 'TK',
-    trustScore: 5.0,
+    trustScore: 97,
     members: 10,
     maxMembers: 15,
     contribution: 2000,
-    frequency: 'Mensuelle',
     duration: 24,
     nextStart: '1 septembre 2026',
     category: 'Investissement',
@@ -235,12 +234,25 @@ function JoinSheet({ tontine, onClose, onConfirm, isDarkMode }: JoinSheetProps) 
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: textMain }}>{tontine.organizer}</p>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: textMuted }}>Organisateur · Trust Score {tontine.trustScore}/5</p>
+              <p style={{ margin: '2px 0 4px', fontSize: 12, color: textMuted }}>Organisateur · Trust Score {tontine.trustScore}/100</p>
+              {/* Barre de progression Trust Score /100 */}
+              <div style={{ height: 5, borderRadius: 99, background: isDarkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0', overflow: 'hidden', width: '100%' }}>
+                <div style={{
+                  height: '100%',
+                  borderRadius: 99,
+                  width: `${tontine.trustScore}%`,
+                  background: tontine.trustScore >= 85
+                    ? 'linear-gradient(90deg, #D4AF37, #F4D03F)'
+                    : tontine.trustScore >= 70
+                    ? 'linear-gradient(90deg, #0a5c7a, #0a847e)'
+                    : '#94A3B8',
+                  transition: 'width 0.6s ease',
+                }} />
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 1 }}>
-              {[1,2,3,4,5].map(i => (
-                <Star key={i} size={11} style={{ fill: i <= Math.round(tontine.trustScore) ? '#D4AF37' : 'none', color: i <= Math.round(tontine.trustScore) ? '#D4AF37' : '#CBD5E1' }} />
-              ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+              <Shield size={11} color="#D4AF37" />
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#D4AF37' }}>{tontine.trustScore}</span>
             </div>
           </div>
 
@@ -636,9 +648,10 @@ function TontineCard({
             </div>
             <span style={{ fontSize: 12, color: textMuted }}>{tontine.organizer}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <Shield size={12} color="#D4AF37" />
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#D4AF37' }}>{tontine.trustScore}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Shield size={11} color="#D4AF37" />
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#D4AF37' }}>{tontine.trustScore}</span>
+            <span style={{ fontSize: 10, color: textMuted, fontWeight: 500 }}>/100</span>
           </div>
         </div>
 
