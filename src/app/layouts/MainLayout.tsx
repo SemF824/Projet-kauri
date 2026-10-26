@@ -437,19 +437,35 @@ export function KauriBottomNav() {
                       aria-label="Kauree"
                     >
                       <defs>
+                        {/* Coquille base */}
                         <radialGradient id="kShell" cx="35%" cy="28%" r="80%">
-                          <stop offset="0" stopColor="#F6E7B0" />
-                          <stop offset="0.35" stopColor="#E2C25A" />
-                          <stop offset="0.75" stopColor="#C9A032" />
-                          <stop offset="1" stopColor="#8F6A1C" />
+                          <stop offset="0%" stopColor="#F6E7B0" />
+                          <stop offset="35%" stopColor="#E2C25A" />
+                          <stop offset="75%" stopColor="#C9A032" />
+                          <stop offset="100%" stopColor="#8F6A1C" />
                         </radialGradient>
-                        <linearGradient id="kSlit" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0" stopColor="#3B2A0E" />
-                          <stop offset="1" stopColor="#0F172A" />
+
+                        {/* Lèvres bombées (dégradé doré chaleureux) */}
+                        <linearGradient id="kLips" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#C9A032" stopOpacity="0.75" />
+                          <stop offset="25%" stopColor="#F3E196" stopOpacity="0.9" />
+                          <stop offset="50%" stopColor="#DBB041" stopOpacity="0.8" />
+                          <stop offset="75%" stopColor="#F3E196" stopOpacity="0.9" />
+                          <stop offset="100%" stopColor="#C9A032" stopOpacity="0.75" />
                         </linearGradient>
+
+                        {/* Fente sombre profonde */}
+                        <linearGradient id="kSlit" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#2D1F08" />
+                          <stop offset="30%" stopColor="#141B2D" />
+                          <stop offset="70%" stopColor="#0B101E" />
+                          <stop offset="100%" stopColor="#2D1F08" />
+                        </linearGradient>
+
+                        {/* Reflet spéculaire coquille */}
                         <radialGradient id="kShine">
-                          <stop offset="0" stopColor="#FFF" stopOpacity="0.85" />
-                          <stop offset="1" stopColor="#FFF" stopOpacity="0" />
+                          <stop offset="0%" stopColor="#FFF" stopOpacity="0.85" />
+                          <stop offset="100%" stopColor="#FFF" stopOpacity="0" />
                         </radialGradient>
                       </defs>
 
@@ -458,42 +474,87 @@ export function KauriBottomNav() {
                         d="M50 6 C76 6 92 34 92 66 C92 96 74 114 50 114 C26 114 8 96 8 66 C8 34 24 6 50 6 Z"
                         fill="url(#kShell)"
                         stroke="#7A5A16"
-                        strokeOpacity=".4"
+                        strokeOpacity="0.4"
                         strokeWidth="1.5"
                       />
 
-                      {/* Lèvres (bande plus claire autour de la fente) */}
+                      {/* Lèvres bombées (coussinets latéraux) */}
                       <path
-                        d="M50 10 C40 30 36 52 37 72 C38 90 42 102 46 110 L54 110 C60 100 64 86 64 70 C64 50 62 28 54 10 Z"
-                        fill="#EBD27A"
-                        opacity=".6"
+                        d="M50 10 C37 28 30 50 31 72 C32 90 39 102 46 110 L54 110 C61 102 68 90 69 72 C70 50 63 28 50 10 Z"
+                        fill="url(#kLips)"
                       />
 
-                      {/* Fente */}
+                      {/* Bandes plus claires de chaque côté de la fente pour l'effet bombé des lèvres */}
                       <path
-                        d="M50 12 C45 30 42 52 43 72 C44 88 46 98 48 106 L52 106 C55 96 58 84 58 70 C58 50 57 30 54 12 Z"
-                        fill="url(#kSlit)"
+                        d="M40 18 C33 38 33 62 35 80 C36 90 40 98 44 104"
+                        stroke="#FFFDF0"
+                        strokeWidth="4.5"
+                        strokeLinecap="round"
+                        strokeOpacity="0.45"
+                        fill="none"
+                      />
+                      <path
+                        d="M60 18 C67 38 67 62 65 80 C64 90 60 98 56 104"
+                        stroke="#FFFDF0"
+                        strokeWidth="4.5"
+                        strokeLinecap="round"
+                        strokeOpacity="0.38"
+                        fill="none"
                       />
 
-                      {/* Dents */}
-                      <g stroke="#F3E2A0" strokeWidth="3" strokeLinecap="round">
-                        <line x1="40.8" y1="30" x2="48.3" y2="30" />
-                        <line x1="61.3" y1="30" x2="53.8" y2="30" />
-                        <line x1="39.2" y1="40" x2="46.7" y2="40" />
-                        <line x1="62.3" y1="40" x2="54.8" y2="40" />
-                        <line x1="38.2" y1="50" x2="45.7" y2="50" />
-                        <line x1="62.9" y1="50" x2="55.4" y2="50" />
-                        <line x1="37.9" y1="60" x2="45.4" y2="60" />
-                        <line x1="63" y1="60" x2="55.5" y2="60" />
-                        <line x1="38" y1="70" x2="45.5" y2="70" />
-                        <line x1="63" y1="70" x2="55.5" y2="70" />
-                        <line x1="38.8" y1="80" x2="46.3" y2="80" />
-                        <line x1="62.2" y1="80" x2="54.7" y2="80" />
-                        <line x1="40.2" y1="90" x2="47.7" y2="90" />
-                        <line x1="60.8" y1="90" x2="53.3" y2="90" />
+                      {/* Fente affinée de moitié avec une élégante courbe en S */}
+                      <path
+                        d="M 51 13 C 45 40, 46 54, 48 64 C 50 74, 53.5 86, 49.5 107"
+                        fill="none"
+                        stroke="url(#kSlit)"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                      />
+
+                      {/* Dents : bourrelets dorés clairs sculptés qui sortent des lèvres et mordent sur la fente */}
+                      {/* Sous-couche d'ombrage pour l'effet de relief 3D des bourrelets */}
+                      <g stroke="#8F6A1C" strokeWidth="3" strokeLinecap="round" opacity="0.38">
+                        <line x1="34" y1="29.2" x2="48.5" y2="29.2" />
+                        <line x1="66" y1="29.2" x2="50.8" y2="29.2" />
+
+                        <line x1="33" y1="41.2" x2="46.5" y2="41.2" />
+                        <line x1="67" y1="41.2" x2="48.8" y2="41.2" />
+
+                        <line x1="32" y1="53.2" x2="45.8" y2="53.2" />
+                        <line x1="68" y1="53.2" x2="48.0" y2="53.2" />
+
+                        <line x1="32" y1="65.2" x2="47.0" y2="65.2" />
+                        <line x1="68" y1="65.2" x2="49.2" y2="65.2" />
+
+                        <line x1="33" y1="77.2" x2="49.8" y2="77.2" />
+                        <line x1="67" y1="77.2" x2="52.0" y2="77.2" />
+
+                        <line x1="35" y1="89.2" x2="51.0" y2="89.2" />
+                        <line x1="65" y1="89.2" x2="53.2" y2="89.2" />
                       </g>
 
-                      {/* Reflet brillant */}
+                      {/* Bourrelets dorés clairs en volume */}
+                      <g stroke="#FFF6D8" strokeWidth="2.6" strokeLinecap="round">
+                        <line x1="34" y1="28.5" x2="48.5" y2="28.5" />
+                        <line x1="66" y1="28.5" x2="50.8" y2="28.5" />
+
+                        <line x1="33" y1="40.5" x2="46.5" y2="40.5" />
+                        <line x1="67" y1="40.5" x2="48.8" y2="40.5" />
+
+                        <line x1="32" y1="52.5" x2="45.8" y2="52.5" />
+                        <line x1="68" y1="52.5" x2="48.0" y2="52.5" />
+
+                        <line x1="32" y1="64.5" x2="47.0" y2="64.5" />
+                        <line x1="68" y1="64.5" x2="49.2" y2="64.5" />
+
+                        <line x1="33" y1="76.5" x2="49.8" y2="76.5" />
+                        <line x1="67" y1="76.5" x2="52.0" y2="76.5" />
+
+                        <line x1="35" y1="88.5" x2="51.0" y2="88.5" />
+                        <line x1="65" y1="88.5" x2="53.2" y2="88.5" />
+                      </g>
+
+                      {/* Reflet brillant coquille */}
                       <ellipse
                         cx="30"
                         cy="36"
