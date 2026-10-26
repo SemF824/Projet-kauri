@@ -1129,6 +1129,16 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    path: "/kauri/secret-kyc-validation",
+    element: (
+      <AdminRoute>
+        <LazyRoute>
+          <KYCAdminDashboardScreen />
+        </LazyRoute>
+      </AdminRoute>
+    ),
+  },
+  {
     path: "/kauri/admin/moderation",
     element: (
       <AdminRoute>

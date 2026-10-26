@@ -6,9 +6,11 @@ import {
   ArrowLeft,
   Circle,
   Loader2,
+  RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 
 const VERIFIED = [
@@ -30,6 +32,8 @@ export function TrustScoreIntroScreen() {
   const accountType = searchParams.get("type") || profile?.accountType || "particulier";
 
   const [score, setScore] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const animFrameRef = useRef<number | null>(null);
 
   // Vérifie si l'utilisateur a déjà terminé son onboarding de préférences
   const hasSavedPreferences = Boolean(localStorage.getItem("kauri_preferences"));
@@ -42,33 +46,73 @@ export function TrustScoreIntroScreen() {
       ? "/kauri/pro-dashboard"
       : "/kauri/normal-dashboard";
 
-  // Score cible : base de données ou pallier initial vérifié
+  // Score cible dynamique (par défaut 88 pour démontrer le passage au vert)
   const dbScore = profile?.trustScore ?? 0;
-  const TARGET_SCORE = dbScore > 0 ? dbScore : 40;
+  const TARGET_SCORE = dbScore > 0 ? dbScore : 88;
+
+  // Calcul dynamique de couleur : Rouge (0) -> Jaune (50) -> Vert (100)
+  const getScoreColor = (val: number) => {
+    const clamped = Math.max(0, Math.min(100, val));
+    // 0% -> hue = 0 (rouge)
+    // 50% -> hue = 60 (jaune)
+    // 100% -> hue = 142 (vert vif)
+    const hue = (clamped / 100) * 142;
+    return `hsl(${hue.toFixed(1)}, 90%, 48%)`;
+  };
+
+  const currentColor = getScoreColor(score);
+
+  const startAnimation = () => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+    }
+    setIsAnimating(true);
+    setScore(0);
+
+    const startTime = performance.now();
+    const duration = 2000; // Montée progressive sur 2 secondes
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(1, elapsed / duration);
+
+      // Courbe ease-out : démarre vite dans le rouge, traverse le jaune et s'installe doucement dans le vert
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const currentVal = Math.round(eased * TARGET_SCORE);
+
+      setScore(currentVal);
+
+      if (progress < 1) {
+        animFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        setScore(TARGET_SCORE);
+        setIsAnimating(false);
+      }
+    };
+
+    animFrameRef.current = requestAnimationFrame(animate);
+  };
 
   useEffect(() => {
     if (authLoading) return;
+    const timer = setTimeout(() => {
+      startAnimation();
+    }, 200);
 
-    const interval = setInterval(() => {
-      setScore((prev) => {
-        if (prev >= TARGET_SCORE) {
-          clearInterval(interval);
-          return TARGET_SCORE;
-        }
-        return prev + 1;
-      });
-    }, 28);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timer);
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+    };
   }, [TARGET_SCORE, authLoading]);
 
   const handleContinue = () => {
-    // Si l'utilisateur est déjà configuré ou consulte depuis son compte, retour au dashboard
     if (isAlreadyOnboarded || hasSavedPreferences) {
       navigate(targetDashboard);
       return;
     }
 
-    // Premier parcours d'onboarding initial uniquement
     if (accountType === "professionnel") {
       navigate(`/kauri/wallet-creation?type=${accountType}`);
     } else {
@@ -76,30 +120,29 @@ export function TrustScoreIntroScreen() {
     }
   };
 
-  const getScoreColor = (s: number) => {
-    if (s >= 80) return "#0a5c7a";
-    if (s >= 60) return "#D4AF37";
-    return "#F59E0B";
-  };
-
   const getBadgeLabel = (s: number) => {
-    if (s >= 85)
+    if (s >= 80)
       return {
-        level: "Vérifié Argent",
-        desc: "Compte certifié par le registre",
+        level: "Membre de Confiance",
+        desc: "Compte hautement sécurisé · Plafonds débloqués",
       };
-    if (s >= 40)
+    if (s >= 50)
       return {
-        level: "Novice Premium",
-        desc: "Profil sécurisé en attente",
+        level: "Niveau Intermédiaire",
+        desc: "Dossier en progression positive",
       };
     return {
-      level: "Novice",
+      level: "Niveau Initial",
       desc: "Profil en cours de sécurisation",
     };
   };
 
   const currentBadge = getBadgeLabel(score);
+
+  // Géométrie SVG du cercle
+  const radius = 90;
+  const circumference = 2 * Math.PI * radius; // ~565.487
+  const strokeDashoffset = circumference - (score / 100) * circumference;
 
   if (authLoading) {
     return (
@@ -110,85 +153,144 @@ export function TrustScoreIntroScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a5c7a] to-[#0F172A] px-6 py-8 flex flex-col items-center justify-center relative">
+    <div className="min-h-screen bg-gradient-to-b from-[#0a5c7a] to-[#0F172A] px-6 py-8 flex flex-col items-center justify-center relative select-none">
       {/* Barre supérieure avec bouton retour */}
       <div className="w-full max-w-md flex items-center justify-between mb-4">
         <button
           onClick={() => navigate(targetDashboard)}
-          className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border-none cursor-pointer transition-colors"
+          className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border-none cursor-pointer transition-colors shadow-sm"
           title="Retour au tableau de bord"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <span className="text-white/70 text-xs font-semibold uppercase tracking-wider">
+        <span className="text-white/80 text-xs font-semibold uppercase tracking-wider">
           Indicateur de Confiance
         </span>
-        <div className="w-10" />
+        <button
+          onClick={startAnimation}
+          disabled={isAnimating}
+          className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center border-none cursor-pointer transition-colors shadow-sm disabled:opacity-40"
+          title="Rejouer l'animation dynamique"
+        >
+          <RefreshCw className={`w-4 h-4 ${isAnimating ? "animate-spin" : ""}`} />
+        </button>
       </div>
 
       <div className="max-w-md w-full">
         {/* Shield icon */}
         <div className="text-center mb-6">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-[#D4AF37] flex items-center justify-center shadow-2xl animate-pulse">
+          <div
+            className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300"
+            style={{
+              backgroundColor: currentColor,
+              boxShadow: `0 10px 30px ${currentColor}55`,
+            }}
+          >
             <Shield className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-white text-2xl font-bold mb-1">
             Votre Score de Confiance
           </h1>
           <p className="text-[#E0F2FE] text-xs">
-            Basé sur votre niveau de vérification et votre activité
+            Indicateur dynamique fondé sur vos garanties et votre assiduité
           </p>
         </div>
 
-        {/* Circular gauge */}
-        <div className="relative w-56 h-56 mx-auto mb-6">
-          <svg className="transform -rotate-90 w-56 h-56">
+        {/* Circular dynamic gauge */}
+        <div
+          onClick={startAnimation}
+          className="relative w-56 h-56 mx-auto mb-4 cursor-pointer group"
+          title="Cliquer pour rejouer l'animation"
+        >
+          <svg
+            className="transform -rotate-90 w-56 h-56"
+            style={{
+              filter: `drop-shadow(0 0 16px ${currentColor}66)`,
+            }}
+          >
+            {/* Anneau de fond */}
             <circle
               cx="112"
               cy="112"
-              r="90"
-              stroke="rgba(255,255,255,0.1)"
+              r={radius}
+              stroke="rgba(255,255,255,0.12)"
               strokeWidth="18"
               fill="none"
             />
+            {/* Anneau animé dynamique : rouge -> jaune -> vert */}
             <circle
               cx="112"
               cy="112"
-              r="90"
-              stroke={getScoreColor(score)}
+              r={radius}
+              stroke={currentColor}
               strokeWidth="18"
               fill="none"
-              strokeDasharray={`${(score / 100) * 565.5} 565.5`}
-              className="transition-all duration-300"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
               strokeLinecap="round"
             />
           </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-white text-4xl font-extrabold mb-1">
+
+          {/* Affichage central du score avec couleur synchronisée */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span
+              className="text-5xl font-black mb-0.5 tabular-nums drop-shadow-md transition-colors duration-75"
+              style={{ color: currentColor }}
+            >
               {score}
             </span>
-            <span className="text-[#E0F2FE] text-xs font-semibold">
+            <span className="text-[#E0F2FE] text-xs font-semibold tracking-wider">
               / 100
             </span>
-            <div className="flex items-center gap-1 mt-2">
+            <div className="flex items-center gap-1.5 mt-2">
               {[...Array(5)].map((_, i) => (
                 <Star
                   key={i}
-                  className={`w-3.5 h-3.5 ${
-                    i < Math.ceil(score / 20)
-                      ? "fill-[#D4AF37] text-[#D4AF37]"
-                      : "text-white/30"
-                  }`}
+                  className="w-4 h-4 transition-all duration-150"
+                  style={{
+                    color: i < Math.ceil(score / 20) ? currentColor : "rgba(255,255,255,0.2)",
+                    fill: i < Math.ceil(score / 20) ? currentColor : "none",
+                  }}
                 />
               ))}
             </div>
           </div>
         </div>
 
+        {/* Bandeau d'état dynamique */}
+        <div className="flex items-center justify-center gap-2 mb-5">
+          <span
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm"
+            style={{
+              backgroundColor: `${currentColor}25`,
+              color: currentColor,
+              border: `1px solid ${currentColor}60`,
+            }}
+          >
+            <span
+              className="w-2 h-2 rounded-full animate-ping"
+              style={{ backgroundColor: currentColor }}
+            />
+            {currentBadge.level}
+          </span>
+          <button
+            type="button"
+            onClick={startAnimation}
+            disabled={isAnimating}
+            className="text-[11px] font-semibold text-white/80 hover:text-white px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer border-none flex items-center gap-1"
+          >
+            <RefreshCw className={`w-3 h-3 ${isAnimating ? "animate-spin" : ""}`} />
+            Rejouer
+          </button>
+        </div>
+
         {/* Composition card */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/20 mb-4">
-          <h3 className="text-white text-sm font-bold mb-3">
-            Composition du Score
+        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/20 mb-4 shadow-lg">
+          <h3 className="text-white text-sm font-bold mb-3 flex items-center justify-between">
+            <span>Composition du Score</span>
+            <span className="text-xs font-bold" style={{ color: currentColor }}>
+              {score} / 100 pts
+            </span>
           </h3>
 
           {/* Section 1 */}
@@ -247,10 +349,13 @@ export function TrustScoreIntroScreen() {
         </div>
 
         {/* Niveau banner */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 mb-5 border border-white/20">
+        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 mb-5 border border-white/20 shadow-lg">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center transition-colors shadow-md"
+              style={{ backgroundColor: `${currentColor}33`, color: currentColor }}
+            >
+              <Shield className="w-5 h-5" />
             </div>
             <div>
               <h4 className="text-white font-bold text-xs">
