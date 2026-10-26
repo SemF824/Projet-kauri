@@ -16,7 +16,7 @@ import { useDarkMode } from "../../contexts/DarkModeContext";
 import { getSupabase } from "../../../utils/supabase";
 import { toast } from "sonner";
 
-const TEAL = "#006D77";
+const TEAL = "#0a5c7a";
 
 type Frequence =
   "mensuelle" | "hebdomadaire" | "bihebdomadaire";

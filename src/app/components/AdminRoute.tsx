@@ -13,7 +13,7 @@ export function AdminRoute({ children }: AdminRouteProps) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0F172A]">
-        <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[#006D77] animate-spin" />
+        <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[#0a5c7a] animate-spin" />
       </div>
     );
   }

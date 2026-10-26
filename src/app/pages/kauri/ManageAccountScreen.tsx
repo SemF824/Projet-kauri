@@ -177,7 +177,7 @@ export function ManageAccountScreen() {
         className={`px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl ${
           isDarkMode
             ? "bg-gradient-to-br from-[#1E293B] to-[#334155]"
-            : "bg-gradient-to-br from-[#006D77] to-[#0D9488]"
+            : "bg-gradient-to-br from-[#0a5c7a] to-[#0F172A]"
         }`}
       >
         <button
@@ -208,7 +208,7 @@ export function ManageAccountScreen() {
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#006D77] to-[#0D9488] flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] flex items-center justify-center">
                       <CreditCard className="w-6 h-6 text-white" />
                     </div>
                     <div>
@@ -233,7 +233,7 @@ export function ManageAccountScreen() {
                   <p className={`text-xs ${isDarkMode ? "text-[#64748B]" : "text-[#94A3B8]"}`}>
                     Expire : {card.expires}
                   </p>
-                  <span className="px-3 py-1 bg-[#D1FAE5] text-[#006D77] text-xs font-semibold rounded-full">
+                  <span className="px-3 py-1 bg-[#D1FAE5] text-[#0a5c7a] text-xs font-semibold rounded-full">
                     Active
                   </span>
                 </div>
@@ -263,8 +263,8 @@ export function ManageAccountScreen() {
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#006D77]/10 flex items-center justify-center">
-                  <Lock className="w-5 h-5 text-[#006D77]" />
+                <div className="w-10 h-10 rounded-lg bg-[#0a5c7a]/10 flex items-center justify-center">
+                  <Lock className="w-5 h-5 text-[#0a5c7a]" />
                 </div>
                 <div className="text-left">
                   <p className={`text-sm font-medium ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}>
@@ -474,7 +474,7 @@ export function ManageAccountScreen() {
                 <button
                   type="submit"
                   disabled={isSavingCard}
-                  className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white text-sm font-bold border-none shadow-md cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white text-sm font-bold border-none shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {isSavingCard ? "Enregistrement..." : "Enregistrer"}
                 </button>
@@ -546,7 +546,7 @@ export function ManageAccountScreen() {
                 <button
                   type="submit"
                   disabled={isUpdatingPin}
-                  className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white text-sm font-bold border-none shadow-md cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white text-sm font-bold border-none shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {isUpdatingPin ? "Modification..." : "Valider le PIN"}
                 </button>

@@ -282,7 +282,7 @@ export function PotCommunScreen() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F9F9F9] to-[#E2E8F0] pb-24">
-      <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
+      <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
         <button
           onClick={() => navigate(-1)}
           className="mb-6 text-white flex items-center gap-2"
@@ -330,11 +330,11 @@ export function PotCommunScreen() {
             {/* Conteneur transparent du pot */}
             <div className="relative h-96 mx-auto max-w-xs">
               {/* Bordures du pot */}
-              <div className="absolute inset-0 border-4 border-[#006D77] rounded-3xl bg-gradient-to-b from-transparent to-[#006D77]/5 shadow-lg"></div>
+              <div className="absolute inset-0 border-4 border-[#0a5c7a] rounded-3xl bg-gradient-to-b from-transparent to-[#0a5c7a]/5 shadow-lg"></div>
 
               {/* Niveau de remplissage avec dégradé */}
               <div
-                className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#006D77] via-[#0D9488] to-[#14B8A6] rounded-b-3xl transition-all duration-1000 ease-out overflow-hidden"
+                className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#0a5c7a] via-[#0D9488] to-[#14B8A6] rounded-b-3xl transition-all duration-1000 ease-out overflow-hidden"
                 style={{
                   height: `${percentage > 100 ? 100 : percentage}%`,
                 }}
@@ -398,8 +398,8 @@ export function PotCommunScreen() {
             {/* Statistiques */}
             <div className="grid grid-cols-3 gap-4 mt-8">
               <div className="text-center">
-                <div className="w-12 h-12 mx-auto mb-2 bg-[#006D77]/10 rounded-full flex items-center justify-center">
-                  <Users className="w-6 h-6 text-[#006D77]" />
+                <div className="w-12 h-12 mx-auto mb-2 bg-[#0a5c7a]/10 rounded-full flex items-center justify-center">
+                  <Users className="w-6 h-6 text-[#0a5c7a]" />
                 </div>
                 <p className="text-sm text-[#0F172A]">87</p>
                 <p className="text-xs text-[#64748B]">
@@ -437,11 +437,11 @@ export function PotCommunScreen() {
           {/* En-tête */}
           <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#F1F5F9]">
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#006D77]" />
+              <Clock className="w-4 h-4 text-[#0a5c7a]" />
               <h3 className="text-[#0F172A] font-semibold text-sm">
                 Historique des contributions
               </h3>
-              <span className="text-[10px] bg-[#006D77]/10 text-[#006D77] px-2 py-0.5 rounded-full font-bold">
+              <span className="text-[10px] bg-[#0a5c7a]/10 text-[#0a5c7a] px-2 py-0.5 rounded-full font-bold">
                 {CONTRIBUTIONS.length}
               </span>
             </div>
@@ -478,7 +478,7 @@ export function PotCommunScreen() {
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                   histoFilter === f.id
                     ? f.id === "investissement"
-                      ? "bg-[#006D77] text-white"
+                      ? "bg-[#0a5c7a] text-white"
                       : f.id === "don"
                         ? "bg-[#B05B3B] text-white"
                         : "bg-[#0F172A] text-white"
@@ -567,7 +567,7 @@ export function PotCommunScreen() {
                         <div
                           className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
                             c.type === "investissement"
-                              ? "bg-gradient-to-br from-[#006D77] to-[#0D9488]"
+                              ? "bg-gradient-to-br from-[#0a5c7a] to-[#0F172A]"
                               : "bg-gradient-to-br from-[#B05B3B] to-[#D4803A]"
                           }`}
                         >
@@ -581,7 +581,7 @@ export function PotCommunScreen() {
                               {c.name}
                             </p>
                             {c.type === "investissement" ? (
-                              <TrendingUp className="w-3 h-3 text-[#006D77] flex-shrink-0" />
+                              <TrendingUp className="w-3 h-3 text-[#0a5c7a] flex-shrink-0" />
                             ) : (
                               <Heart className="w-3 h-3 text-[#B05B3B] flex-shrink-0" />
                             )}
@@ -590,7 +590,7 @@ export function PotCommunScreen() {
                             <span
                               className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                                 c.type === "investissement"
-                                  ? "bg-[#006D77]/10 text-[#006D77]"
+                                  ? "bg-[#0a5c7a]/10 text-[#0a5c7a]"
                                   : "bg-[#B05B3B]/10 text-[#B05B3B]"
                               }`}
                             >
@@ -606,7 +606,7 @@ export function PotCommunScreen() {
                         <p
                           className={`text-sm font-bold flex-shrink-0 ${
                             c.type === "investissement"
-                              ? "text-[#006D77]"
+                              ? "text-[#0a5c7a]"
                               : "text-[#B05B3B]"
                           }`}
                         >
@@ -623,7 +623,7 @@ export function PotCommunScreen() {
                     onClick={() =>
                       setHistoExpanded(!histoExpanded)
                     }
-                    className="w-full py-3.5 text-xs font-semibold text-[#006D77] flex items-center justify-center gap-1.5 hover:bg-[#F8FAFC] transition-colors"
+                    className="w-full py-3.5 text-xs font-semibold text-[#0a5c7a] flex items-center justify-center gap-1.5 hover:bg-[#F8FAFC] transition-colors"
                   >
                     {histoExpanded ? (
                       <>
@@ -646,7 +646,7 @@ export function PotCommunScreen() {
         {/* Bouton Augmenter les Paliers */}
         <button
           onClick={openPaliersSheet}
-          className="w-full bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"
+          className="w-full bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"
         >
           <ChevronUp className="w-5 h-5" />
           <span className="font-semibold">
@@ -769,7 +769,7 @@ export function PotCommunScreen() {
 
                 <button
                   onClick={() => setEditStep("edit")}
-                  className="w-full bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg"
+                  className="w-full bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg"
                 >
                   <Plus className="w-5 h-5" />
                   Définir de nouveaux objectifs
@@ -837,7 +837,7 @@ export function PotCommunScreen() {
                         className={`w-full pl-9 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm ${
                           errors[key]
                             ? "border-red-400 focus:ring-red-300 bg-red-50"
-                            : "border-[#E2E8F0] focus:ring-[#006D77]/40"
+                            : "border-[#E2E8F0] focus:ring-[#0a5c7a]/40"
                         }`}
                       />
                     </div>
@@ -872,7 +872,7 @@ export function PotCommunScreen() {
                   </button>
                   <button
                     onClick={validateAndProceed}
-                    className="flex-1 bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-xl font-semibold text-sm shadow-lg"
+                    className="flex-1 bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white py-4 rounded-xl font-semibold text-sm shadow-lg"
                   >
                     Vérifier
                   </button>
@@ -884,7 +884,7 @@ export function PotCommunScreen() {
             {editStep === "confirm" && (
               <div className="px-6 py-5 space-y-5">
                 <div className="text-center py-2">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#006D77] to-[#0D9488] rounded-full flex items-center justify-center">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] rounded-full flex items-center justify-center">
                     <ChevronUp className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-[#0F172A] font-bold text-lg mb-1">
@@ -930,12 +930,12 @@ export function PotCommunScreen() {
                             {palier.montant.toLocaleString()} €
                           </p>
                         </div>
-                        <ChevronUp className="w-5 h-5 text-[#006D77]" />
-                        <div className="flex-1 text-center bg-[#E0F2FE] rounded-xl py-2 border border-[#006D77]/20">
-                          <p className="text-[10px] text-[#006D77] mb-0.5">
+                        <ChevronUp className="w-5 h-5 text-[#0a5c7a]" />
+                        <div className="flex-1 text-center bg-[#E0F2FE] rounded-xl py-2 border border-[#0a5c7a]/20">
+                          <p className="text-[10px] text-[#0a5c7a] mb-0.5">
                             Nouveau
                           </p>
-                          <p className="text-sm font-bold text-[#006D77]">
+                          <p className="text-sm font-bold text-[#0a5c7a]">
                             {newVal.toLocaleString()} €
                           </p>
                         </div>
@@ -980,7 +980,7 @@ export function PotCommunScreen() {
             </p>
             <button
               onClick={() => setShowSuccess(false)}
-              className="w-full bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-xl"
+              className="w-full bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white py-4 rounded-xl"
             >
               Continuer
             </button>

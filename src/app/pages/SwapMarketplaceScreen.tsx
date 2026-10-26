@@ -154,7 +154,7 @@ export function SwapMarketplaceScreen() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#E2E8F0] pb-24">
       {/* HEADER */}
-      <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-2xl">
+      <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-2xl">
         <button
           onClick={() => navigate(-1)}
           className="mb-6 text-white flex items-center gap-2 border-none bg-transparent cursor-pointer"
@@ -211,13 +211,13 @@ export function SwapMarketplaceScreen() {
 
         {loading ? (
           <div className="py-16 text-center text-[#64748B]">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#006D77] mb-2" />
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#0a5c7a] mb-2" />
             <p className="text-sm">Chargement des demandes de swap depuis la base...</p>
           </div>
         ) : displayedSwaps.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center border border-[#E2E8F0] shadow-sm">
-            <div className="w-16 h-16 bg-[#006D77]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <RefreshCcw className="w-8 h-8 text-[#006D77]" />
+            <div className="w-16 h-16 bg-[#0a5c7a]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <RefreshCcw className="w-8 h-8 text-[#0a5c7a]" />
             </div>
             <h4 className="font-bold text-[#0F172A] mb-1">Aucune demande en attente</h4>
             <p className="text-xs text-[#64748B] mb-4">
@@ -225,7 +225,7 @@ export function SwapMarketplaceScreen() {
             </p>
             <button
               onClick={() => navigate('/kauri/emergency-swap')}
-              className="bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-md border-none cursor-pointer"
+              className="bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-md border-none cursor-pointer"
             >
               Créer une demande d'échange
             </button>
@@ -235,7 +235,7 @@ export function SwapMarketplaceScreen() {
             {displayedSwaps.map((request) => (
               <div
                 key={request.id}
-                className="bg-white rounded-2xl shadow-lg border border-[#E2E8F0] overflow-hidden hover:border-[#006D77] transition-all"
+                className="bg-white rounded-2xl shadow-lg border border-[#E2E8F0] overflow-hidden hover:border-[#0a5c7a] transition-all"
               >
                 <div
                   className={`h-1.5 ${
@@ -248,7 +248,7 @@ export function SwapMarketplaceScreen() {
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#006D77] to-[#0D9488] flex items-center justify-center text-white font-bold text-sm shadow-md">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] flex items-center justify-center text-white font-bold text-sm shadow-md">
                         {request.avatar}
                       </div>
                       <div>
@@ -286,8 +286,8 @@ export function SwapMarketplaceScreen() {
                   <div className="bg-[#F8FAFC] rounded-xl p-4 mb-4 border border-[#E8ECF0]">
                     <div className="flex items-center justify-center gap-4 mb-3">
                       <div className="text-center">
-                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1 shadow-sm border-2 border-[#006D77]">
-                          <span className="text-sm font-bold text-[#006D77]">#{request.original_turn}</span>
+                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1 shadow-sm border-2 border-[#0a5c7a]">
+                          <span className="text-sm font-bold text-[#0a5c7a]">#{request.original_turn}</span>
                         </div>
                         <p className="text-xs text-[#64748B]">Position actuelle</p>
                       </div>
@@ -311,7 +311,7 @@ export function SwapMarketplaceScreen() {
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => navigate('/kauri/community-chat')}
-                      className="bg-white border border-[#006D77] text-[#006D77] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#F8FAFC] transition-all cursor-pointer font-semibold text-xs"
+                      className="bg-white border border-[#0a5c7a] text-[#0a5c7a] py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-[#F8FAFC] transition-all cursor-pointer font-semibold text-xs"
                     >
                       <MessageCircle className="w-4 h-4" />
                       <span>Discuter</span>
@@ -319,7 +319,7 @@ export function SwapMarketplaceScreen() {
                     <button
                       disabled={processingId === request.id}
                       onClick={() => handleAgreeSwap(request)}
-                      className="bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-3 rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer border-none font-semibold text-xs disabled:opacity-50"
+                      className="bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white py-3 rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer border-none font-semibold text-xs disabled:opacity-50"
                     >
                       {processingId === request.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -347,7 +347,7 @@ export function SwapMarketplaceScreen() {
           </p>
           <button
             onClick={() => navigate('/kauri/emergency-swap')}
-            className="text-[#006D77] text-xs font-bold underline bg-transparent border-none cursor-pointer p-0"
+            className="text-[#0a5c7a] text-xs font-bold underline bg-transparent border-none cursor-pointer p-0"
           >
             Initier une demande pour mon cercle →
           </button>

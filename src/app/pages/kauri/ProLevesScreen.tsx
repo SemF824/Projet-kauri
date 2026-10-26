@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useProData } from '../../contexts/ProDataContext';
 import type { ProProjet } from '../../contexts/ProDataContext';
 
-const TEAL  = '#006D77';
+const TEAL  = '#0a5c7a';
 const GOLD  = '#D4AF37';
 const TERRA = '#B05B3B';
 const AMBER = '#92400E';

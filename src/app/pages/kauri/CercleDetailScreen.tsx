@@ -16,11 +16,11 @@ import { useNavigate, useLocation } from 'react-router';
 import { useState } from 'react';
 import { ALL_CIRCLES } from './DiscoverCirclesScreen';
 
-const TEAL = '#006D77';
+const TEAL = '#0a5c7a';
 const GOLD = '#D4AF37';
 
 const MEMBER_AVATARS = [
-  { initials: 'AM', color: '#006D77' },
+  { initials: 'AM', color: '#0a5c7a' },
   { initials: 'KD', color: '#D4AF37' },
   { initials: 'FS', color: '#8B5CF6' },
   { initials: 'LN', color: '#EC4899' },
@@ -158,7 +158,7 @@ export function CercleDetailScreen() {
                 onClick={() => setActiveTab(tab)}
                 className={`flex-1 py-3 text-xs font-semibold transition-all border-b-2 ${
                   activeTab === tab
-                    ? 'border-[#006D77] text-[#006D77]'
+                    ? 'border-[#0a5c7a] text-[#0a5c7a]'
                     : 'border-transparent text-[#94A3B8]'
                 }`}
                 style={activeTab === tab && isElite ? { borderColor: GOLD, color: GOLD } : {}}

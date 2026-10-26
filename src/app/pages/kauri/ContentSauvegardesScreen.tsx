@@ -8,7 +8,7 @@ import {
 import { useDarkMode } from '../../contexts/DarkModeContext';
 
 const TERRACOTTA = '#B05B3B';
-const TEAL = '#006D77';
+const TEAL = '#0a5c7a';
 
 interface SavedPost {
   id: string;

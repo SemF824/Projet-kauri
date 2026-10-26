@@ -21,7 +21,7 @@ export function SplashScreen() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#006D77] via-[#0D9488] to-[#006D77] flex items-center justify-center px-6 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-[#0a5c7a] via-[#0D9488] to-[#0a5c7a] flex items-center justify-center px-6 relative overflow-hidden">
       {/* Motif de coquillages en arrière-plan */}
       <div className="absolute inset-0 opacity-10">
         {Array.from({ length: 20 }).map((_, i) => (

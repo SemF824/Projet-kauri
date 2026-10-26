@@ -88,7 +88,7 @@ export function SuspendedAccountScreen() {
               </div>
             </div>
 
-            <div className="bg-[#E0F2FE] rounded-xl p-4 border border-[#006D77]/30 mb-6">
+            <div className="bg-[#E0F2FE] rounded-xl p-4 border border-[#0a5c7a]/30 mb-6">
               <p className="text-[#0369A1] text-sm">
                 <strong>Que faire maintenant ?</strong>
               </p>
@@ -99,7 +99,7 @@ export function SuspendedAccountScreen() {
               </ul>
             </div>
 
-            <button className="w-full bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-xl mb-3 shadow-lg flex items-center justify-center gap-2">
+            <button className="w-full bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white py-4 rounded-xl mb-3 shadow-lg flex items-center justify-center gap-2">
               <FileText className="w-5 h-5" />
               <span>Faire Appel de la Décision</span>
             </button>

@@ -188,7 +188,7 @@ export function DiscoverCirclesScreen() {
       <div className="w-full max-w-[430px] h-screen flex flex-col overflow-hidden shadow-2xl bg-[#F9F9F9] relative">
 
         {/* Header */}
-        <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-4 pt-10 pb-5 flex-shrink-0">
+        <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-4 pt-10 pb-5 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <button onClick={() => navigate(-1)} className="text-white flex items-center gap-2">
               <ArrowLeft className="w-5 h-5" />
@@ -284,7 +284,7 @@ export function DiscoverCirclesScreen() {
               <p className="text-xs text-[#CBD5E1]">Essayez d'autres critères</p>
               <button
                 onClick={clearFilters}
-                className="mt-4 text-[#006D77] text-xs font-semibold underline"
+                className="mt-4 text-[#0a5c7a] text-xs font-semibold underline"
               >
                 Réinitialiser les filtres
               </button>
@@ -308,7 +308,7 @@ export function DiscoverCirclesScreen() {
                           className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                           style={{
                             backgroundColor: isElite ? '#D4AF3715' : '#006D7710',
-                            color: isElite ? '#B8860B' : '#006D77',
+                            color: isElite ? '#B8860B' : '#0a5c7a',
                           }}
                         >
                           {tag}
@@ -319,7 +319,7 @@ export function DiscoverCirclesScreen() {
 
                   {/* Header */}
                   <div className="px-4 pt-2.5 pb-3 flex items-start justify-between">
-                    <h3 className="text-base font-bold text-[#006D77] flex-1 leading-snug">{circle.name}</h3>
+                    <h3 className="text-base font-bold text-[#0a5c7a] flex-1 leading-snug">{circle.name}</h3>
                     {circle.scoreRequired !== null ? (
                       <div className="flex-shrink-0 px-2.5 py-1 rounded-md bg-[#B05B3B] ml-2">
                         <p className="text-[10px] font-bold text-white uppercase tracking-wide">
@@ -338,7 +338,7 @@ export function DiscoverCirclesScreen() {
                   {/* Financials */}
                   <div className="px-4 pb-3 grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xl font-bold text-[#006D77]">{circle.contribution} €</p>
+                      <p className="text-xl font-bold text-[#0a5c7a]">{circle.contribution} €</p>
                       <p className="text-[11px] text-[#64748B]">Cotisation / mois</p>
                     </div>
                     <div>
@@ -354,7 +354,7 @@ export function DiscoverCirclesScreen() {
                         className="absolute top-0 left-0 h-full rounded-full transition-all duration-500"
                         style={{
                           width: `${circle.fillPercentage}%`,
-                          backgroundColor: isElite ? '#D4AF37' : '#006D77',
+                          backgroundColor: isElite ? '#D4AF37' : '#0a5c7a',
                         }}
                       />
                     </div>
@@ -384,7 +384,7 @@ export function DiscoverCirclesScreen() {
                         }
                         className="w-full py-3.5 rounded-xl text-white font-medium text-sm transition-colors shadow-md flex items-center justify-center gap-2"
                         style={{
-                          backgroundColor: circle.status === 'accessible' ? '#B05B3B' : '#006D77',
+                          backgroundColor: circle.status === 'accessible' ? '#B05B3B' : '#0a5c7a',
                         }}
                       >
                         {circle.status === 'accessible' ? 'Postuler' : 'Rejoindre le Cercle'}
@@ -404,7 +404,7 @@ export function DiscoverCirclesScreen() {
                 <TrendingUp className="w-5 h-5 text-[#D4AF37]" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold text-[#006D77] text-sm mb-1">Améliorez votre Score de Confiance</h4>
+                <h4 className="font-semibold text-[#0a5c7a] text-sm mb-1">Améliorez votre Score de Confiance</h4>
                 <p className="text-xs text-[#64748B] leading-relaxed">
                   Participez régulièrement aux tontines et respectez vos engagements pour débloquer
                   les cercles Élite et bénéficier de meilleures opportunités d'épargne.
@@ -433,7 +433,7 @@ export function DiscoverCirclesScreen() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => setFilterContrib(null)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterContrib === null ? 'bg-[#006D77] text-white border-[#006D77]' : 'border-gray-200 text-[#64748B]'}`}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterContrib === null ? 'bg-[#0a5c7a] text-white border-[#0a5c7a]' : 'border-gray-200 text-[#64748B]'}`}
                     >
                       Tous
                     </button>
@@ -441,7 +441,7 @@ export function DiscoverCirclesScreen() {
                       <button
                         key={v}
                         onClick={() => setFilterContrib(filterContrib === v ? null : v)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterContrib === v ? 'bg-[#006D77] text-white border-[#006D77]' : 'border-gray-200 text-[#64748B]'}`}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterContrib === v ? 'bg-[#0a5c7a] text-white border-[#0a5c7a]' : 'border-gray-200 text-[#64748B]'}`}
                       >
                         {v} €
                       </button>
@@ -455,7 +455,7 @@ export function DiscoverCirclesScreen() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => setFilterDuration(null)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterDuration === null ? 'bg-[#006D77] text-white border-[#006D77]' : 'border-gray-200 text-[#64748B]'}`}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterDuration === null ? 'bg-[#0a5c7a] text-white border-[#0a5c7a]' : 'border-gray-200 text-[#64748B]'}`}
                     >
                       Toutes
                     </button>
@@ -463,7 +463,7 @@ export function DiscoverCirclesScreen() {
                       <button
                         key={v}
                         onClick={() => setFilterDuration(filterDuration === v ? null : v)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterDuration === v ? 'bg-[#006D77] text-white border-[#006D77]' : 'border-gray-200 text-[#64748B]'}`}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterDuration === v ? 'bg-[#0a5c7a] text-white border-[#0a5c7a]' : 'border-gray-200 text-[#64748B]'}`}
                       >
                         {v} mois
                       </button>
@@ -477,13 +477,13 @@ export function DiscoverCirclesScreen() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => setFilterScore('none')}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterScore === 'none' ? 'bg-[#006D77] text-white border-[#006D77]' : 'border-gray-200 text-[#64748B]'}`}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterScore === 'none' ? 'bg-[#0a5c7a] text-white border-[#0a5c7a]' : 'border-gray-200 text-[#64748B]'}`}
                     >
                       Tous
                     </button>
                     <button
                       onClick={() => setFilterScore(filterScore === null ? 'none' : null)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterScore === null ? 'bg-[#006D77] text-white border-[#006D77]' : 'border-gray-200 text-[#64748B]'}`}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterScore === null ? 'bg-[#0a5c7a] text-white border-[#0a5c7a]' : 'border-gray-200 text-[#64748B]'}`}
                     >
                       Sans score
                     </button>
@@ -491,7 +491,7 @@ export function DiscoverCirclesScreen() {
                       <button
                         key={v}
                         onClick={() => setFilterScore(filterScore === v ? 'none' : v)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterScore === v ? 'bg-[#006D77] text-white border-[#006D77]' : 'border-gray-200 text-[#64748B]'}`}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterScore === v ? 'bg-[#0a5c7a] text-white border-[#0a5c7a]' : 'border-gray-200 text-[#64748B]'}`}
                       >
                         {v}+
                       </button>
@@ -509,7 +509,7 @@ export function DiscoverCirclesScreen() {
                 </button>
                 <button
                   onClick={() => setShowFilterSheet(false)}
-                  className="flex-1 py-3 rounded-xl bg-[#006D77] text-white text-sm font-semibold"
+                  className="flex-1 py-3 rounded-xl bg-[#0a5c7a] text-white text-sm font-semibold"
                 >
                   Appliquer
                 </button>

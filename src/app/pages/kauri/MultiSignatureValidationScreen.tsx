@@ -200,7 +200,7 @@ const statusConfig: Record<
   },
   valide: {
     label: "Validé",
-    color: "#006D77",
+    color: "#0a5c7a",
     bg: "bg-[#D1FAE5]",
   },
   rejete: {
@@ -424,7 +424,7 @@ export function MultiSignatureValidationScreen() {
     return (
       <div className={`min-h-screen pb-28 ${bg}`}>
         {/* Header */}
-        <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
+        <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
           <button
             onClick={() => setFlow("liste")}
             className="mb-5 text-white/70 flex items-center gap-2"
@@ -495,7 +495,7 @@ export function MultiSignatureValidationScreen() {
                 label: "Montant demandé",
                 value: `${detail.montant.toLocaleString()} €`,
                 bold: true,
-                color: "#006D77",
+                color: "#0a5c7a",
               },
               { label: "Projet source", value: detail.projet },
               {
@@ -552,7 +552,7 @@ export function MultiSignatureValidationScreen() {
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
                         isApproved
-                          ? "bg-gradient-to-br from-[#006D77] to-[#0D9488]"
+                          ? "bg-gradient-to-br from-[#0a5c7a] to-[#0F172A]"
                           : s.status === "rejected"
                             ? "bg-red-400"
                             : isDarkMode
@@ -590,7 +590,7 @@ export function MultiSignatureValidationScreen() {
                     </div>
                     <div>
                       {isApproved && (
-                        <span className="text-xs font-semibold text-[#006D77] flex items-center gap-1">
+                        <span className="text-xs font-semibold text-[#0a5c7a] flex items-center gap-1">
                           <CheckCircle2 className="w-4 h-4" />{" "}
                           Signé
                         </span>
@@ -618,8 +618,8 @@ export function MultiSignatureValidationScreen() {
           </div>
 
           {/* Alerte sécurité */}
-          <div className="bg-[#E0F2FE] rounded-xl p-4 border border-[#006D77]/30 flex gap-3">
-            <Shield className="w-5 h-5 text-[#006D77] flex-shrink-0 mt-0.5" />
+          <div className="bg-[#E0F2FE] rounded-xl p-4 border border-[#0a5c7a]/30 flex gap-3">
+            <Shield className="w-5 h-5 text-[#0a5c7a] flex-shrink-0 mt-0.5" />
             <p className="text-xs text-[#0369A1] leading-relaxed">
               <strong>Sécurité anti-fraude :</strong> Les{" "}
               {detail.requis} co-signataires doivent approuver
@@ -632,7 +632,7 @@ export function MultiSignatureValidationScreen() {
           {canSign && (
             <button
               onClick={() => setSignConfirmId(detail.id)}
-              className="w-full bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
+              className="w-full bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
             >
               <Fingerprint className="w-5 h-5" /> Apposer ma
               signature
@@ -650,12 +650,12 @@ export function MultiSignatureValidationScreen() {
           )}
 
           {isExecuted && (
-            <div className="bg-[#D1FAE5] rounded-2xl p-5 border-2 border-[#006D77] text-center">
-              <CheckCircle2 className="w-12 h-12 text-[#006D77] mx-auto mb-2" />
-              <p className="text-[#006D77] font-bold text-sm">
+            <div className="bg-[#D1FAE5] rounded-2xl p-5 border-2 border-[#0a5c7a] text-center">
+              <CheckCircle2 className="w-12 h-12 text-[#0a5c7a] mx-auto mb-2" />
+              <p className="text-[#0a5c7a] font-bold text-sm">
                 Retrait exécuté
               </p>
-              <p className="text-[#006D77] text-xs mt-1">
+              <p className="text-[#0a5c7a] text-xs mt-1">
                 Les fonds seront crédités sous 1–2 jours ouvrés.
               </p>
             </div>
@@ -672,8 +672,8 @@ export function MultiSignatureValidationScreen() {
             <div
               className={`relative w-full max-w-sm rounded-3xl p-6 shadow-2xl ${isDarkMode ? "bg-[#1E293B]" : "bg-white"}`}
             >
-              <div className="w-16 h-16 bg-[#006D77]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Fingerprint className="w-8 h-8 text-[#006D77]" />
+              <div className="w-16 h-16 bg-[#0a5c7a]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Fingerprint className="w-8 h-8 text-[#0a5c7a]" />
               </div>
               <h3
                 className={`text-lg font-bold text-center mb-2 ${txt}`}
@@ -686,7 +686,7 @@ export function MultiSignatureValidationScreen() {
                 <p className={`text-xs text-center ${sub}`}>
                   Retrait de
                 </p>
-                <p className="text-xl font-bold text-[#006D77] text-center">
+                <p className="text-xl font-bold text-[#0a5c7a] text-center">
                   {detail.montant.toLocaleString()} €
                 </p>
                 <p
@@ -709,7 +709,7 @@ export function MultiSignatureValidationScreen() {
                 </button>
                 <button
                   onClick={() => handleSign(detail.id)}
-                  className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white text-sm font-bold shadow-lg"
+                  className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white text-sm font-bold shadow-lg"
                 >
                   Signer ✓
                 </button>
@@ -737,7 +737,7 @@ export function MultiSignatureValidationScreen() {
                 Exécuter le retrait ?
               </h3>
               <p
-                className={`text-2xl font-bold text-center text-[#006D77] mb-1`}
+                className={`text-2xl font-bold text-center text-[#0a5c7a] mb-1`}
               >
                 {detail.montant.toLocaleString()} €
               </p>
@@ -800,7 +800,7 @@ export function MultiSignatureValidationScreen() {
 
     return (
       <div className={`min-h-screen pb-28 ${bg}`}>
-        <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
+        <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
           <button
             onClick={() => setFlow("liste")}
             className="mb-5 text-white/70 flex items-center gap-2"
@@ -829,7 +829,7 @@ export function MultiSignatureValidationScreen() {
                       <CheckCircle2 className="w-4 h-4 text-white" />
                     ) : (
                       <span
-                        className={`text-xs font-bold ${s.id === formStep ? "text-[#006D77]" : "text-white/50"}`}
+                        className={`text-xs font-bold ${s.id === formStep ? "text-[#0a5c7a]" : "text-white/50"}`}
                       >
                         {s.id}
                       </span>
@@ -872,7 +872,7 @@ export function MultiSignatureValidationScreen() {
                         onClick={() =>
                           setForm({ ...form, projetId: p.id })
                         }
-                        className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${form.projetId === p.id ? "border-[#006D77] bg-[#006D77]/5" : isDarkMode ? "border-[#334155]" : "border-[#E2E8F0]"}`}
+                        className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${form.projetId === p.id ? "border-[#0a5c7a] bg-[#0a5c7a]/5" : isDarkMode ? "border-[#334155]" : "border-[#E2E8F0]"}`}
                       >
                         <div className="text-left">
                           <p
@@ -885,11 +885,11 @@ export function MultiSignatureValidationScreen() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold text-[#006D77]">
+                          <p className="text-sm font-bold text-[#0a5c7a]">
                             {p.disponible.toLocaleString()} €
                           </p>
                           {form.projetId === p.id && (
-                            <CheckCircle2 className="w-4 h-4 text-[#006D77] ml-auto mt-1" />
+                            <CheckCircle2 className="w-4 h-4 text-[#0a5c7a] ml-auto mt-1" />
                           )}
                         </div>
                       </button>
@@ -920,7 +920,7 @@ export function MultiSignatureValidationScreen() {
                         })
                       }
                       placeholder="Ex: 10 000"
-                      className={`w-full pl-9 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#006D77]/30 ${inp}`}
+                      className={`w-full pl-9 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0a5c7a]/30 ${inp}`}
                     />
                   </div>
                   {selectedProject &&
@@ -953,7 +953,7 @@ export function MultiSignatureValidationScreen() {
                       })
                     }
                     placeholder="Ex: Achat équipements, loyer local..."
-                    className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#006D77]/30 ${inp}`}
+                    className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0a5c7a]/30 ${inp}`}
                   />
                 </div>
               </div>
@@ -962,8 +962,8 @@ export function MultiSignatureValidationScreen() {
             {/* Étape 2 */}
             {formStep === 2 && (
               <div className="space-y-5">
-                <div className="bg-[#E0F2FE] rounded-xl p-3 border border-[#006D77]/30 flex gap-2">
-                  <Building2 className="w-5 h-5 text-[#006D77] flex-shrink-0 mt-0.5" />
+                <div className="bg-[#E0F2FE] rounded-xl p-3 border border-[#0a5c7a]/30 flex gap-2">
+                  <Building2 className="w-5 h-5 text-[#0a5c7a] flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-[#0369A1]">
                     Les fonds seront virés sur le compte
                     bancaire enregistré ci-dessous. Vérifiez
@@ -987,7 +987,7 @@ export function MultiSignatureValidationScreen() {
                       })
                     }
                     placeholder="Ex: Crédit Agricole Martinique"
-                    className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#006D77]/30 ${inp}`}
+                    className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0a5c7a]/30 ${inp}`}
                   />
                 </div>
                 <div>
@@ -1003,7 +1003,7 @@ export function MultiSignatureValidationScreen() {
                       setForm({ ...form, iban: e.target.value })
                     }
                     placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX"
-                    className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#006D77]/30 font-mono ${inp}`}
+                    className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0a5c7a]/30 font-mono ${inp}`}
                   />
                 </div>
               </div>
@@ -1024,7 +1024,7 @@ export function MultiSignatureValidationScreen() {
                     label: "Montant",
                     value: `${parseFloat(form.montant || "0").toLocaleString()} €`,
                     bold: true,
-                    color: "#006D77",
+                    color: "#0a5c7a",
                   },
                   {
                     label: "Banque destination",
@@ -1094,7 +1094,7 @@ export function MultiSignatureValidationScreen() {
                   (formStep === 2 &&
                     (!form.destination || !form.iban))
                 }
-                className="flex-1 py-4 rounded-xl bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white text-sm font-bold shadow-lg disabled:opacity-40"
+                className="flex-1 py-4 rounded-xl bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white text-sm font-bold shadow-lg disabled:opacity-40"
               >
                 Suivant
               </button>
@@ -1115,7 +1115,7 @@ export function MultiSignatureValidationScreen() {
   // ── VUE LISTE ─────────────────────────────────────────────────────────────
   return (
     <div className={`min-h-screen pb-28 ${bg}`}>
-      <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
+      <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
         <button
           onClick={() => navigate(-1)}
           className="mb-5 text-white/70 flex items-center gap-2"
@@ -1185,7 +1185,7 @@ export function MultiSignatureValidationScreen() {
           </p>
           <button
             onClick={() => setFlow("initier")}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#006D77] text-white text-xs font-bold rounded-full shadow"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0a5c7a] text-white text-xs font-bold rounded-full shadow"
           >
             <Plus className="w-3.5 h-3.5" /> Nouveau retrait
           </button>
@@ -1264,7 +1264,7 @@ export function MultiSignatureValidationScreen() {
                       return (
                         <div
                           key={i}
-                          className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-bold text-white ${ok ? "bg-[#006D77] border-white" : isDarkMode ? "bg-[#334155] border-[#1E293B]" : "bg-[#E2E8F0] border-white"}`}
+                          className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-bold text-white ${ok ? "bg-[#0a5c7a] border-white" : isDarkMode ? "bg-[#334155] border-[#1E293B]" : "bg-[#E2E8F0] border-white"}`}
                         >
                           {ok ? "✓" : s.initials}
                         </div>

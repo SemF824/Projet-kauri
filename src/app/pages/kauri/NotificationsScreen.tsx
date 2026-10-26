@@ -115,21 +115,21 @@ export function NotificationsScreen() {
   const unreadCount = notifications.filter(n => !n.read && (n.status === 'active' || !n.status)).length;
 
   const accentColor = (type: string) => {
-    if (type === 'success') return '#006D77';
+    if (type === 'success') return '#0a5c7a';
     if (type === 'celebration') return '#D4AF37';
     if (type === 'warning') return '#B05B3B';
     return '#64748B';
   };
 
   const iconColor = (type: string) => {
-    if (type === 'success') return 'text-[#006D77]';
+    if (type === 'success') return 'text-[#0a5c7a]';
     if (type === 'celebration') return 'text-[#D4AF37]';
     if (type === 'warning') return 'text-[#B05B3B]';
     return 'text-[#64748B]';
   };
 
   const iconBg = (type: string) => {
-    if (type === 'success') return isDarkMode ? 'bg-[#006D77]/20' : 'bg-[#006D77]/10';
+    if (type === 'success') return isDarkMode ? 'bg-[#0a5c7a]/20' : 'bg-[#0a5c7a]/10';
     if (type === 'celebration') return isDarkMode ? 'bg-[#D4AF37]/20' : 'bg-[#D4AF37]/10';
     if (type === 'warning') return isDarkMode ? 'bg-[#B05B3B]/20' : 'bg-[#B05B3B]/10';
     return isDarkMode ? 'bg-white/10' : 'bg-[#64748B]/10';
@@ -138,7 +138,7 @@ export function NotificationsScreen() {
   return (
     <div className={`min-h-screen pb-24 transition-colors ${isDarkMode ? 'bg-[#0F172A]' : 'bg-[#F2F4F7]'}`}>
       {/* Header */}
-      <div className={`px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl ${isDarkMode ? 'bg-gradient-to-br from-[#1E293B] to-[#334155]' : 'bg-gradient-to-br from-[#006D77] to-[#0D9488]'}`}>
+      <div className={`px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl ${isDarkMode ? 'bg-gradient-to-br from-[#1E293B] to-[#334155]' : 'bg-gradient-to-br from-[#0a5c7a] to-[#0F172A]'}`}>
         <div className="flex items-center justify-between mb-6">
           <button onClick={() => navigate(-1)} className="text-white flex items-center gap-2">
             <ArrowLeft className="w-5 h-5" />
@@ -166,7 +166,7 @@ export function NotificationsScreen() {
           onClick={() => setActiveTab('active')}
           className={`pb-2 text-sm font-medium transition-colors border-b-2 ${
             activeTab === 'active' 
-              ? isDarkMode ? 'border-white text-white' : 'border-[#006D77] text-[#006D77]'
+              ? isDarkMode ? 'border-white text-white' : 'border-[#0a5c7a] text-[#0a5c7a]'
               : 'border-transparent text-[#64748B]'
           }`}
         >
@@ -176,7 +176,7 @@ export function NotificationsScreen() {
           onClick={() => setActiveTab('archived')}
           className={`pb-2 text-sm font-medium transition-colors border-b-2 ${
             activeTab === 'archived'
-              ? isDarkMode ? 'border-white text-white' : 'border-[#006D77] text-[#006D77]'
+              ? isDarkMode ? 'border-white text-white' : 'border-[#0a5c7a] text-[#0a5c7a]'
               : 'border-transparent text-[#64748B]'
           }`}
         >

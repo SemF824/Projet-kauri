@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { ArrowLeft, X, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
-const TEAL = "#006D77";
+const TEAL = "#0a5c7a";
 const GOLD = "#D4AF37";
 const TERRA = "#B05B3B";
 const BG = "#F4F6F8";

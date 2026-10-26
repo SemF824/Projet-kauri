@@ -26,26 +26,26 @@ export function YourTurnIcon() {
 
 export function SwipeTransferIcon() {
   return (
-    <div className="relative w-full h-24 bg-gradient-to-r from-[#006D77]/10 to-[#0D9488]/10 rounded-2xl overflow-hidden border border-[#006D77]/30">
+    <div className="relative w-full h-24 bg-gradient-to-r from-[#0a5c7a]/10 to-[#0D9488]/10 rounded-2xl overflow-hidden border border-[#0a5c7a]/30">
       {/* Flèche glissante */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="animate-slideRight">
-          <ArrowRight className="w-12 h-12 text-[#006D77]" />
+          <ArrowRight className="w-12 h-12 text-[#0a5c7a]" />
         </div>
       </div>
 
       {/* Effet de traînée */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#006D77]/20 to-transparent animate-shimmer"></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#0a5c7a]/20 to-transparent animate-shimmer"></div>
 
       {/* Labels */}
       <div className="absolute left-4 top-1/2 -translate-y-1/2">
-        <div className="w-10 h-10 rounded-full bg-white border-2 border-[#006D77] flex items-center justify-center shadow-lg">
-          <span className="text-xs text-[#006D77]">Vous</span>
+        <div className="w-10 h-10 rounded-full bg-white border-2 border-[#0a5c7a] flex items-center justify-center shadow-lg">
+          <span className="text-xs text-[#0a5c7a]">Vous</span>
         </div>
       </div>
 
       <div className="absolute right-4 top-1/2 -translate-y-1/2">
-        <div className="w-10 h-10 rounded-full bg-[#006D77] border-2 border-[#D4AF37] flex items-center justify-center shadow-lg">
+        <div className="w-10 h-10 rounded-full bg-[#0a5c7a] border-2 border-[#D4AF37] flex items-center justify-center shadow-lg">
           <span className="text-xs text-white">M.L</span>
         </div>
       </div>
@@ -112,8 +112,8 @@ export function RecurrenceSelector() {
             key={option}
             className={`py-3 px-4 rounded-xl border-2 transition-all ${
               index === 0
-                ? 'bg-[#006D77] border-[#006D77] text-white'
-                : 'bg-white border-[#E2E8F0] text-[#64748B] hover:border-[#006D77]'
+                ? 'bg-[#0a5c7a] border-[#0a5c7a] text-white'
+                : 'bg-white border-[#E2E8F0] text-[#64748B] hover:border-[#0a5c7a]'
             }`}
           >
             {option}
@@ -121,7 +121,7 @@ export function RecurrenceSelector() {
         ))}
       </div>
 
-      <div className="bg-[#E0F2FE] rounded-xl p-4 border border-[#006D77]/30">
+      <div className="bg-[#E0F2FE] rounded-xl p-4 border border-[#0a5c7a]/30">
         <p className="text-[#0369A1] text-sm">
           <strong>Sélectionné :</strong> La tontine se répétera 1 fois (cycle unique)
         </p>

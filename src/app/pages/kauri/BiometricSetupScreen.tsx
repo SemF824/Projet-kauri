@@ -90,7 +90,7 @@ export function BiometricSetupScreen() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans">
       {/* ── BANNER HEADER SUPÉRIEUR ── */}
-      <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-md">
+      <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-md">
         <button
           onClick={() => navigate(-1)}
           className="mb-6 text-white flex items-center gap-2 bg-transparent border-none cursor-pointer opacity-90 hover:opacity-100 transition-opacity"
@@ -112,7 +112,7 @@ export function BiometricSetupScreen() {
         {/* CARTE CENTRALE D'INSTRUCTIONS */}
         <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-[#E2E8F0] text-center space-y-6">
           {/* Icône de scan stylisée */}
-          <div className="w-20 h-20 bg-[#006D77] rounded-full flex items-center justify-center mx-auto shadow-lg shadow-[#006D77]/20">
+          <div className="w-20 h-20 bg-[#0a5c7a] rounded-full flex items-center justify-center mx-auto shadow-lg shadow-[#0a5c7a]/20">
             <svg
               width="36"
               height="36"
@@ -163,8 +163,8 @@ export function BiometricSetupScreen() {
 
             {/* Avantage 2 */}
             <div className="bg-[#F8FAFC] border border-[#E8ECF0] rounded-2xl p-4 flex items-start gap-3.5">
-              <div className="w-9 h-9 bg-[#006D77]/10 border border-[#006D77]/20 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Fingerprint className="w-4 h-4 text-[#006D77]" />
+              <div className="w-9 h-9 bg-[#0a5c7a]/10 border border-[#0a5c7a]/20 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Fingerprint className="w-4 h-4 text-[#0a5c7a]" />
               </div>
               <div>
                 <h4 className="text-xs font-bold text-[#0F172A] mb-0.5">
@@ -184,7 +184,7 @@ export function BiometricSetupScreen() {
           <button
             onClick={handleActivateBiometrics}
             disabled={isActivating}
-            className="w-full bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-2xl shadow-lg shadow-[#006D77]/20 font-bold text-sm tracking-wide transition-all active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer border-none"
+            className="w-full bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white py-4 rounded-2xl shadow-lg shadow-[#0a5c7a]/20 font-bold text-sm tracking-wide transition-all active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer border-none"
           >
             {isActivating ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -199,7 +199,7 @@ export function BiometricSetupScreen() {
           <button
             onClick={handleSkip}
             disabled={isActivating}
-            className="w-full bg-transparent border-none text-[#64748B] text-xs font-bold py-2 text-center block hover:text-[#006D77] transition-colors cursor-pointer outline-none disabled:opacity-30"
+            className="w-full bg-transparent border-none text-[#64748B] text-xs font-bold py-2 text-center block hover:text-[#0a5c7a] transition-colors cursor-pointer outline-none disabled:opacity-30"
           >
             Ignorer cette étape
           </button>

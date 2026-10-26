@@ -186,21 +186,21 @@ export function ProNotificationsScreen() {
   const unreadCount = notifications.filter(n => !n.read && (n.status === 'active' || !n.status)).length;
 
   const accentColor = (type: string) => {
-    if (type === 'success') return '#006D77';
+    if (type === 'success') return '#0a5c7a';
     if (type === 'business') return '#D4AF37';
     if (type === 'warning') return '#B05B3B';
     return '#64748B';
   };
 
   const iconColor = (type: string) => {
-    if (type === 'success') return 'text-[#006D77]';
+    if (type === 'success') return 'text-[#0a5c7a]';
     if (type === 'business') return 'text-[#D4AF37]';
     if (type === 'warning') return 'text-[#B05B3B]';
     return 'text-[#64748B]';
   };
 
   const iconBg = (type: string) => {
-    if (type === 'success') return isDarkMode ? 'bg-[#006D77]/20' : 'bg-[#006D77]/10';
+    if (type === 'success') return isDarkMode ? 'bg-[#0a5c7a]/20' : 'bg-[#0a5c7a]/10';
     if (type === 'business') return isDarkMode ? 'bg-[#D4AF37]/20' : 'bg-[#D4AF37]/10';
     if (type === 'warning') return isDarkMode ? 'bg-[#B05B3B]/20' : 'bg-[#B05B3B]/10';
     return isDarkMode ? 'bg-white/10' : 'bg-[#64748B]/10';
@@ -242,7 +242,7 @@ export function ProNotificationsScreen() {
       <div className="px-6 pt-4">
         <div className={`rounded-2xl p-4 border grid grid-cols-3 gap-3 ${isDarkMode ? 'bg-[#1E293B] border-[#334155]' : 'bg-white border-[#E2E8F0]'} shadow-sm`}>
           {[
-            { label: 'Total levé', value: '45 000 €', color: '#006D77' },
+            { label: 'Total levé', value: '45 000 €', color: '#0a5c7a' },
             { label: 'Ce mois', value: '+8 200 €', color: '#D4AF37' },
             { label: 'Palier actuel', value: 'Palier 2', color: '#B05B3B' },
           ].map(s => (
@@ -362,7 +362,7 @@ export function ProNotificationsScreen() {
                           </span>
                         )}
                         {n.meta.contributionType === 'investissement' && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#006D77]/10 text-[#006D77] font-medium flex items-center gap-0.5">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#0a5c7a]/10 text-[#0a5c7a] font-medium flex items-center gap-0.5">
                             <TrendingUp className="w-2.5 h-2.5" /> Investissement
                           </span>
                         )}

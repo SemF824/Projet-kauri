@@ -56,8 +56,8 @@ export function TontineQuickActionsModal({
       title: "Mes tontines en cours",
       description: "Consultez vos tours, vos paiements et l'avancement des pots",
       icon: ListOrdered,
-      gradient: "from-[#006D77] to-[#0D9488]",
-      bgLight: "bg-teal-50 dark:bg-teal-950/40 text-[#006D77] dark:text-[#0D9488]",
+      gradient: "from-[#0a5c7a] to-[#0F172A]",
+      bgLight: "bg-teal-50 dark:bg-teal-950/40 text-[#0a5c7a] dark:text-[#0D9488]",
       action: () => {
         onClose();
         navigate("/kauri/tontines-actives");
@@ -153,7 +153,7 @@ export function TontineQuickActionsModal({
               onClose();
               onOpenTutorial();
             }}
-            className="w-full py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs font-bold text-[#006D77] dark:text-[#0D9488] hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-colors border-none bg-transparent cursor-pointer"
+            className="w-full py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs font-bold text-[#0a5c7a] dark:text-[#0D9488] hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-colors border-none bg-transparent cursor-pointer"
           >
             <HelpCircle className="w-4 h-4" />
             <span>Nouveau ? Voir comment fonctionne la tontine</span>

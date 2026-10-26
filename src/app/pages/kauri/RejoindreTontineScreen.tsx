@@ -43,7 +43,7 @@ const TONTINES: TontineOffer[] = [
     duration: 12,
     nextStart: '1 juillet 2026',
     category: 'Investissement',
-    categoryColor: '#006D77',
+    categoryColor: '#0a5c7a',
     isPrivate: false,
     spotsLeft: 6,
     featured: true,
@@ -381,7 +381,7 @@ export function RejoindreTontineScreen() {
 
       {/* Header */}
       <div style={{
-        background: 'linear-gradient(135deg, #006D77 0%, #0D9488 100%)',
+        background: 'linear-gradient(135deg, #0a5c7a 0%, #0D9488 100%)',
         padding: '48px 20px 20px',
       }}>
         <button
@@ -436,8 +436,8 @@ export function RejoindreTontineScreen() {
             {CATEGORIES.map(c => (
               <button key={c} onClick={() => setActiveCategory(c)} style={{
                 flexShrink: 0, padding: '5px 12px', borderRadius: 20,
-                border: `1.5px solid ${activeCategory === c ? '#006D77' : cardBorder}`,
-                background: activeCategory === c ? '#006D77' : 'transparent',
+                border: `1.5px solid ${activeCategory === c ? '#0a5c7a' : cardBorder}`,
+                background: activeCategory === c ? '#0a5c7a' : 'transparent',
                 color: activeCategory === c ? '#fff' : textMuted,
                 fontSize: 12, fontWeight: 600, cursor: 'pointer',
               }}>{c}</button>
@@ -448,8 +448,8 @@ export function RejoindreTontineScreen() {
             {FREQUENCIES.map(f => (
               <button key={f} onClick={() => setActiveFreq(f)} style={{
                 flexShrink: 0, padding: '5px 10px', borderRadius: 20,
-                border: `1.5px solid ${activeFreq === f ? '#006D77' : cardBorder}`,
-                background: activeFreq === f ? '#006D77' : 'transparent',
+                border: `1.5px solid ${activeFreq === f ? '#0a5c7a' : cardBorder}`,
+                background: activeFreq === f ? '#0a5c7a' : 'transparent',
                 color: activeFreq === f ? '#fff' : textMuted,
                 fontSize: 11, fontWeight: 600, cursor: 'pointer',
               }}>{f}</button>
@@ -460,8 +460,8 @@ export function RejoindreTontineScreen() {
             {AMOUNTS.map(a => (
               <button key={a} onClick={() => setActiveAmount(a)} style={{
                 flexShrink: 0, padding: '5px 10px', borderRadius: 20,
-                border: `1.5px solid ${activeAmount === a ? '#006D77' : cardBorder}`,
-                background: activeAmount === a ? '#006D77' : 'transparent',
+                border: `1.5px solid ${activeAmount === a ? '#0a5c7a' : cardBorder}`,
+                background: activeAmount === a ? '#0a5c7a' : 'transparent',
                 color: activeAmount === a ? '#fff' : textMuted,
                 fontSize: 11, fontWeight: 600, cursor: 'pointer',
               }}>{a}</button>
@@ -477,8 +477,8 @@ export function RejoindreTontineScreen() {
             {CATEGORIES.map(c => (
               <button key={c} onClick={() => setActiveCategory(c)} style={{
                 flexShrink: 0, padding: '6px 14px', borderRadius: 20,
-                border: `1.5px solid ${activeCategory === c ? '#006D77' : cardBorder}`,
-                background: activeCategory === c ? '#006D77' : 'transparent',
+                border: `1.5px solid ${activeCategory === c ? '#0a5c7a' : cardBorder}`,
+                background: activeCategory === c ? '#0a5c7a' : 'transparent',
                 color: activeCategory === c ? '#fff' : textMuted,
                 fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
               }}>{c}</button>

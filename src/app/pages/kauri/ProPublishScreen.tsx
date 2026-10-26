@@ -242,8 +242,8 @@ const CTA_CONFIG: Record<
 > = {
   investir: {
     label: "Investir maintenant",
-    color: "#006D77",
-    bg: "bg-[#006D77]",
+    color: "#0a5c7a",
+    bg: "bg-[#0a5c7a]",
     icon: TrendingUp,
     desc: "Le particulier sera invité à investir dans votre projet",
   },
@@ -374,11 +374,11 @@ export function ProPublishScreen() {
   if (published) {
     const ctaCfg = form.ctaType ? CTA_CONFIG[form.ctaType as CtaType] : null;
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#0F172A] via-[#0F172A] to-[#006D77]/30 flex flex-col px-6 pt-16 pb-10">
+      <div className="min-h-screen bg-gradient-to-b from-[#0F172A] via-[#0F172A] to-[#0a5c7a]/30 flex flex-col px-6 pt-16 pb-10">
         {/* Checkmark animé */}
         <div className="flex flex-col items-center mb-10">
           <div
-            className="w-20 h-20 rounded-full bg-gradient-to-br from-[#006D77] to-[#0D9488] flex items-center justify-center shadow-2xl mb-5"
+            className="w-20 h-20 rounded-full bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] flex items-center justify-center shadow-2xl mb-5"
             style={{ boxShadow: "0 0 40px rgba(0,109,119,0.5)" }}
           >
             <CheckCircle2 className="w-10 h-10 text-white" strokeWidth={2.5} />
@@ -541,7 +541,7 @@ export function ProPublishScreen() {
                   label: "Vidéo",
                   sublabel: "URL YouTube, Vimeo ou lien direct MP4",
                   badge: "Recommandé",
-                  badgeColor: "#006D77",
+                  badgeColor: "#0a5c7a",
                 },
                 {
                   type: "image" as ContentType,
@@ -934,7 +934,7 @@ export function ProPublishScreen() {
                     <span className="text-xs text-[#0F172A] font-medium">
                       {selectedProject.nom}
                     </span>
-                    <span className="text-xs text-[#006D77] font-bold">
+                    <span className="text-xs text-[#0a5c7a] font-bold">
                       {selectedProject.objectif > 0
                         ? `${Math.round((selectedProject.leve / selectedProject.objectif) * 100)} % financé`
                         : selectedProject.statut}

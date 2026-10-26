@@ -130,7 +130,7 @@ function ProBottomNav({
   navigate: (p: string) => void;
 }) {
   const GOLD = "#D4AF37";
-  const TEAL = "#006D77";
+  const TEAL = "#0a5c7a";
   const bg = isDarkMode ? "#1E293B" : "#ffffff";
   const border = isDarkMode ? "#334155" : "#E8EDF2";
   const inactive = isDarkMode ? "#475569" : "#94A3B8";
@@ -243,7 +243,7 @@ function ProBottomNav({
                       width: 18,
                       height: 18,
                       borderRadius: "50%",
-                      backgroundColor: isDarkMode ? "#0F172A" : "#006D77",
+                      backgroundColor: isDarkMode ? "#0F172A" : "#0a5c7a",
                       border: "1.5px solid #ffffff",
                       display: "flex",
                       alignItems: "center",
@@ -516,7 +516,7 @@ export function ProDashboardScreen() {
               </button>
               <button
                 onClick={() => navigate("/kauri/pro-projets")}
-                className="bg-[#006D77] text-white py-3 rounded-xl text-xs font-black uppercase tracking-wider border-none cursor-pointer hover:bg-[#005a63] transition-colors"
+                className="bg-[#0a5c7a] text-white py-3 rounded-xl text-xs font-black uppercase tracking-wider border-none cursor-pointer hover:bg-[#005a63] transition-colors"
               >
                 Suivi Levées
               </button>
@@ -547,7 +547,7 @@ export function ProDashboardScreen() {
               onClick={() => navigate("/kauri/pro-leves")}
               className={`rounded-2xl p-4 text-center shadow-sm border transition-all active:scale-95 border-none cursor-pointer ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
             >
-              <BarChart3 className="w-6 h-6 text-[#006D77] mx-auto mb-1.5" />
+              <BarChart3 className="w-6 h-6 text-[#0a5c7a] mx-auto mb-1.5" />
               <p
                 className={`mb-0.5 font-black text-sm ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
               >
@@ -603,8 +603,8 @@ export function ProDashboardScreen() {
                 onClick={() => navigate("/kauri/tontines-actives")}
                 className={`rounded-2xl p-4 text-center shadow-sm border hover:shadow-md transition-all active:scale-95 cursor-pointer border-none ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
               >
-                <div className="w-10 h-10 mx-auto mb-2 bg-[#006D77]/10 rounded-xl flex items-center justify-center">
-                  <Users className="w-5 h-5 text-[#006D77]" />
+                <div className="w-10 h-10 mx-auto mb-2 bg-[#0a5c7a]/10 rounded-xl flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#0a5c7a]" />
                 </div>
                 <p className="text-xs font-bold text-slate-500 mb-0.5">Tontines Pro</p>
                 <p className={`text-sm font-black ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}>
@@ -644,8 +644,8 @@ export function ProDashboardScreen() {
                 onClick={() => navigate("/kauri/discover-circles")}
                 className={`rounded-2xl p-4 text-center shadow-sm border hover:shadow-md transition-all active:scale-95 cursor-pointer border-none ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
               >
-                <div className="w-10 h-10 mx-auto mb-2 bg-[#006D77]/10 rounded-xl flex items-center justify-center">
-                  <Compass className="w-5 h-5 text-[#006D77]" />
+                <div className="w-10 h-10 mx-auto mb-2 bg-[#0a5c7a]/10 rounded-xl flex items-center justify-center">
+                  <Compass className="w-5 h-5 text-[#0a5c7a]" />
                 </div>
                 <p className="text-xs font-bold text-slate-500 mb-0.5">Réseau Cercles</p>
                 <p className={`text-sm font-black ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}>

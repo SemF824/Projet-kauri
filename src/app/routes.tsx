@@ -124,7 +124,7 @@ function LazyRoute({ children }: { children: React.ReactNode }) {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-[#0F172A]">
-          <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[#006D77] animate-spin" />
+          <div className="w-10 h-10 rounded-full border-2 border-white/30 border-t-[#0a5c7a] animate-spin" />
         </div>
       }
     >
@@ -198,8 +198,8 @@ function KauriKYCGuardLayout() {
           </div>
 
           {!isKycRejected && (
-            <div className="bg-[#E6F4F5] border border-[#006D77]/10 rounded-2xl p-4">
-              <p className="text-[#006D77] text-xs font-semibold leading-relaxed text-center">
+            <div className="bg-[#E6F4F5] border border-[#0a5c7a]/10 rounded-2xl p-4">
+              <p className="text-[#0a5c7a] text-xs font-semibold leading-relaxed text-center">
                 ⏳ Activation de vos accès financiers sous 24 heures maximum.
               </p>
             </div>
@@ -230,7 +230,7 @@ function KauriKYCGuardLayout() {
             <button
               onClick={() => navigate("/kauri/kyc-verification")}
               className={`flex-1 py-3 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer border-none flex items-center justify-center gap-1.5 ${
-                isKycRejected ? "bg-red-500 hover:bg-red-600" : "bg-[#006D77] hover:bg-[#00525a]"
+                isKycRejected ? "bg-red-500 hover:bg-red-600" : "bg-[#0a5c7a] hover:bg-[#00525a]"
               }`}
             >
               <span>{isKycRejected ? "Réessayer" : "Mes pièces"}</span>

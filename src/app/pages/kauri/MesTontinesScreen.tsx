@@ -13,7 +13,7 @@ import { useDarkMode } from "../../contexts/DarkModeContext";
 import { useState, useEffect } from "react";
 import { getSupabase } from "../../../utils/supabase";
 
-const TEAL = "#006D77";
+const TEAL = "#0a5c7a";
 const GOLD = "#D4AF37";
 
 interface TontineCreee {
@@ -322,7 +322,7 @@ export function MesTontinesScreen() {
       <div
         className={`min-h-screen flex items-center justify-center ${bg}`}
       >
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#006D77]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0a5c7a]"></div>
       </div>
     );
   }

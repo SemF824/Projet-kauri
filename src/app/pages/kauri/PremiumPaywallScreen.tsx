@@ -53,7 +53,7 @@ export function PremiumPaywallScreen() {
     <div className="flex justify-center items-stretch min-h-screen bg-[#D6D6D6]">
       <div className="w-full max-w-[430px] h-screen flex flex-col overflow-hidden shadow-2xl bg-[#F9F9F9]">
         {/* Header */}
-        <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 flex-shrink-0">
+        <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-8 flex-shrink-0">
           <div className="flex items-center justify-between mb-6">
             <button onClick={() => navigate('/kauri/profil-particulier')} className="text-white flex items-center gap-2">
               <ArrowLeft className="w-5 h-5" />
@@ -90,7 +90,7 @@ export function PremiumPaywallScreen() {
                 onClick={() => setIsAnnual(false)}
                 className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all ${
                   !isAnnual
-                    ? 'bg-[#006D77] text-white shadow-lg'
+                    ? 'bg-[#0a5c7a] text-white shadow-lg'
                     : 'bg-gray-100 text-[#64748B]'
                 }`}
               >
@@ -100,7 +100,7 @@ export function PremiumPaywallScreen() {
                 onClick={() => setIsAnnual(true)}
                 className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all relative ${
                   isAnnual
-                    ? 'bg-[#006D77] text-white shadow-lg'
+                    ? 'bg-[#0a5c7a] text-white shadow-lg'
                     : 'bg-gray-100 text-[#64748B]'
                 }`}
               >
@@ -114,7 +114,7 @@ export function PremiumPaywallScreen() {
             </div>
 
             <div className="text-center">
-              <p className="text-4xl font-bold text-[#006D77] mb-1">
+              <p className="text-4xl font-bold text-[#0a5c7a] mb-1">
                 {isAnnual ? `${annualPrice}` : `${monthlyPrice}`} €
               </p>
               <p className="text-sm text-[#64748B]">
@@ -142,7 +142,7 @@ export function PremiumPaywallScreen() {
                   className="bg-white rounded-2xl p-4 shadow-md border border-gray-100"
                 >
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-[#006D77]/10 rounded-xl flex items-center justify-center text-[#006D77]">
+                    <div className="w-10 h-10 bg-[#0a5c7a]/10 rounded-xl flex items-center justify-center text-[#0a5c7a]">
                       {feature.icon}
                     </div>
                     <h4 className="font-semibold text-[#0F172A] text-sm flex-1">
@@ -163,14 +163,14 @@ export function PremiumPaywallScreen() {
                     <div className={`rounded-xl p-3 border-2 ${
                       feature.isPremiumHighlight
                         ? 'bg-gradient-to-br from-[#FEF9E7] to-[#FCF4DD] border-[#D4AF37]'
-                        : 'bg-[#F0FDFA] border-[#006D77]/30'
+                        : 'bg-[#F0FDFA] border-[#0a5c7a]/30'
                     }`}>
-                      <p className="text-xs text-[#006D77] mb-1 flex items-center gap-1">
+                      <p className="text-xs text-[#0a5c7a] mb-1 flex items-center gap-1">
                         <Crown className="w-3 h-3" />
                         Premium
                       </p>
                       <p className={`text-sm font-bold leading-tight ${
-                        feature.isPremiumHighlight ? 'text-[#D4AF37]' : 'text-[#006D77]'
+                        feature.isPremiumHighlight ? 'text-[#D4AF37]' : 'text-[#0a5c7a]'
                       }`}>
                         {feature.premium}
                       </p>
@@ -182,8 +182,8 @@ export function PremiumPaywallScreen() {
           </div>
 
           {/* Avantages Supplémentaires */}
-          <div className="bg-gradient-to-br from-[#F0FDFA] to-[#E0F2FE] rounded-2xl p-5 border border-[#006D77]/20">
-            <h4 className="font-bold text-[#006D77] text-sm mb-3">Avantages Exclusifs</h4>
+          <div className="bg-gradient-to-br from-[#F0FDFA] to-[#E0F2FE] rounded-2xl p-5 border border-[#0a5c7a]/20">
+            <h4 className="font-bold text-[#0a5c7a] text-sm mb-3">Avantages Exclusifs</h4>
             <div className="space-y-2">
               {[
                 'Support client prioritaire 24/7',
@@ -191,7 +191,7 @@ export function PremiumPaywallScreen() {
                 'Rendements bonifiés sur certains projets RWA',
               ].map((benefit, index) => (
                 <div key={index} className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-[#006D77] flex-shrink-0 mt-0.5" />
+                  <Check className="w-4 h-4 text-[#0a5c7a] flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-[#4A4A4A]">{benefit}</p>
                 </div>
               ))}

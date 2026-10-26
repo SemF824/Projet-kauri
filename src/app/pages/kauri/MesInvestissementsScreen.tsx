@@ -91,7 +91,7 @@ export function MesInvestissementsScreen() {
       <div
         className={`min-h-screen flex items-center justify-center ${isDarkMode ? "bg-[#0F172A] text-white" : "bg-white text-[#0F172A]"}`}
       >
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#006D77]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0a5c7a]"></div>
       </div>
     );
   }
@@ -165,24 +165,24 @@ export function MesInvestissementsScreen() {
           <div
             className={`rounded-xl p-4 transition-colors ${
               totalRoi >= 0
-                ? "bg-[#D1FAE5] border border-[#006D77]/30"
+                ? "bg-[#D1FAE5] border border-[#0a5c7a]/30"
                 : "bg-[#FECACA] border border-[#B05B3B]/30"
             }`}
           >
             <div className="flex items-center justify-between">
               <p
-                className={`text-sm font-semibold ${totalRoi >= 0 ? "text-[#006D77]" : "text-[#B05B3B]"}`}
+                className={`text-sm font-semibold ${totalRoi >= 0 ? "text-[#0a5c7a]" : "text-[#B05B3B]"}`}
               >
                 ROI Global
               </p>
               <div className="flex items-center gap-2">
                 {totalRoi >= 0 ? (
-                  <TrendingUp className="w-5 h-5 text-[#006D77]" />
+                  <TrendingUp className="w-5 h-5 text-[#0a5c7a]" />
                 ) : (
                   <TrendingDown className="w-5 h-5 text-[#B05B3B]" />
                 )}
                 <p
-                  className={`text-xl font-bold ${totalRoi >= 0 ? "text-[#006D77]" : "text-[#B05B3B]"}`}
+                  className={`text-xl font-bold ${totalRoi >= 0 ? "text-[#0a5c7a]" : "text-[#B05B3B]"}`}
                 >
                   {totalRoi > 0 ? "+" : ""}
                   {totalRoi.toFixed(2)}%
@@ -236,7 +236,7 @@ export function MesInvestissementsScreen() {
                     <div
                       className={`px-3 py-1 rounded-full text-xs font-bold ${
                         investment.roi >= 0
-                          ? "bg-[#D1FAE5] text-[#006D77]"
+                          ? "bg-[#D1FAE5] text-[#0a5c7a]"
                           : "bg-[#FECACA] text-[#B05B3B]"
                       }`}
                     >
@@ -285,7 +285,7 @@ export function MesInvestissementsScreen() {
                       <p
                         className={`text-sm font-bold ${
                           investment.roi >= 0
-                            ? "text-[#006D77]"
+                            ? "text-[#0a5c7a]"
                             : "text-[#B05B3B]"
                         }`}
                       >
@@ -324,7 +324,7 @@ export function MesInvestissementsScreen() {
           </div>
         </div>
 
-        <button className="w-full bg-gradient-to-r from-[#006D77] to-[#0D9488] hover:from-[#00565F] hover:to-[#0B7A70] text-white py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.01] active:scale-95 font-semibold">
+        <button className="w-full bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] hover:from-[#00565F] hover:to-[#0B7A70] text-white py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.01] active:scale-95 font-semibold">
           <DollarSign className="w-5 h-5" />
           <span>Découvrir de nouveaux projets</span>
         </button>

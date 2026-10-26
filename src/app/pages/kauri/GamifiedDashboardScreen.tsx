@@ -42,7 +42,7 @@ export function GamifiedDashboardScreen() {
     <div className="flex justify-center items-stretch min-h-screen bg-[#D6D6D6]">
       <div className="w-full max-w-[430px] h-screen flex flex-col overflow-hidden shadow-2xl bg-[#F9F9F9]">
         {/* Header */}
-        <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-6 flex-shrink-0">
+        <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-6 flex-shrink-0">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8860B] flex items-center justify-center text-white text-xl font-bold shadow-xl border-2 border-white">
@@ -65,7 +65,7 @@ export function GamifiedDashboardScreen() {
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 pb-24">
           {/* Section Hub de Confiance */}
           <div className="bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
-            <h3 className="text-[#006D77] font-bold text-lg mb-6 text-center">
+            <h3 className="text-[#0a5c7a] font-bold text-lg mb-6 text-center">
               Hub de Confiance
             </h3>
 
@@ -97,13 +97,13 @@ export function GamifiedDashboardScreen() {
                   />
                   <defs>
                     <linearGradient id="trustGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#006D77" />
+                      <stop offset="0%" stopColor="#0a5c7a" />
                       <stop offset="100%" stopColor="#0D9488" />
                     </linearGradient>
                   </defs>
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <p className="text-4xl font-bold text-[#006D77]">{trustScore}</p>
+                  <p className="text-4xl font-bold text-[#0a5c7a]">{trustScore}</p>
                   <p className="text-sm text-[#64748B]">/ 100</p>
                   <p className="text-xs text-[#94A3B8] mt-1">Trust Score</p>
                 </div>
@@ -134,7 +134,7 @@ export function GamifiedDashboardScreen() {
                     <span className="font-bold text-[#D4AF37]">Félicitations !</span> Vous bénéficiez du statut Élite
                   </p>
                   <p className="text-[#64748B] text-xs mt-1">
-                    Frais CICO réduits à <span className="font-bold text-[#006D77]">0%</span> ce mois-ci
+                    Frais CICO réduits à <span className="font-bold text-[#0a5c7a]">0%</span> ce mois-ci
                   </p>
                 </div>
               </div>
@@ -144,7 +144,7 @@ export function GamifiedDashboardScreen() {
           {/* Mes Tontines Actives */}
           <div>
             <h3 className="text-[#0F172A] font-bold text-base mb-4 flex items-center gap-2">
-              <div className="w-1 h-5 bg-[#006D77] rounded-full"></div>
+              <div className="w-1 h-5 bg-[#0a5c7a] rounded-full"></div>
               Mes Tontines Actives
             </h3>
 
@@ -156,7 +156,7 @@ export function GamifiedDashboardScreen() {
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-[#006D77] to-[#0D9488] rounded-xl flex items-center justify-center">
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] rounded-xl flex items-center justify-center">
                         <Users className="w-5 h-5 text-white" />
                       </div>
                       <div>
@@ -181,7 +181,7 @@ export function GamifiedDashboardScreen() {
                   </div>
 
                   {!tontine.isPaid && (
-                    <button className="w-full py-3 rounded-xl bg-[#006D77] hover:bg-[#005A63] text-white font-medium text-sm transition-colors shadow-md">
+                    <button className="w-full py-3 rounded-xl bg-[#0a5c7a] hover:bg-[#005A63] text-white font-medium text-sm transition-colors shadow-md">
                       Payer {tontine.amount} € maintenant
                     </button>
                   )}
@@ -195,8 +195,8 @@ export function GamifiedDashboardScreen() {
         <nav className="bg-white border-t border-gray-200 px-6 py-4 flex-shrink-0 fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto shadow-lg">
           <div className="flex items-center justify-around">
             <button className="flex flex-col items-center gap-1">
-              <Wallet className="w-6 h-6 text-[#006D77]" />
-              <span className="text-xs text-[#006D77] font-medium">Accueil</span>
+              <Wallet className="w-6 h-6 text-[#0a5c7a]" />
+              <span className="text-xs text-[#0a5c7a] font-medium">Accueil</span>
             </button>
             <button
               onClick={() => navigate('/kauri/tontines-actives')}

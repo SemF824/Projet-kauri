@@ -77,7 +77,7 @@ export const SwipeableNotification: React.FC<SwipeableNotificationProps> = ({
       {/* Background Actions */}
       <div className="absolute inset-0 flex items-center justify-between rounded-2xl overflow-hidden">
         {/* Left Action (Mark Read/Unread) */}
-        <div className="h-full flex items-center bg-[#006D77] px-4 w-1/2">
+        <div className="h-full flex items-center bg-[#0a5c7a] px-4 w-1/2">
           {isRead ? <Mail className="w-6 h-6 text-white" /> : <MailOpen className="w-6 h-6 text-white" />}
         </div>
         

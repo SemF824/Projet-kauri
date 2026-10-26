@@ -72,8 +72,8 @@ export function KYCGuardOverlay({
 
           {/* LA NOTIFICATION EXPLICITE DES 24H */}
           {!isRejected && (
-            <div className="bg-[#E6F4F5] border border-[#006D77]/10 rounded-2xl p-4 text-left">
-              <p className="text-[#006D77] text-xs font-semibold leading-relaxed text-center">
+            <div className="bg-[#E6F4F5] border border-[#0a5c7a]/10 rounded-2xl p-4 text-left">
+              <p className="text-[#0a5c7a] text-xs font-semibold leading-relaxed text-center">
                 ⏳ Activation de vos accès financiers sous 24
                 heures maximum.
               </p>
@@ -94,7 +94,7 @@ export function KYCGuardOverlay({
             className={`w-full py-4 rounded-xl text-white font-bold text-xs tracking-wider uppercase shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer border-none ${
               isRejected
                 ? "bg-red-500 hover:bg-red-600"
-                : "bg-[#006D77] hover:bg-[#00525a]"
+                : "bg-[#0a5c7a] hover:bg-[#00525a]"
             }`}
           >
             <span>

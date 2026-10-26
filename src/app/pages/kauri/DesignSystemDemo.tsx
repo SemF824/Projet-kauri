@@ -5,7 +5,7 @@ export function DesignSystemDemo() {
   const navigate = useNavigate();
 
   const colors = [
-    { name: 'Deep Caribbean Teal', hex: '#006D77', usage: 'Headers, Boutons Primaires, Navigation Active' },
+    { name: 'Deep Caribbean Teal', hex: '#0a5c7a', usage: 'Headers, Boutons Primaires, Navigation Active' },
     { name: 'Antique Gold', hex: '#D4AF37', usage: 'Pot Kauree, Trust Score, Succès' },
     { name: 'Terracotta', hex: '#B05B3B', usage: 'Live Social, Impact, CTAs Communauté' },
     { name: 'Off-White', hex: '#F9F9F9', usage: 'Arrière-plans' },
@@ -13,18 +13,18 @@ export function DesignSystemDemo() {
   ];
 
   const demoScreens = [
-    { name: 'Splash Screen', path: '/splash', color: '#006D77' },
+    { name: 'Splash Screen', path: '/splash', color: '#0a5c7a' },
     { name: 'Pot Commun (Teal Border + Gold Shells)', path: '/kauri/pot-commun', color: '#D4AF37' },
     { name: 'Compte Suspendu (Terracotta Overlay)', path: '/kauri/suspended', color: '#B05B3B' },
     { name: 'Icônes Animées (Gold Halo + Confetti)', path: '/kauri/animated-icons', color: '#D4AF37' },
     { name: 'Social Feed (Live Indicators)', path: '/kauri/social-feed', color: '#B05B3B' },
-    { name: 'Dashboard Pro', path: '/kauri/pro-dashboard', color: '#006D77' },
-    { name: 'Dashboard Particulier', path: '/kauri/normal-dashboard', color: '#006D77' },
+    { name: 'Dashboard Pro', path: '/kauri/pro-dashboard', color: '#0a5c7a' },
+    { name: 'Dashboard Particulier', path: '/kauri/normal-dashboard', color: '#0a5c7a' },
   ];
 
   return (
     <div className="min-h-screen bg-[#F9F9F9] pb-24">
-      <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
+      <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
         <button onClick={() => navigate(-1)} className="mb-6 text-white flex items-center gap-2">
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm">Retour</span>
@@ -43,7 +43,7 @@ export function DesignSystemDemo() {
         {/* Palette de Couleurs */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-[#E2E8F0]">
           <h3 className="text-[#0F172A] mb-4 flex items-center gap-2">
-            <Palette className="w-5 h-5 text-[#006D77]" />
+            <Palette className="w-5 h-5 text-[#0a5c7a]" />
             Palette de Couleurs
           </h3>
 
@@ -67,7 +67,7 @@ export function DesignSystemDemo() {
         {/* Écrans de Démonstration */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-[#E2E8F0]">
           <h3 className="text-[#0F172A] mb-4 flex items-center gap-2">
-            <Eye className="w-5 h-5 text-[#006D77]" />
+            <Eye className="w-5 h-5 text-[#0a5c7a]" />
             Écrans Mis à Jour
           </h3>
 
@@ -76,7 +76,7 @@ export function DesignSystemDemo() {
               <button
                 key={index}
                 onClick={() => navigate(screen.path)}
-                className="w-full p-4 bg-[#F9F9F9] rounded-xl border-2 border-[#E2E8F0] hover:border-[#006D77] transition-all flex items-center justify-between"
+                className="w-full p-4 bg-[#F9F9F9] rounded-xl border-2 border-[#E2E8F0] hover:border-[#0a5c7a] transition-all flex items-center justify-between"
               >
                 <div className="flex items-center gap-3">
                   <div
@@ -85,7 +85,7 @@ export function DesignSystemDemo() {
                   ></div>
                   <span className="text-[#0F172A]">{screen.name}</span>
                 </div>
-                <ArrowLeft className="w-5 h-5 text-[#006D77] rotate-180" />
+                <ArrowLeft className="w-5 h-5 text-[#0a5c7a] rotate-180" />
               </button>
             ))}
           </div>
@@ -93,7 +93,7 @@ export function DesignSystemDemo() {
 
         {/* Typographie */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-[#E2E8F0]">
-          <h3 className="text-[#006D77] mb-4" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+          <h3 className="text-[#0a5c7a] mb-4" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
             Typographie Sans-Serif Bold
           </h3>
           <p className="text-[#4A4A4A] mb-2">
@@ -105,7 +105,7 @@ export function DesignSystemDemo() {
         </div>
 
         {/* Logo Cowrie Shell */}
-        <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] rounded-2xl p-8 shadow-lg text-center">
+        <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] rounded-2xl p-8 shadow-lg text-center">
           <div className="w-24 h-24 mx-auto mb-4 bg-[#D4AF37] rounded-full flex items-center justify-center shadow-2xl">
             <svg viewBox="0 0 100 100" className="w-14 h-14 text-white">
               <path

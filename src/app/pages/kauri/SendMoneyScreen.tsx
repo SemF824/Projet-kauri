@@ -83,7 +83,7 @@ export function SendMoneyScreen() {
         className={`px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl ${
           isDarkMode
             ? 'bg-gradient-to-br from-[#1E293B] to-[#334155]'
-            : 'bg-gradient-to-br from-[#006D77] to-[#0D9488]'
+            : 'bg-gradient-to-br from-[#0a5c7a] to-[#0F172A]'
         }`}
       >
         <button
@@ -131,7 +131,7 @@ export function SendMoneyScreen() {
                 onClick={() => setAmount(val)}
                 className={`py-2 rounded-xl text-xs font-bold border-none cursor-pointer transition-all ${
                   amount === val
-                    ? 'bg-[#006D77] text-white shadow-md'
+                    ? 'bg-[#0a5c7a] text-white shadow-md'
                     : isDarkMode
                     ? 'bg-[#334155] text-white'
                     : 'bg-[#F1F5F9] text-[#0F172A]'
@@ -155,10 +155,10 @@ export function SendMoneyScreen() {
                 isDarkMode
                   ? 'bg-[#334155] border-[#475569] text-white placeholder-[#64748B]'
                   : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8]'
-              } focus:outline-none focus:border-[#006D77]`}
+              } focus:outline-none focus:border-[#0a5c7a]`}
             />
             <button className="absolute right-3 top-1/2 -translate-y-1/2 border-none bg-transparent cursor-pointer p-1">
-              <Scan className="w-5 h-5 text-[#006D77]" />
+              <Scan className="w-5 h-5 text-[#0a5c7a]" />
             </button>
           </div>
 
@@ -174,7 +174,7 @@ export function SendMoneyScreen() {
               isDarkMode
                 ? 'bg-[#334155] border-[#475569] text-white placeholder-[#64748B]'
                 : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#0F172A] placeholder-[#94A3B8]'
-            } focus:outline-none focus:border-[#006D77] resize-none`}
+            } focus:outline-none focus:border-[#0a5c7a] resize-none`}
           ></textarea>
         </div>
 
@@ -190,14 +190,14 @@ export function SendMoneyScreen() {
                   onClick={() => setRecipient(contact.name)}
                   className={`w-full rounded-2xl p-4 flex items-center justify-between border cursor-pointer text-left ${
                     recipient === contact.name
-                      ? 'border-[#006D77] bg-[#006D77]/5'
+                      ? 'border-[#0a5c7a] bg-[#0a5c7a]/5'
                       : isDarkMode
                       ? 'bg-[#1E293B] border-[#334155]'
                       : 'bg-white border-[#E2E8F0]'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#006D77] to-[#0D9488] flex items-center justify-center text-white text-xs font-bold">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] flex items-center justify-center text-white text-xs font-bold">
                       {contact.avatar}
                     </div>
                     <div>
@@ -224,7 +224,7 @@ export function SendMoneyScreen() {
           }}
           className={`w-full py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 border-none font-bold text-sm cursor-pointer transition-all ${
             amount && recipient && parseFloat(amount) > 0
-              ? 'bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white hover:opacity-95'
+              ? 'bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white hover:opacity-95'
               : 'bg-[#E2E8F0] text-[#94A3B8] cursor-not-allowed'
           }`}
         >

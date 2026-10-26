@@ -59,8 +59,8 @@ function computeBadges(
       label: "Vérifié KYB",
       desc: "Vérification d'identité entreprise complète",
       condition: "KYB validé",
-      color: "#006D77",
-      gradient: "from-[#006D77] to-[#0D9488]",
+      color: "#0a5c7a",
+      gradient: "from-[#0a5c7a] to-[#0F172A]",
       earned: true,
     },
     {
@@ -273,7 +273,7 @@ export function ProfilProScreen() {
             href={`https://${profile.siteWeb}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block mt-3 text-xs font-bold text-[#006D77] hover:underline"
+            className="inline-block mt-3 text-xs font-bold text-[#0a5c7a] hover:underline"
           >
             {profile.siteWeb}
           </a>
@@ -302,7 +302,7 @@ export function ProfilProScreen() {
 
           <div className={`rounded-2xl border p-4 ${card}`}>
             <div className="flex items-center gap-2 mb-1">
-              <Users className="w-4 h-4 text-[#006D77]" />
+              <Users className="w-4 h-4 text-[#0a5c7a]" />
               <span className={`text-[10px] font-semibold uppercase ${sub}`}>
                 Investisseurs
               </span>

@@ -105,7 +105,7 @@ export function CommunityChatScreen() {
               >
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 ${
                   msg.isMine
-                    ? 'bg-gradient-to-br from-[#006D77] to-[#0D9488]'
+                    ? 'bg-gradient-to-br from-[#0a5c7a] to-[#0F172A]'
                     : 'bg-gradient-to-br from-[#B05B3B] to-[#DC2626]'
                 }`}>
                   {msg.avatar}
@@ -117,8 +117,8 @@ export function CommunityChatScreen() {
                   <div className={`rounded-2xl p-3 ${
                     msg.isMine
                       ? isDarkMode
-                        ? 'bg-[#006D77] text-white'
-                        : 'bg-[#006D77] text-white'
+                        ? 'bg-[#0a5c7a] text-white'
+                        : 'bg-[#0a5c7a] text-white'
                       : isDarkMode
                       ? 'bg-[#1E293B] text-white border border-[#334155]'
                       : 'bg-white text-[#0F172A] border border-[#E2E8F0]'

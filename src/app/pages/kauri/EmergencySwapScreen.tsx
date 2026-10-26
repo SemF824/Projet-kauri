@@ -383,7 +383,7 @@ export function EmergencySwapScreen() {
               </div>
             </div>
 
-            <div className={`rounded-xl p-4 ${isDarkMode ? 'bg-[#006D77]/10 border border-[#006D77]/30' : 'bg-emerald-50 border border-emerald-200'}`}>
+            <div className={`rounded-xl p-4 ${isDarkMode ? 'bg-[#0a5c7a]/10 border border-[#0a5c7a]/30' : 'bg-emerald-50 border border-emerald-200'}`}>
               <p className="text-xs font-bold text-emerald-600">
                 ✓ Votre demande de swap est en cours de traitement. Elle passera en statut 'approuvé' dès l'atteinte du quorum.
               </p>

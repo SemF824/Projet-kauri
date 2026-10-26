@@ -34,7 +34,7 @@ export function OnboardingTutorialModal({
       subtitle: "L'épargne collective ancestrale réinventée avec la sécurité d'une banque moderne.",
       icon: Users,
       iconBg: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-      accentColor: "#006D77",
+      accentColor: "#0a5c7a",
       bullets: [
         "Chaque membre du cercle verse une cotisation mensuelle fixe.",
         "À chaque cycle, l'un des participants empoche l'intégralité du pot commun.",
@@ -109,7 +109,7 @@ export function OnboardingTutorialModal({
               key={idx}
               className={`h-1.5 rounded-full flex-1 transition-all duration-300 ${
                 idx === currentStep
-                  ? "bg-[#006D77] dark:bg-[#0D9488]"
+                  ? "bg-[#0a5c7a] dark:bg-[#0D9488]"
                   : idx < currentStep
                   ? "bg-slate-300 dark:bg-slate-700"
                   : "bg-slate-200 dark:bg-slate-800"
@@ -120,7 +120,7 @@ export function OnboardingTutorialModal({
 
         {/* Badge & Titre */}
         <div className="space-y-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase bg-slate-100 dark:bg-slate-800 text-[#006D77] dark:text-[#0D9488]">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase bg-slate-100 dark:bg-slate-800 text-[#0a5c7a] dark:text-[#0D9488]">
             <Sparkles className="w-3.5 h-3.5" />
             {step.badge}
           </span>
@@ -147,7 +147,7 @@ export function OnboardingTutorialModal({
         <div className="mt-5 space-y-2.5 bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
           {step.bullets.map((bullet, idx) => (
             <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm">
-              <CheckCircle2 className="w-4 h-4 text-[#006D77] dark:text-[#0D9488] shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-4 h-4 text-[#0a5c7a] dark:text-[#0D9488] shrink-0 mt-0.5" />
               <span className="text-slate-700 dark:text-slate-200 font-medium">
                 {bullet}
               </span>
@@ -176,7 +176,7 @@ export function OnboardingTutorialModal({
           {currentStep < steps.length - 1 ? (
             <button
               onClick={handleNext}
-              className="flex-1 max-w-[200px] flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-[#006D77] hover:bg-[#005a63] text-white text-xs font-bold shadow-md shadow-[#006D77]/20 transition-all active:scale-95 cursor-pointer border-none"
+              className="flex-1 max-w-[200px] flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-[#0a5c7a] hover:bg-[#005a63] text-white text-xs font-bold shadow-md shadow-[#0a5c7a]/20 transition-all active:scale-95 cursor-pointer border-none"
             >
               <span>Continuer</span>
               <ArrowRight className="w-4 h-4" />
@@ -199,7 +199,7 @@ export function OnboardingTutorialModal({
                       handleComplete();
                       onStartAction("creer");
                     }}
-                    className="flex-1 py-3 px-3 rounded-xl bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white text-xs font-bold shadow-md shadow-[#006D77]/20 transition-all active:scale-95 border-none cursor-pointer"
+                    className="flex-1 py-3 px-3 rounded-xl bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white text-xs font-bold shadow-md shadow-[#0a5c7a]/20 transition-all active:scale-95 border-none cursor-pointer"
                   >
                     Créer
                   </button>
@@ -207,7 +207,7 @@ export function OnboardingTutorialModal({
               ) : (
                 <button
                   onClick={handleComplete}
-                  className="w-full py-3 px-5 rounded-xl bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white text-xs font-bold shadow-md shadow-[#006D77]/20 transition-all active:scale-95 cursor-pointer border-none"
+                  className="w-full py-3 px-5 rounded-xl bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white text-xs font-bold shadow-md shadow-[#0a5c7a]/20 transition-all active:scale-95 cursor-pointer border-none"
                 >
                   J'ai compris, c'est parti !
                 </button>

@@ -191,7 +191,7 @@ export function TransferConfirmScreen() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{
               width: 52, height: 52, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #006D77, #0D9488)',
+              background: 'linear-gradient(135deg, #0a5c7a, #0D9488)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#fff', fontWeight: 800, fontSize: 16, flexShrink: 0,
             }}>
@@ -269,7 +269,7 @@ export function TransferConfirmScreen() {
             disabled={isConfirming}
             style={{
               width: '100%', padding: '16px', borderRadius: 16, border: 'none',
-              background: 'linear-gradient(135deg, #006D77, #0D9488)',
+              background: 'linear-gradient(135deg, #0a5c7a, #0D9488)',
               color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               boxShadow: '0 4px 20px rgba(0,109,119,0.35)',
@@ -297,7 +297,7 @@ export function TransferConfirmScreen() {
                   background: pinError
                     ? '#EF4444'
                     : i < pinDigits.length
-                    ? '#006D77'
+                    ? '#0a5c7a'
                     : isDarkMode ? '#334155' : '#E2E8F0',
                   transition: 'background 0.15s',
                   transform: pinError ? 'scale(1.2)' : 'scale(1)',

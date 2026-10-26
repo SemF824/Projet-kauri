@@ -12,7 +12,7 @@ export function AnimatedIconsDemoScreen() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#E2E8F0] pb-24">
-      <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem]">
+      <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-8 rounded-b-[2.5rem]">
         <button onClick={() => navigate(-1)} className="mb-6 text-white flex items-center gap-2">
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm">Retour</span>

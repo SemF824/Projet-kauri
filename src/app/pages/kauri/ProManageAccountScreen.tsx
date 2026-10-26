@@ -131,7 +131,7 @@ export function ProManageAccountScreen() {
 
       {/* Toast */}
       {toast && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[60] bg-[#006D77] text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2 whitespace-nowrap">
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[60] bg-[#0a5c7a] text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2 whitespace-nowrap">
           <CheckCircle2 className="w-4 h-4" /> {toast}
         </div>
       )}
@@ -154,7 +154,7 @@ export function ProManageAccountScreen() {
           <div className="space-y-2.5">
             <Row icon={Building}  color="#D4AF37" bg="#D4AF3715" label="Raison Sociale" value={raisonSociale}
               onClick={() => { setRaisonDraft(raisonSociale); setPanel('raison-sociale'); }} />
-            <Row icon={FileText}  color="#006D77" bg="#006D7715" label="SIRET"           value="123 456 789 00012"
+            <Row icon={FileText}  color="#0a5c7a" bg="#006D7715" label="SIRET"           value="123 456 789 00012"
               onClick={() => setPanel('siret')} />
             <Row icon={Users}     color="#0D9488" bg="#0D948815" label="Signataires autorisés" value={`${signataires.filter(s => s.actif).length} membres actifs`}
               onClick={() => setPanel('signataires')} />
@@ -184,7 +184,7 @@ export function ProManageAccountScreen() {
           </div>
           <button
             onClick={() => setPanel('carte')}
-            className="w-full bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white py-4 rounded-xl shadow-lg font-semibold text-sm flex items-center justify-center gap-2"
+            className="w-full bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white py-4 rounded-xl shadow-lg font-semibold text-sm flex items-center justify-center gap-2"
           >
             <Plus className="w-4 h-4" /> Commander une carte Pro
           </button>
@@ -194,7 +194,7 @@ export function ProManageAccountScreen() {
         <div>
           <p className={`text-sm font-semibold mb-3 ${txt}`}>Sécurité & Conformité</p>
           <div className="space-y-2.5">
-            <Row icon={Shield}    color="#006D77" bg="#006D7715"
+            <Row icon={Shield}    color="#0a5c7a" bg="#006D7715"
               label="Validation Multi-Signatures"
               value={`Seuil : ${seuilMultiSig.toLocaleString()} € (${sigRequises}/${sigTotal} signatures)`}
               onClick={() => { setSeuilDraft({ seuil: String(seuilMultiSig), requis: String(sigRequises), total: String(sigTotal) }); setPanel('multi-sig'); }} />
@@ -254,8 +254,8 @@ export function ProManageAccountScreen() {
               <p className={`text-2xl font-bold font-mono tracking-widest mb-1 ${txt}`}>123 456 789 00012</p>
               <p className={`text-xs ${sub}`}>SARL Innovation Caraïbes</p>
             </div>
-            <div className={`rounded-xl p-4 border flex gap-3 ${isDarkMode ? 'bg-[#0F172A] border-[#334155]' : 'bg-[#E0F2FE] border-[#006D77]/30'}`}>
-              <Lock className="w-4 h-4 text-[#006D77] flex-shrink-0 mt-0.5" />
+            <div className={`rounded-xl p-4 border flex gap-3 ${isDarkMode ? 'bg-[#0F172A] border-[#334155]' : 'bg-[#E0F2FE] border-[#0a5c7a]/30'}`}>
+              <Lock className="w-4 h-4 text-[#0a5c7a] flex-shrink-0 mt-0.5" />
               <p className="text-xs text-[#0369A1]">
                 Le numéro SIRET est verrouillé et ne peut être modifié qu'à travers une nouvelle procédure de vérification KYB. Contactez <strong>support@kauri.fr</strong> pour toute modification.
               </p>
@@ -286,7 +286,7 @@ export function ProManageAccountScreen() {
             <div className="space-y-2">
               {signataires.map((s) => (
                 <div key={s.id} className={`flex items-center gap-3 p-4 rounded-xl border ${card}`}>
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${s.actif ? 'bg-gradient-to-br from-[#006D77] to-[#0D9488]' : 'bg-[#94A3B8]'}`}>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${s.actif ? 'bg-gradient-to-br from-[#0a5c7a] to-[#0F172A]' : 'bg-[#94A3B8]'}`}>
                     {s.nom.split(' ').map(n => n[0]).join('').slice(0, 2)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -331,7 +331,7 @@ export function ProManageAccountScreen() {
                     setSignataires(prev => [...prev, { id: `s${Date.now()}`, nom: newSig.nom, role: newSig.role, actif: true }]);
                     setNewSig({ nom: '', role: '' });
                   }}
-                  className="w-full py-2.5 rounded-xl bg-[#006D77] text-white text-sm font-semibold disabled:opacity-40"
+                  className="w-full py-2.5 rounded-xl bg-[#0a5c7a] text-white text-sm font-semibold disabled:opacity-40"
                 >
                   Ajouter
                 </button>
@@ -385,7 +385,7 @@ export function ProManageAccountScreen() {
             <div className="flex gap-3">
               <button onClick={() => setPanel(null)} className={`flex-1 py-4 rounded-xl border-2 text-sm font-medium ${isDarkMode ? 'border-[#334155] text-white' : 'border-[#E2E8F0] text-[#64748B]'}`}>Annuler</button>
               <button onClick={() => { setPanel(null); showToast('Demande de carte envoyée !'); }}
-                className="flex-1 py-4 rounded-xl bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white text-sm font-bold shadow-lg">
+                className="flex-1 py-4 rounded-xl bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white text-sm font-bold shadow-lg">
                 Commander
               </button>
             </div>
@@ -397,8 +397,8 @@ export function ProManageAccountScreen() {
       {panel === 'multi-sig' && (
         <PanelWrap title="Seuil Multi-Signatures" sub="Transactions nécessitant plusieurs validations">
           <div className="space-y-5">
-            <div className={`rounded-xl p-4 border flex gap-3 ${isDarkMode ? 'bg-[#0F172A] border-[#334155]' : 'bg-[#E0F2FE] border-[#006D77]/30'}`}>
-              <Shield className="w-4 h-4 text-[#006D77] flex-shrink-0 mt-0.5" />
+            <div className={`rounded-xl p-4 border flex gap-3 ${isDarkMode ? 'bg-[#0F172A] border-[#334155]' : 'bg-[#E0F2FE] border-[#0a5c7a]/30'}`}>
+              <Shield className="w-4 h-4 text-[#0a5c7a] flex-shrink-0 mt-0.5" />
               <p className="text-xs text-[#0369A1]">
                 Toute transaction dépassant ce seuil déclenchera automatiquement une validation multi-signatures avant exécution.
               </p>
@@ -409,7 +409,7 @@ export function ProManageAccountScreen() {
               <div className="relative">
                 <span className={`absolute left-4 top-1/2 -translate-y-1/2 font-bold ${sub}`}>€</span>
                 <input type="number" value={seuilDraft.seuil} onChange={e => setSeuilDraft({ ...seuilDraft, seuil: e.target.value })}
-                  className={`w-full pl-9 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#006D77]/30 ${inp}`} />
+                  className={`w-full pl-9 pr-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0a5c7a]/30 ${inp}`} />
               </div>
               <p className={`text-xs mt-1 ${sub}`}>Actuel : {seuilMultiSig.toLocaleString()} €</p>
             </div>
@@ -418,14 +418,14 @@ export function ProManageAccountScreen() {
               <div>
                 <label className={`text-sm font-semibold mb-2 block ${txt}`}>Signatures requises</label>
                 <select value={seuilDraft.requis} onChange={e => setSeuilDraft({ ...seuilDraft, requis: e.target.value })}
-                  className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#006D77]/30 ${inp}`}>
+                  className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0a5c7a]/30 ${inp}`}>
                   {['1', '2', '3'].map(v => <option key={v} value={v}>{v} signature{v !== '1' ? 's' : ''}</option>)}
                 </select>
               </div>
               <div>
                 <label className={`text-sm font-semibold mb-2 block ${txt}`}>Sur X signataires</label>
                 <select value={seuilDraft.total} onChange={e => setSeuilDraft({ ...seuilDraft, total: e.target.value })}
-                  className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#006D77]/30 ${inp}`}>
+                  className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0a5c7a]/30 ${inp}`}>
                   {['2', '3', '4', '5'].map(v => <option key={v} value={v}>{v} signataires</option>)}
                 </select>
               </div>
@@ -446,7 +446,7 @@ export function ProManageAccountScreen() {
                 setSigTotal(parseInt(seuilDraft.total));
                 setPanel(null);
                 showToast('Seuil multi-signatures mis à jour');
-              }} className="flex-1 py-4 rounded-xl bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white text-sm font-bold shadow-lg">
+              }} className="flex-1 py-4 rounded-xl bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white text-sm font-bold shadow-lg">
                 Enregistrer
               </button>
             </div>
@@ -523,13 +523,13 @@ export function ProManageAccountScreen() {
                 </div>
                 <button
                   onClick={() => setApiEnabled(v => !v)}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${apiEnabled ? 'bg-[#006D77]' : isDarkMode ? 'bg-[#334155]' : 'bg-[#E2E8F0]'}`}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${apiEnabled ? 'bg-[#0a5c7a]' : isDarkMode ? 'bg-[#334155]' : 'bg-[#E2E8F0]'}`}
                 >
                   <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${apiEnabled ? 'left-7' : 'left-1'}`} />
                 </button>
               </div>
               {apiEnabled && (
-                <div className={`rounded-xl p-4 border font-mono text-xs ${isDarkMode ? 'bg-[#0F172A] border-[#334155] text-[#D4AF37]' : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#006D77]'} break-all`}>
+                <div className={`rounded-xl p-4 border font-mono text-xs ${isDarkMode ? 'bg-[#0F172A] border-[#334155] text-[#D4AF37]' : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#0a5c7a]'} break-all`}>
                   sk_live_kauri_xxxxxxxxxxxxxxxxxxxxxxxx
                 </div>
               )}
@@ -546,7 +546,7 @@ export function ProManageAccountScreen() {
                 value={webhookDraft}
                 onChange={e => setWebhookDraft(e.target.value)}
                 placeholder="https://votre-app.com/webhook/kauri"
-                className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#006D77]/30 ${inp}`}
+                className={`w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0a5c7a]/30 ${inp}`}
               />
               <p className={`text-xs mt-1 ${sub}`}>Reçoit les événements : paiements, signatures, alertes.</p>
             </div>
@@ -564,7 +564,7 @@ export function ProManageAccountScreen() {
                 <div key={label} className={`flex items-center justify-between px-4 py-3 rounded-xl mb-2 border ${card}`}>
                   <span className={`text-sm ${txt}`}>{label}</span>
                   <button onClick={() => set(v => !v)}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#006D77]' : isDarkMode ? 'bg-[#334155]' : 'bg-[#E2E8F0]'}`}>
+                    className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#0a5c7a]' : isDarkMode ? 'bg-[#334155]' : 'bg-[#E2E8F0]'}`}>
                     <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${value ? 'left-7' : 'left-1'}`} />
                   </button>
                 </div>

@@ -30,7 +30,7 @@ export function WalletCreationScreen() {
   }, [progress, accountType, navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#006D77] to-[#0A5C7A] px-6 py-12 flex flex-col items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-b from-[#0a5c7a] to-[#0F172A] px-6 py-12 flex flex-col items-center justify-center">
       <div className="w-full max-w-md">
         <div className="text-center mb-12">
           <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-[#D4AF37] flex items-center justify-center shadow-2xl animate-pulse">

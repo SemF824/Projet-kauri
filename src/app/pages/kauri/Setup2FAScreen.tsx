@@ -15,7 +15,7 @@ import { getSupabase } from "../../../utils/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { toast } from "sonner";
 
-const TEAL = "#006D77";
+const TEAL = "#0a5c7a";
 const GOLD = "#D4AF37";
 const BG = "#F4F6F8";
 const CARD = "#FFFFFF";
@@ -641,7 +641,7 @@ export function Setup2FAScreen() {
                     }}
                   >
                     {opt.id === "app" && verifying ? (
-                      <div className="w-5 h-5 rounded-full border-2 border-[#006D77] border-t-transparent animate-spin" />
+                      <div className="w-5 h-5 rounded-full border-2 border-[#0a5c7a] border-t-transparent animate-spin" />
                     ) : (
                       <IconComp
                         style={{
@@ -827,7 +827,7 @@ export function Setup2FAScreen() {
 
                 <button
                   onClick={() => setStep("verify")}
-                  className="w-full py-4 bg-[#006D77] text-white text-sm font-bold rounded-xl shadow-md cursor-pointer"
+                  className="w-full py-4 bg-[#0a5c7a] text-white text-sm font-bold rounded-xl shadow-md cursor-pointer"
                 >
                   J&#39;ai scanné le code
                 </button>

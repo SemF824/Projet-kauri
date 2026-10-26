@@ -251,7 +251,7 @@ export function KauriLoginScreen() {
         className="min-h-screen flex items-center justify-center"
         style={{
           background:
-            "linear-gradient(165deg, #006D77 0%, #004E57 55%, #003A42 100%)",
+            "linear-gradient(165deg, #0a5c7a 0%, #004E57 55%, #003A42 100%)",
         }}
       >
         <div

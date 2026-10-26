@@ -70,8 +70,8 @@ export function HistoriqueSwapsScreen() {
         return {
           icon: CheckCircle2,
           text: 'Validé',
-          className: 'bg-[#D1FAE5] text-[#006D77]',
-          iconColor: 'text-[#006D77]',
+          className: 'bg-[#D1FAE5] text-[#0a5c7a]',
+          iconColor: 'text-[#0a5c7a]',
         };
       case 'pending':
         return {
@@ -131,7 +131,7 @@ export function HistoriqueSwapsScreen() {
 
               <div className="mb-4">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#006D77] to-[#0D9488] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] flex items-center justify-center">
                     <User className="w-4 h-4 text-white" />
                   </div>
                   <div className="flex-1">
@@ -172,12 +172,12 @@ export function HistoriqueSwapsScreen() {
                     <div className="flex-1">
                       <div className={`h-2 rounded-full overflow-hidden ${isDarkMode ? 'bg-[#475569]' : 'bg-[#E2E8F0]'}`}>
                         <div
-                          className="h-full bg-gradient-to-r from-[#006D77] to-[#0D9488]"
+                          className="h-full bg-gradient-to-r from-[#0a5c7a] to-[#0F172A]"
                           style={{ width: `${(swap.votes.for / swap.votes.required) * 100}%` }}
                         ></div>
                       </div>
                     </div>
-                    <span className="text-xs text-[#006D77]">{swap.votes.for} Pour</span>
+                    <span className="text-xs text-[#0a5c7a]">{swap.votes.for} Pour</span>
                     <span className="text-xs text-[#B05B3B]">{swap.votes.against} Contre</span>
                   </div>
                 </div>

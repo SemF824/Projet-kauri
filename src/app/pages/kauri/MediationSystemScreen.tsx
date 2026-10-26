@@ -98,7 +98,7 @@ export function MediationSystemScreen() {
         {/* Panel des Gardiens */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-[#E2E8F0]">
           <h3 className="text-[#0F172A] mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-[#006D77]" />
+            <Users className="w-5 h-5 text-[#0a5c7a]" />
             Panel de Gardiens (3)
           </h3>
 
@@ -107,7 +107,7 @@ export function MediationSystemScreen() {
               <div key={index} className="p-4 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#006D77] to-[#0D9488] flex items-center justify-center text-white shadow-lg">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] flex items-center justify-center text-white shadow-lg">
                       {guardian.avatar}
                     </div>
                     <div>
@@ -121,14 +121,14 @@ export function MediationSystemScreen() {
                       En délibération
                     </span>
                   ) : guardian.vote === 'approved' ? (
-                    <CheckCircle2 className="w-6 h-6 text-[#006D77]" />
+                    <CheckCircle2 className="w-6 h-6 text-[#0a5c7a]" />
                   ) : null}
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="bg-[#E0F2FE] rounded-xl p-4 border border-[#006D77]/30">
+          <div className="bg-[#E0F2FE] rounded-xl p-4 border border-[#0a5c7a]/30">
             <p className="text-[#0369A1] text-sm">
               <strong>ℹ️ Processus :</strong> Les 3 Gardiens examinent le dossier de manière
               indépendante. Une décision à la majorité simple (2/3) est nécessaire. Délai maximum : 15 jours.
@@ -156,7 +156,7 @@ export function MediationSystemScreen() {
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
                       item.status === 'completed'
-                        ? 'bg-[#D1FAE5] text-[#006D77]'
+                        ? 'bg-[#D1FAE5] text-[#0a5c7a]'
                         : item.status === 'in-progress'
                         ? 'bg-[#FEF3C7] text-[#D97706]'
                         : 'bg-[#F1F5F9] text-[#94A3B8]'

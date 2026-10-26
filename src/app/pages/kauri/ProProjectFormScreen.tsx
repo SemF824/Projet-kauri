@@ -40,10 +40,10 @@ export function ProProjectFormScreen() {
   const palierMeta = [
     {
       icon: TrendingUp,
-      color: '#006D77',
-      bgGrad: 'from-[#006D77]/8 to-[#E0F2FE]/60',
-      border: 'border-[#006D77]/25',
-      badge: '#006D77',
+      color: '#0a5c7a',
+      bgGrad: 'from-[#0a5c7a]/8 to-[#E0F2FE]/60',
+      border: 'border-[#0a5c7a]/25',
+      badge: '#0a5c7a',
       tier: 'Palier 1',
       sublabel: 'Montant le plus bas',
       amountPlaceholder: '500',
@@ -102,7 +102,7 @@ export function ProProjectFormScreen() {
     } else {
       // Persister le nouveau projet dans localStorage pour ProProjetsScreen
       const COLORS: Record<string, string> = {
-        'Agriculture': '#059669', 'Immobilier': '#006D77', 'Technologie': '#7C3AED',
+        'Agriculture': '#059669', 'Immobilier': '#0a5c7a', 'Technologie': '#7C3AED',
         'Social & Communautaire': '#B05B3B', 'Commerce': '#D4AF37', 'Tech': '#7C3AED',
         'Hôtellerie & Restauration': '#D97706', 'Artisanat': '#92400E', 'Autre': '#64748B',
       };
@@ -114,7 +114,7 @@ export function ProProjectFormScreen() {
         objectif: parseFloat(formData.paliers[2].montant) || 0,
         backers: 0,
         statut: 'En attente',
-        color: COLORS[formData.category] || '#006D77',
+        color: COLORS[formData.category] || '#0a5c7a',
         categorie: formData.category,
         dateDebut: '—',
         dateFin: formData.cycleDuration ? `Dans ${formData.cycleDuration} mois` : '—',
@@ -218,7 +218,7 @@ export function ProProjectFormScreen() {
                 </select>
               </div>
 
-              <div className="bg-[#E0F2FE] rounded-xl p-4 border border-[#006D77]/30">
+              <div className="bg-[#E0F2FE] rounded-xl p-4 border border-[#0a5c7a]/30">
                 <p className="text-[#0369A1] text-sm">
                   💡 <strong>Conseil :</strong> Choisissez une catégorie pertinente pour attirer les bons contributeurs.
                 </p>
@@ -241,7 +241,7 @@ export function ProProjectFormScreen() {
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { value: 'dons', icon: Heart, label: 'Dons', sublabel: 'Contribution solidaire', color: '#B05B3B' },
-                    { value: 'investissement', icon: BarChart2, label: 'Investissement', sublabel: 'Retour financier', color: '#006D77' },
+                    { value: 'investissement', icon: BarChart2, label: 'Investissement', sublabel: 'Retour financier', color: '#0a5c7a' },
                     { value: 'les-deux', icon: null, label: 'Les deux', sublabel: 'Don ou investir', color: '#D4AF37' },
                   ].map((opt) => (
                     <button
@@ -259,7 +259,7 @@ export function ProProjectFormScreen() {
                       ) : (
                         <div className="flex gap-0.5">
                           <Heart className="w-4 h-4" style={{ color: '#B05B3B' }} />
-                          <BarChart2 className="w-4 h-4" style={{ color: '#006D77' }} />
+                          <BarChart2 className="w-4 h-4" style={{ color: '#0a5c7a' }} />
                         </div>
                       )}
                       <span className="text-xs font-bold leading-tight text-center">{opt.label}</span>
@@ -273,7 +273,7 @@ export function ProProjectFormScreen() {
               {financementType && (
                 <div className={`rounded-xl p-3 border text-xs flex gap-2 ${
                   financementType === 'dons' ? 'bg-[#FEF3EE] border-[#B05B3B]/30 text-[#7C3B25]' :
-                  financementType === 'investissement' ? 'bg-[#E0F2FE] border-[#006D77]/30 text-[#0369A1]' :
+                  financementType === 'investissement' ? 'bg-[#E0F2FE] border-[#0a5c7a]/30 text-[#0369A1]' :
                   'bg-[#FEF9E7] border-[#D4AF37]/30 text-[#92400E]'
                 }`}>
                   <span className="text-base leading-none flex-shrink-0">
@@ -385,10 +385,10 @@ export function ProProjectFormScreen() {
 
                               {/* Rendement investissement */}
                               {acceptsInvest && (
-                                <div className="bg-[#E0F2FE]/60 rounded-xl p-3 border border-[#006D77]/15">
+                                <div className="bg-[#E0F2FE]/60 rounded-xl p-3 border border-[#0a5c7a]/15">
                                   <div className="flex items-center gap-1.5 mb-1.5">
-                                    <BarChart2 className="w-3.5 h-3.5 text-[#006D77]" />
-                                    <label className="text-xs font-semibold text-[#006D77]">Retour pour les investisseurs</label>
+                                    <BarChart2 className="w-3.5 h-3.5 text-[#0a5c7a]" />
+                                    <label className="text-xs font-semibold text-[#0a5c7a]">Retour pour les investisseurs</label>
                                   </div>
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="relative">
@@ -397,9 +397,9 @@ export function ProProjectFormScreen() {
                                         value={palier.rendement_invest}
                                         onChange={(e) => updatePalier(index, 'rendement_invest', e.target.value)}
                                         placeholder={index === 0 ? '5' : index === 1 ? '8' : '12'}
-                                        className="w-full pr-7 pl-3 py-2 bg-white rounded-lg border border-[#006D77]/20 focus:outline-none text-xs transition-all"
+                                        className="w-full pr-7 pl-3 py-2 bg-white rounded-lg border border-[#0a5c7a]/20 focus:outline-none text-xs transition-all"
                                       />
-                                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#006D77] text-xs font-bold">%</span>
+                                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#0a5c7a] text-xs font-bold">%</span>
                                     </div>
                                     <div className="flex items-center text-[10px] text-[#64748B]">
                                       taux annuel proposé aux investisseurs
@@ -465,7 +465,7 @@ export function ProProjectFormScreen() {
                                   {parseFloat(p.montant).toLocaleString()} €
                                 </span>
                                 {acceptsInvest && p.rendement_invest && (
-                                  <span className="text-[10px] bg-[#006D77]/10 text-[#006D77] px-1.5 py-0.5 rounded-full font-medium">
+                                  <span className="text-[10px] bg-[#0a5c7a]/10 text-[#0a5c7a] px-1.5 py-0.5 rounded-full font-medium">
                                     {p.rendement_invest}% / an
                                   </span>
                                 )}

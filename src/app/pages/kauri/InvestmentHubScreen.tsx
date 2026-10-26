@@ -54,7 +54,7 @@ export function InvestmentHubScreen() {
     <div className="flex justify-center items-stretch min-h-screen bg-[#D6D6D6]">
       <div className="w-full max-w-[430px] h-screen flex flex-col overflow-hidden shadow-2xl bg-[#F9F9F9]">
         {/* Header */}
-        <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-6 flex-shrink-0">
+        <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-6 flex-shrink-0">
           <div className="flex items-center justify-between mb-6">
             <button onClick={() => navigate('/kauri/normal-dashboard')} className="text-white flex items-center gap-2">
               <ArrowLeft className="w-5 h-5" />
@@ -136,11 +136,11 @@ export function InvestmentHubScreen() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm text-[#64748B]">Progression</p>
-                        <p className="text-sm font-bold text-[#006D77]">{project.fundingProgress}%</p>
+                        <p className="text-sm font-bold text-[#0a5c7a]">{project.fundingProgress}%</p>
                       </div>
                       <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-[#006D77] to-[#0D9488] rounded-full transition-all duration-500"
+                          className="h-full bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] rounded-full transition-all duration-500"
                           style={{ width: `${project.fundingProgress}%` }}
                         ></div>
                       </div>
@@ -165,13 +165,13 @@ export function InvestmentHubScreen() {
           </div>
 
           {/* Info Box */}
-          <div className="bg-gradient-to-br from-[#F0FDFA] to-[#E0F2FE] rounded-2xl p-4 border border-[#006D77]/20">
+          <div className="bg-gradient-to-br from-[#F0FDFA] to-[#E0F2FE] rounded-2xl p-4 border border-[#0a5c7a]/20">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-[#006D77]/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="w-5 h-5 text-[#006D77]" />
+              <div className="w-10 h-10 bg-[#0a5c7a]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-5 h-5 text-[#0a5c7a]" />
               </div>
               <div>
-                <h4 className="font-semibold text-[#006D77] text-sm mb-1">
+                <h4 className="font-semibold text-[#0a5c7a] text-sm mb-1">
                   Investissement Responsable
                 </h4>
                 <p className="text-xs text-[#64748B] leading-relaxed">
@@ -189,8 +189,8 @@ export function InvestmentHubScreen() {
               onClick={() => navigate('/kauri/normal-dashboard')}
               className="flex flex-col items-center gap-1"
             >
-              <Wallet className="w-6 h-6 text-[#006D77]" />
-              <span className="text-xs text-[#006D77] font-medium">FinTech</span>
+              <Wallet className="w-6 h-6 text-[#0a5c7a]" />
+              <span className="text-xs text-[#0a5c7a] font-medium">FinTech</span>
             </button>
             <button
               onClick={() => navigate('/kauri/social-hub-gateway')}

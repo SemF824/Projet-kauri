@@ -657,8 +657,8 @@ export function NormalDashboardScreen() {
                 }
                 className={`rounded-xl p-4 text-center shadow-sm border hover:shadow-md transition-shadow cursor-pointer ${isDarkMode ? "bg-[#1E293B] border-[#334155]" : "bg-white border-[#E2E8F0]"}`}
               >
-                <div className="w-12 h-12 mx-auto mb-2 bg-[#006D77]/10 rounded-xl flex items-center justify-center">
-                  <Compass className="w-6 h-6 text-[#006D77]" />
+                <div className="w-12 h-12 mx-auto mb-2 bg-[#0a5c7a]/10 rounded-xl flex items-center justify-center">
+                  <Compass className="w-6 h-6 text-[#0a5c7a]" />
                 </div>
                 <p
                   className={`text-xs font-medium ${isDarkMode ? "text-[#94A3B8]" : "text-[#4A4A4A]"}`}
@@ -679,12 +679,12 @@ export function NormalDashboardScreen() {
               <h3
                 className={`flex items-center gap-2 font-bold ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
               >
-                <div className="w-1.5 h-5 bg-[#006D77] rounded-full"></div>
+                <div className="w-1.5 h-5 bg-[#0a5c7a] rounded-full"></div>
                 Mes Tontines
               </h3>
               <button
                 onClick={() => navigate("/kauri/tontines-actives")}
-                className="text-xs font-bold text-[#006D77] dark:text-[#0D9488] bg-transparent border-none cursor-pointer hover:underline"
+                className="text-xs font-bold text-[#0a5c7a] dark:text-[#0D9488] bg-transparent border-none cursor-pointer hover:underline"
               >
                 Tout voir
               </button>
@@ -704,7 +704,7 @@ export function NormalDashboardScreen() {
                       >
                         {tontine.name}
                       </h4>
-                      <span className="px-3 py-1 bg-[#D1FAE5] text-[#006D77] text-[10px] rounded-full font-bold uppercase tracking-wider">
+                      <span className="px-3 py-1 bg-[#D1FAE5] text-[#0a5c7a] text-[10px] rounded-full font-bold uppercase tracking-wider">
                         {tontine.status || "Actif"}
                       </span>
                     </div>
@@ -723,7 +723,7 @@ export function NormalDashboardScreen() {
                     <div
                       className={`h-2 rounded-full overflow-hidden ${isDarkMode ? "bg-[#334155]" : "bg-[#F1F5F9]"}`}
                     >
-                      <div className="h-full bg-gradient-to-r from-[#006D77] to-[#0D9488] w-4/5 rounded-full"></div>
+                      <div className="h-full bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] w-4/5 rounded-full"></div>
                     </div>
                   </div>
                 ))}
@@ -736,7 +736,7 @@ export function NormalDashboardScreen() {
                     : "bg-white border-[#E2E8F0]"
                 }`}
               >
-                <div className="w-14 h-14 mx-auto rounded-2xl bg-[#006D77]/10 flex items-center justify-center text-[#006D77]">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-[#0a5c7a]/10 flex items-center justify-center text-[#0a5c7a]">
                   <Users className="w-7 h-7" />
                 </div>
                 <div className="space-y-1">
@@ -761,7 +761,7 @@ export function NormalDashboardScreen() {
                   </button>
                   <button
                     onClick={() => navigate("/kauri/creer-tontine")}
-                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white text-xs font-bold shadow-md shadow-[#006D77]/20 transition-all active:scale-95 border-none cursor-pointer"
+                    className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white text-xs font-bold shadow-md shadow-[#0a5c7a]/20 transition-all active:scale-95 border-none cursor-pointer"
                   >
                     Créer un cercle
                   </button>
@@ -814,10 +814,10 @@ export function NormalDashboardScreen() {
 
             {!isKycRejected && (
               <div
-                className={`${isDarkMode ? "bg-[#006D77]/10 border border-[#006D77]/20" : "bg-[#E6F4F5] border border-[#006D77]/10"} rounded-2xl p-4`}
+                className={`${isDarkMode ? "bg-[#0a5c7a]/10 border border-[#0a5c7a]/20" : "bg-[#E6F4F5] border border-[#0a5c7a]/10"} rounded-2xl p-4`}
               >
                 <p
-                  className={`text-xs font-bold leading-relaxed text-center ${isDarkMode ? "text-teal-400" : "text-[#006D77]"}`}
+                  className={`text-xs font-bold leading-relaxed text-center ${isDarkMode ? "text-teal-400" : "text-[#0a5c7a]"}`}
                 >
                   ⏳ Activation de vos accès financiers sous 24
                   heures.
@@ -844,7 +844,7 @@ export function NormalDashboardScreen() {
               onClick={() =>
                 navigate("/kauri/kyc-verification")
               }
-              className={`w-full py-4 rounded-xl text-white font-bold text-[13px] tracking-wide uppercase shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer border-none ${isKycRejected ? "bg-red-500 hover:bg-red-600 shadow-red-500/20" : "bg-[#006D77] hover:bg-[#00525a] shadow-[#006D77]/20"}`}
+              className={`w-full py-4 rounded-xl text-white font-bold text-[13px] tracking-wide uppercase shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer border-none ${isKycRejected ? "bg-red-500 hover:bg-red-600 shadow-red-500/20" : "bg-[#0a5c7a] hover:bg-[#00525a] shadow-[#0a5c7a]/20"}`}
             >
               <span>
                 {isKycRejected

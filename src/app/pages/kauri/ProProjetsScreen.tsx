@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
 import { useProData, ProProjet } from '../../contexts/ProDataContext';
 
-const TEAL  = '#006D77';
+const TEAL  = '#0a5c7a';
 const GOLD  = '#D4AF37';
 const TERRA = '#B05B3B';
 const AMBER = '#92400E';
@@ -199,7 +199,7 @@ export function ProProjetsScreen() {
 
       {/* Toast */}
       {saved && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-[#006D77] text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2 whitespace-nowrap">
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-[#0a5c7a] text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2 whitespace-nowrap">
           <CheckCircle2 className="w-4 h-4" />
           {clotureDone.length > 0 ? 'Levée clôturée et archivée' : 'Projet mis à jour'}
         </div>
@@ -533,7 +533,7 @@ export function ProProjetsScreen() {
                   <textarea value={clotureRaison} onChange={e => setClotureRaison(e.target.value)}
                     placeholder="Ex : Merci à tous pour votre soutien ! Les fonds seront utilisés pour..."
                     rows={3} maxLength={300}
-                    className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#006D77]/20" />
+                    className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0a5c7a]/20" />
                   <p className="text-xs text-[#94A3B8] text-right mt-1">{clotureRaison.length}/300</p>
                 </div>
 
@@ -595,7 +595,7 @@ export function ProProjetsScreen() {
                 { id: 'cta',     label: 'Financement' },
               ] as { id: EditTab; label: string }[]).map(t => (
                 <button key={t.id} onClick={() => setEditTab(t.id)}
-                  className={`py-3 mr-5 text-sm font-semibold border-b-2 transition-colors ${editTab === t.id ? 'border-[#006D77] text-[#006D77]' : 'border-transparent text-[#94A3B8]'}`}>
+                  className={`py-3 mr-5 text-sm font-semibold border-b-2 transition-colors ${editTab === t.id ? 'border-[#0a5c7a] text-[#0a5c7a]' : 'border-transparent text-[#94A3B8]'}`}>
                   {t.label}
                 </button>
               ))}
@@ -610,13 +610,13 @@ export function ProProjetsScreen() {
                   <div>
                     <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Nom du projet</label>
                     <input value={draft.nom} onChange={e => setDraft({ ...draft, nom: e.target.value })}
-                      className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#006D77]/30" />
+                      className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0a5c7a]/30" />
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-[#0F172A] mb-2 block">Description</label>
                     <textarea value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })}
                       rows={4} maxLength={500}
-                      className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#006D77]/30" />
+                      className="w-full px-4 py-3 border border-[#E2E8F0] rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#0a5c7a]/30" />
                     <p className="text-xs text-[#94A3B8] text-right mt-1">{draft.description.length}/500</p>
                   </div>
                   <div>
@@ -657,14 +657,14 @@ export function ProProjetsScreen() {
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8] font-bold text-sm">€</span>
                               <input type="number" value={p.montant} onChange={e => updatePalier(i, 'montant', e.target.value)}
                                 placeholder={meta.placeholder}
-                                className="w-full pl-8 pr-4 py-2.5 border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#006D77]/20" />
+                                className="w-full pl-8 pr-4 py-2.5 border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0a5c7a]/20" />
                             </div>
                           </div>
                           {/* Description */}
                           <div>
                             <label className="text-xs text-[#64748B] mb-1 block">Ce que finance ce palier</label>
                             <input value={p.description} onChange={e => updatePalier(i, 'description', e.target.value)}
-                              className="w-full px-3 py-2.5 border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#006D77]/20" />
+                              className="w-full px-3 py-2.5 border border-[#E2E8F0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0a5c7a]/20" />
                           </div>
                           {/* Contrepartie don */}
                           {acceptsDons && (
@@ -679,15 +679,15 @@ export function ProProjetsScreen() {
                           )}
                           {/* Rendement investisseur */}
                           {acceptsInvest && (
-                            <div className="bg-[#E0F2FE] rounded-xl p-3 border border-[#006D77]/15">
-                              <label className="text-[10px] font-semibold text-[#006D77] mb-1.5 flex items-center gap-1 block">
+                            <div className="bg-[#E0F2FE] rounded-xl p-3 border border-[#0a5c7a]/15">
+                              <label className="text-[10px] font-semibold text-[#0a5c7a] mb-1.5 flex items-center gap-1 block">
                                 <TrendingUp className="w-3 h-3" /> Rendement annuel investisseurs
                               </label>
                               <div className="relative">
                                 <input type="number" value={p.rendement_invest} onChange={e => updatePalier(i, 'rendement_invest', e.target.value)}
                                   placeholder="Ex: 8"
-                                  className="w-full pl-3 pr-8 py-2 bg-white border border-[#006D77]/20 rounded-lg text-xs focus:outline-none" />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#006D77] text-xs font-bold">%</span>
+                                  className="w-full pl-3 pr-8 py-2 bg-white border border-[#0a5c7a]/20 rounded-lg text-xs focus:outline-none" />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0a5c7a] text-xs font-bold">%</span>
                               </div>
                             </div>
                           )}

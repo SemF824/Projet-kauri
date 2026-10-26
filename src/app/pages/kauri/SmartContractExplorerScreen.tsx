@@ -62,7 +62,7 @@ export function SmartContractExplorerScreen() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#E2E8F0] pb-24">
-      <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
+      <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
         <button onClick={() => navigate(-1)} className="mb-6 text-white flex items-center gap-2">
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm">Retour</span>
@@ -104,7 +104,7 @@ export function SmartContractExplorerScreen() {
         {/* Statistiques */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-white rounded-xl p-4 shadow-md border border-[#E2E8F0]">
-            <Shield className="w-8 h-8 text-[#006D77] mb-2" />
+            <Shield className="w-8 h-8 text-[#0a5c7a] mb-2" />
             <p className="text-[#0F172A] text-lg mb-1">{contractInfo.totalValue}</p>
             <p className="text-[#64748B] text-xs">Valeur Totale</p>
           </div>
@@ -137,11 +137,11 @@ export function SmartContractExplorerScreen() {
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="px-3 py-1 bg-[#006D77]/10 text-[#006D77] text-xs rounded-full">
+                      <span className="px-3 py-1 bg-[#0a5c7a]/10 text-[#0a5c7a] text-xs rounded-full">
                         {tx.type}
                       </span>
                       {tx.status === 'validé' ? (
-                        <CheckCircle2 className="w-4 h-4 text-[#006D77]" />
+                        <CheckCircle2 className="w-4 h-4 text-[#0a5c7a]" />
                       ) : (
                         <Clock className="w-4 h-4 text-[#F59E0B] animate-pulse" />
                       )}
@@ -167,7 +167,7 @@ export function SmartContractExplorerScreen() {
                 <div className="pt-3 border-t border-[#E2E8F0] grid grid-cols-2 gap-3 text-xs">
                   <div>
                     <p className="text-[#64748B] mb-1">TX Hash</p>
-                    <p className="text-[#006D77] font-mono">{tx.id}</p>
+                    <p className="text-[#0a5c7a] font-mono">{tx.id}</p>
                   </div>
                   <div>
                     <p className="text-[#64748B] mb-1">Bloc / Gas</p>
@@ -180,7 +180,7 @@ export function SmartContractExplorerScreen() {
                 </div>
 
                 {/* Bouton voir détails */}
-                <button className="w-full mt-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-[#006D77] text-sm hover:bg-[#E0F2FE] transition-colors">
+                <button className="w-full mt-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-[#0a5c7a] text-sm hover:bg-[#E0F2FE] transition-colors">
                   Voir sur Blockchain Explorer
                 </button>
               </div>
@@ -189,9 +189,9 @@ export function SmartContractExplorerScreen() {
         </div>
 
         {/* Info transparence */}
-        <div className="mt-6 bg-gradient-to-br from-[#E0F2FE] to-[#DBEAFE] rounded-2xl p-6 border border-[#006D77]/30">
+        <div className="mt-6 bg-gradient-to-br from-[#E0F2FE] to-[#DBEAFE] rounded-2xl p-6 border border-[#0a5c7a]/30">
           <h4 className="text-[#0F172A] mb-3 flex items-center gap-2">
-            <Shield className="w-5 h-5 text-[#006D77]" />
+            <Shield className="w-5 h-5 text-[#0a5c7a]" />
             Garantie de Transparence
           </h4>
           <p className="text-[#0369A1] text-sm leading-relaxed">

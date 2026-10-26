@@ -212,7 +212,7 @@ export function TontinesActivesScreen() {
         return {
           text: "Actif",
           className:
-            "bg-[#D1FAE5] text-[#006D77] border border-[#006D77]/20",
+            "bg-[#D1FAE5] text-[#0a5c7a] border border-[#0a5c7a]/20",
         };
       default:
         return {
@@ -228,7 +228,7 @@ export function TontinesActivesScreen() {
       className={`min-h-screen pb-32 transition-colors font-sans select-none ${isDarkMode ? "bg-[#0F172A]" : "bg-gradient-to-b from-[#F8FAFC] to-[#E2E8F0]"}`}
     >
       <div
-        className={`px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl ${isDarkMode ? "bg-gradient-to-br from-[#1E293B] to-[#334155]" : "bg-gradient-to-br from-[#006D77] to-[#0D9488]"}`}
+        className={`px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl ${isDarkMode ? "bg-gradient-to-br from-[#1E293B] to-[#334155]" : "bg-gradient-to-br from-[#0a5c7a] to-[#0F172A]"}`}
       >
         <button
           onClick={() => navigate(-1)}
@@ -251,7 +251,7 @@ export function TontinesActivesScreen() {
       <div className="px-6 py-6 space-y-4">
         {isLoading ? (
           <div className="py-20 flex flex-col items-center justify-center space-y-3 bg-white/50 rounded-3xl backdrop-blur-sm border border-white/20">
-            <Loader2 className="w-8 h-8 animate-spin text-[#006D77]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#0a5c7a]" />
             <p className="text-xs text-slate-500 font-bold tracking-wide">
               Calcul de vos droits de tirage...
             </p>
@@ -378,7 +378,7 @@ export function TontinesActivesScreen() {
                     }`}
                   >
                     <div
-                      className="h-full bg-gradient-to-r from-[#006D77] to-[#0D9488] rounded-full"
+                      className="h-full bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] rounded-full"
                       style={{ width: `${tontine.progress}%` }}
                     ></div>
                   </div>
@@ -389,7 +389,7 @@ export function TontinesActivesScreen() {
                     className={`text-xs font-bold ${
                       tontine.status === "your-turn"
                         ? "text-[#D4AF37]"
-                        : "text-[#006D77]"
+                        : "text-[#0a5c7a]"
                     }`}
                   >
                     Voir l'échéancier
@@ -423,7 +423,7 @@ export function TontinesActivesScreen() {
           <h3
             className={`text-sm font-black mb-4 flex items-center gap-2 tracking-tight ${isDarkMode ? "text-white" : "text-[#0F172A]"}`}
           >
-            <span className="w-1.5 h-4 rounded-full bg-[#006D77] inline-block" />
+            <span className="w-1.5 h-4 rounded-full bg-[#0a5c7a] inline-block" />
             Créer un nouveau cercle
           </h3>
 
@@ -432,7 +432,7 @@ export function TontinesActivesScreen() {
               onClick={() =>
                 navigate("/kauri/creer-tontine-privee")
               }
-              className="flex items-center justify-center gap-2 py-4 rounded-xl shadow-md font-bold text-white bg-gradient-to-r from-[#006D77] to-[#0D9488] active:scale-95 transition-all cursor-pointer border-none"
+              className="flex items-center justify-center gap-2 py-4 rounded-xl shadow-md font-bold text-white bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] active:scale-95 transition-all cursor-pointer border-none"
             >
               <Lock className="w-4 h-4" />
               <span className="text-sm">+ Privée</span>

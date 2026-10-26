@@ -77,7 +77,7 @@ export function TrustScoreIntroScreen() {
   };
 
   const getScoreColor = (s: number) => {
-    if (s >= 80) return "#006D77";
+    if (s >= 80) return "#0a5c7a";
     if (s >= 60) return "#D4AF37";
     return "#F59E0B";
   };
@@ -103,14 +103,14 @@ export function TrustScoreIntroScreen() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#006D77] to-[#0A5C7A] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-[#0a5c7a] to-[#0F172A] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-white" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#006D77] to-[#0A5C7A] px-6 py-8 flex flex-col items-center justify-center relative">
+    <div className="min-h-screen bg-gradient-to-b from-[#0a5c7a] to-[#0F172A] px-6 py-8 flex flex-col items-center justify-center relative">
       {/* Barre supérieure avec bouton retour */}
       <div className="w-full max-w-md flex items-center justify-between mb-4">
         <button
@@ -271,7 +271,7 @@ export function TrustScoreIntroScreen() {
         {/* CTA */}
         <button
           onClick={handleContinue}
-          className="w-full bg-white text-[#006D77] py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-xl font-bold text-sm border-none cursor-pointer hover:bg-slate-50 transition-colors"
+          className="w-full bg-white text-[#0a5c7a] py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-xl font-bold text-sm border-none cursor-pointer hover:bg-slate-50 transition-colors"
         >
           <span>
             {isAlreadyOnboarded || hasSavedPreferences

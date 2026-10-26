@@ -618,7 +618,7 @@ export function AccountTypeSelectionScreen() {
           className="hidden"
         />
 
-        <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl w-full">
+        <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl w-full">
           <div className="max-w-md mx-auto">
             <div className="flex items-center justify-between mb-4">
               <button
@@ -888,7 +888,7 @@ export function AccountTypeSelectionScreen() {
               }
               className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 text-white text-sm font-bold shadow-xl cursor-pointer border-none transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                background: "linear-gradient(135deg, #006D77, #0D9488)",
+                background: "linear-gradient(135deg, #0a5c7a, #0D9488)",
               }}
             >
               {isLoading ? (
@@ -961,7 +961,7 @@ export function AccountTypeSelectionScreen() {
 
   // ── ÉTAPE 1 : SELECTION TYPE DE COMPTE ──
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#006D77] to-[#0A5C7A] flex flex-col font-sans">
+    <div className="min-h-screen bg-gradient-to-b from-[#0a5c7a] to-[#0F172A] flex flex-col font-sans">
       <div className="flex-1 w-full max-w-md mx-auto px-6 py-12 flex flex-col justify-center">
         <div className="text-center mb-10">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#F59E0B] flex items-center justify-center shadow-2xl">
@@ -986,10 +986,10 @@ export function AccountTypeSelectionScreen() {
             className="w-full bg-white rounded-3xl p-6 shadow-2xl text-left cursor-pointer border-none outline-none active:scale-[0.98] transition-transform"
           >
             <div className="flex items-start justify-between mb-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#006D77] to-[#0D9488] flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] flex items-center justify-center">
                 <User className="w-6 h-6 text-white" />
               </div>
-              <ArrowRight className="w-5 h-5 text-[#006D77]" />
+              <ArrowRight className="w-5 h-5 text-[#0a5c7a]" />
             </div>
             <h3 className="text-[#0F172A] text-lg font-bold mb-1">
               Compte Particulier
@@ -998,7 +998,7 @@ export function AccountTypeSelectionScreen() {
               Rejoignez des tontines privées, investissez dans des projets et
               gérez vos rendements.
             </p>
-            <span className="text-[10px] font-bold text-[#006D77] bg-[#006D77]/10 px-3 py-1 rounded-full uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-[#0a5c7a] bg-[#0a5c7a]/10 px-3 py-1 rounded-full uppercase tracking-wider">
               Accès Immédiat
             </span>
           </button>

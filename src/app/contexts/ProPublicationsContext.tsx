@@ -141,7 +141,7 @@ const INITIAL_PUBLICATIONS: ProPublication[] = [
 ];
 
 export const CTA_LABEL: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  investir:  { label: 'Investir',    color: '#006D77', icon: TrendingUp },
+  investir:  { label: 'Investir',    color: '#0a5c7a', icon: TrendingUp },
   don:       { label: 'Don',         color: '#B05B3B', icon: Gift },
   decouvrir: { label: 'En savoir +', color: '#D4AF37', icon: Info },
 };

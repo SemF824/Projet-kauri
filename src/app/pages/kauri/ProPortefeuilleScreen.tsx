@@ -10,7 +10,7 @@ import { getSupabase } from '../../../utils/supabase';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 const AMBER = '#92400E';
-const TEAL  = '#006D77';
+const TEAL  = '#0a5c7a';
 const GOLD  = '#D4A373';
 const TERRA = '#B05B3B';
 

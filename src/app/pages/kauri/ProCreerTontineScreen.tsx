@@ -23,7 +23,7 @@ import { useNavigate } from "react-router";
 import { useState, useMemo } from "react";
 
 // ── Constantes design ─────────────────────────────────────────────────────────
-const TEAL = "#006D77";
+const TEAL = "#0a5c7a";
 const GOLD = "#D4AF37";
 const TERRA = "#B05B3B";
 const AMBER = "#92400E";
@@ -410,7 +410,7 @@ export function ProCreerTontineScreen() {
           className="w-24 h-24 rounded-full flex items-center justify-center animate-bounce"
           style={{
             background:
-              "linear-gradient(135deg, #006D77, #D4AF37)",
+              "linear-gradient(135deg, #0a5c7a, #D4AF37)",
           }}
         >
           <Sparkles className="w-12 h-12 text-white" />

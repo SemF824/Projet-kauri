@@ -171,7 +171,7 @@ function Bar({ value, max, color }: { value: number; max: number; color: string 
 
 const CATEGORIES = ['Finance', 'Agriculture', 'Immobilier', 'Restauration', 'Tech', 'Artisanat', 'Commerce', 'Social'];
 const CTA_OPTIONS: { value: string; label: string; color: string }[] = [
-  { value: 'investir',  label: 'Investir maintenant', color: '#006D77' },
+  { value: 'investir',  label: 'Investir maintenant', color: '#0a5c7a' },
   { value: 'don',       label: 'Faire un don',         color: '#B05B3B' },
   { value: 'decouvrir', label: 'En savoir plus',       color: '#D4AF37' },
 ];
@@ -289,7 +289,7 @@ export function ProPublicationStatsScreen() {
           <div className={`rounded-2xl border ${card} shadow-md overflow-hidden`}>
             <div className="grid grid-cols-2 divide-x divide-y" style={{ borderColor: isDarkMode ? '#334155' : '#F1F5F9' }}>
               {[
-                { icon: Eye,              label: 'Vues',      value: s.vues.toLocaleString(),    evol: s.vuesEvol,  color: '#006D77' },
+                { icon: Eye,              label: 'Vues',      value: s.vues.toLocaleString(),    evol: s.vuesEvol,  color: '#0a5c7a' },
                 { icon: MousePointerClick,label: 'Clics CTA', value: s.ctaClics.toLocaleString(), evol: s.ctaEvol,   color: '#D4AF37' },
                 { icon: Heart,            label: 'Likes',     value: s.likes.toLocaleString(),    evol: s.likesEvol, color: '#B05B3B' },
                 { icon: Users,            label: 'Portée',    value: s.portee.toLocaleString(),   evol: null,        color: '#0D9488' },
@@ -334,8 +334,8 @@ export function ProPublicationStatsScreen() {
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 bg-[#006D77]/15 rounded-lg flex items-center justify-center">
-                      <TrendingUp className="w-3.5 h-3.5 text-[#006D77]" />
+                    <div className="w-7 h-7 bg-[#0a5c7a]/15 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="w-3.5 h-3.5 text-[#0a5c7a]" />
                     </div>
                     <div>
                       <p className={`text-sm font-semibold ${txt}`}>Investissements</p>
@@ -343,12 +343,12 @@ export function ProPublicationStatsScreen() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-[#006D77]">{s.conversions.investissements.montant.toLocaleString()} €</p>
+                    <p className="text-sm font-bold text-[#0a5c7a]">{s.conversions.investissements.montant.toLocaleString()} €</p>
                     <p className={`text-[10px] ${sub}`}>collectés</p>
                   </div>
                 </div>
                 <div className="h-2 rounded-full overflow-hidden" style={{ background: isDarkMode ? '#334155' : '#F1F5F9' }}>
-                  <div className="h-full bg-[#006D77] rounded-full" style={{ width: `${Math.round(s.conversions.investissements.count / s.conversions.total * 100)}%` }} />
+                  <div className="h-full bg-[#0a5c7a] rounded-full" style={{ width: `${Math.round(s.conversions.investissements.count / s.conversions.total * 100)}%` }} />
                 </div>
                 <p className={`text-[10px] ${sub} mt-1`}>{Math.round(s.conversions.investissements.count / s.conversions.total * 100)}% des conversions</p>
               </div>
@@ -392,7 +392,7 @@ export function ProPublicationStatsScreen() {
                 <div key={i} className="flex items-center gap-3">
                   <span className={`text-xs w-6 ${sub}`}>{t.jour}</span>
                   <div className="flex-1">
-                    <Bar value={t.vues} max={maxVues} color="#006D77" />
+                    <Bar value={t.vues} max={maxVues} color="#0a5c7a" />
                   </div>
                   <span className={`text-xs w-14 text-right font-medium ${txt}`}>{t.vues} vues</span>
                   <span className={`text-xs w-14 text-right ${s.ctaClics > 0 ? 'text-[#D4AF37]' : sub}`}>{t.clics} clics</span>
@@ -400,7 +400,7 @@ export function ProPublicationStatsScreen() {
               ))}
             </div>
             <div className="flex items-center gap-4 mt-3 pt-3 border-t" style={{ borderColor: isDarkMode ? '#334155' : '#F1F5F9' }}>
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#006D77]" /><span className={`text-[10px] ${sub}`}>Vues</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#0a5c7a]" /><span className={`text-[10px] ${sub}`}>Vues</span></div>
               <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#D4AF37]" /><span className={`text-[10px] ${sub}`}>Clics CTA</span></div>
             </div>
           </div>
@@ -412,16 +412,16 @@ export function ProPublicationStatsScreen() {
               <div className="space-y-3">
                 {selected.top_contributeurs.map((c, i) => (
                   <div key={i} className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${i === 0 ? 'bg-gradient-to-br from-[#D4AF37] to-[#F59E0B]' : 'bg-gradient-to-br from-[#006D77] to-[#0D9488]'}`}>
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${i === 0 ? 'bg-gradient-to-br from-[#D4AF37] to-[#F59E0B]' : 'bg-gradient-to-br from-[#0a5c7a] to-[#0F172A]'}`}>
                       {c.initials}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium truncate ${txt}`}>{c.name}</p>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${c.type === 'investissement' ? 'bg-[#006D77]/10 text-[#006D77]' : 'bg-[#B05B3B]/10 text-[#B05B3B]'}`}>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${c.type === 'investissement' ? 'bg-[#0a5c7a]/10 text-[#0a5c7a]' : 'bg-[#B05B3B]/10 text-[#B05B3B]'}`}>
                         {c.palier} · {c.type === 'investissement' ? 'Investissement' : 'Don'}
                       </span>
                     </div>
-                    <span className={`text-sm font-bold flex-shrink-0 ${c.type === 'investissement' ? 'text-[#006D77]' : 'text-[#B05B3B]'}`}>
+                    <span className={`text-sm font-bold flex-shrink-0 ${c.type === 'investissement' ? 'text-[#0a5c7a]' : 'text-[#B05B3B]'}`}>
                       {c.montant.toLocaleString()} €
                     </span>
                   </div>
@@ -446,7 +446,7 @@ export function ProPublicationStatsScreen() {
             </button>
             <button
               onClick={() => navigate('/kauri/pro-investisseurs')}
-              className="py-3.5 rounded-xl bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white text-sm font-semibold shadow-lg"
+              className="py-3.5 rounded-xl bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white text-sm font-semibold shadow-lg"
             >
               Investisseurs
             </button>
@@ -594,7 +594,7 @@ export function ProPublicationStatsScreen() {
 
       {/* Toast confirmation édition */}
       {editSaved && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-[#006D77] text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2">
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-[#0a5c7a] text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" /> Publication mise à jour
         </div>
       )}
@@ -674,7 +674,7 @@ export function ProPublicationStatsScreen() {
                   </div>
                   <div className="flex items-center gap-1 ml-auto">
                     {pub.stats.conversions.investissements.count > 0 && (
-                      <span className="text-[10px] bg-[#006D77]/10 text-[#006D77] px-1.5 py-0.5 rounded-full font-medium">
+                      <span className="text-[10px] bg-[#0a5c7a]/10 text-[#0a5c7a] px-1.5 py-0.5 rounded-full font-medium">
                         {pub.stats.conversions.investissements.count} invest.
                       </span>
                     )}
@@ -686,7 +686,7 @@ export function ProPublicationStatsScreen() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <Sparkline data={sparkData} color={pub.stats.vuesEvol >= 0 ? '#006D77' : '#B05B3B'} />
+                  <Sparkline data={sparkData} color={pub.stats.vuesEvol >= 0 ? '#0a5c7a' : '#B05B3B'} />
                   <div className="text-right">
                     <p className={`text-xs font-bold ${txt}`}>{pub.stats.taux_conversion}%</p>
                     <p className={`text-[10px] ${sub}`}>conversion</p>

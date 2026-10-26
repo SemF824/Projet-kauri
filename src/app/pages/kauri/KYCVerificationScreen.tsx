@@ -510,7 +510,7 @@ export function KYCVerificationScreen() {
         className="hidden"
       />
 
-      <div className="bg-gradient-to-br from-[#006D77] to-[#0D9488] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
+      <div className="bg-gradient-to-br from-[#0a5c7a] to-[#0F172A] px-6 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl">
         <button
           onClick={() => navigate(-1)}
           className="mb-4 text-white flex items-center gap-2 bg-transparent border-none cursor-pointer opacity-90 hover:opacity-100 transition-all"
@@ -562,7 +562,7 @@ export function KYCVerificationScreen() {
 
         {isLoadingDocuments ? (
           <div className="py-20 flex flex-col items-center justify-center space-y-3 bg-white rounded-3xl border border-slate-100 shadow-md">
-            <Loader2 className="w-8 h-8 animate-spin text-[#006D77]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#0a5c7a]" />
             <p className="text-xs text-slate-500 font-medium">
               Synchronisation de l'enclave matérielle...
             </p>
@@ -614,7 +614,7 @@ export function KYCVerificationScreen() {
                 </div>
                 <button
                   onClick={() => identityInputRef.current?.click()}
-                  className="px-4 py-2.5 bg-[#006D77]/10 hover:bg-[#006D77]/20 text-[#006D77] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1"
+                  className="px-4 py-2.5 bg-[#0a5c7a]/10 hover:bg-[#0a5c7a]/20 text-[#0a5c7a] font-bold text-xs rounded-xl border-none transition-all cursor-pointer flex items-center gap-1"
                 >
                   <RotateCw className="w-3.5 h-3.5" />{" "}
                   {hasIdentity ? "Modifier" : "Ajouter"}
@@ -683,7 +683,7 @@ export function KYCVerificationScreen() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between px-1">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4 text-[#006D77]" /> Registre des Sociétés
+                    <Building2 className="w-4 h-4 text-[#0a5c7a]" /> Registre des Sociétés
                   </h3>
                   {isBusinessChanged && (
                     <span className="text-[10px] bg-amber-500/10 text-amber-600 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -703,7 +703,7 @@ export function KYCVerificationScreen() {
                         updateBusinessField("businessName", e.target.value)
                       }
                       placeholder="SARL Innovation Caraïbes"
-                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#0a5c7a] transition-all"
                     />
                   </div>
 
@@ -721,7 +721,7 @@ export function KYCVerificationScreen() {
                           updateBusinessField("siret", e.target.value)
                         }
                         placeholder="12345678900012"
-                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-mono font-bold outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-mono font-bold outline-none text-[#0F172A] focus:border-[#0a5c7a] transition-all"
                       />
                     </div>
                     <div>
@@ -733,7 +733,7 @@ export function KYCVerificationScreen() {
                         onChange={(e) =>
                           updateBusinessField("formeJuridique", e.target.value)
                         }
-                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#0a5c7a] transition-all"
                       >
                         <option value="SARL">SARL</option>
                         <option value="SAS">SAS</option>
@@ -757,7 +757,7 @@ export function KYCVerificationScreen() {
                         updateBusinessField("dirigeant", e.target.value)
                       }
                       placeholder="Marie Céleste (Gérante)"
-                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#0a5c7a] transition-all"
                     />
                   </div>
                 </div>
@@ -787,7 +787,7 @@ export function KYCVerificationScreen() {
                           updateAddressField("firstName", e.target.value)
                         }
                         placeholder="Marie"
-                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#0a5c7a] transition-all"
                       />
                     </div>
                     <div>
@@ -801,7 +801,7 @@ export function KYCVerificationScreen() {
                           updateAddressField("lastName", e.target.value)
                         }
                         placeholder="Dupont"
-                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#0a5c7a] transition-all"
                       />
                     </div>
                   </div>
@@ -816,7 +816,7 @@ export function KYCVerificationScreen() {
                         updateAddressField("street", e.target.value)
                       }
                       placeholder="1 Rue de la Solidarité"
-                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                      className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#0a5c7a] transition-all"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -833,7 +833,7 @@ export function KYCVerificationScreen() {
                           updateAddressField("zip", e.target.value)
                         }
                         placeholder="75001"
-                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#0a5c7a] transition-all"
                       />
                     </div>
                     <div>
@@ -847,7 +847,7 @@ export function KYCVerificationScreen() {
                           updateAddressField("city", e.target.value)
                         }
                         placeholder="Paris"
-                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#006D77] transition-all"
+                        className="w-full px-4 py-3 border-2 border-[#E2E8F0] bg-[#F8FAFC] rounded-xl text-xs font-medium outline-none text-[#0F172A] focus:border-[#0a5c7a] transition-all"
                       />
                     </div>
                   </div>
@@ -865,7 +865,7 @@ export function KYCVerificationScreen() {
                 ${
                   !isFormComplete
                     ? "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none"
-                    : "bg-gradient-to-r from-[#006D77] to-[#0D9488] text-white shadow-[#006D77]/20"
+                    : "bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] text-white shadow-[#0a5c7a]/20"
                 }`}
             >
               {isActionLoading ? (

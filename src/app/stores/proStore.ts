@@ -29,7 +29,7 @@ const BASE: ProProjet[] = [
     id: 'p1', nom: 'Lolo Moderne',
     description: "Rénovation et modernisation d'une résidence communautaire à Fort-de-France avec intégration de solutions durables.",
     leve: 45_000, objectif: 100_000, backers: 87,
-    statut: 'En cours', color: '#006D77', categorie: 'Immobilier',
+    statut: 'En cours', color: '#0a5c7a', categorie: 'Immobilier',
     dateDebut: '1 avr. 2026', dateFin: '1 oct. 2026', progress: 45,
     finType: 'les-deux',
     paliers: [

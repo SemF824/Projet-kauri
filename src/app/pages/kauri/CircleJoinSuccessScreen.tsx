@@ -9,7 +9,7 @@ import {
 import { useNavigate, useLocation } from 'react-router';
 import { useEffect, useState } from 'react';
 
-const TEAL = '#006D77';
+const TEAL = '#0a5c7a';
 
 export function CircleJoinSuccessScreen() {
   const navigate = useNavigate();

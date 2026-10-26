@@ -146,7 +146,7 @@ export function DashboardScreen() {
           </button>
         </div>
 
-        <div className="mb-6 bg-gradient-to-r from-[#006D77] to-[#0D9488] rounded-2xl p-6 shadow-xl">
+        <div className="mb-6 bg-gradient-to-r from-[#0a5c7a] to-[#0F172A] rounded-2xl p-6 shadow-xl">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-full bg-[#D4AF37] flex items-center justify-center">
               <svg viewBox="0 0 100 100" className="w-7 h-7 text-white">
@@ -163,7 +163,7 @@ export function DashboardScreen() {
           </div>
           <button
             onClick={() => navigate('/kauri')}
-            className="w-full bg-white text-[#006D77] py-3 rounded-xl text-sm"
+            className="w-full bg-white text-[#0a5c7a] py-3 rounded-xl text-sm"
           >
             Explorer KAUREE →
           </button>

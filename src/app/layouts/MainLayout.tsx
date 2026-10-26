@@ -419,54 +419,77 @@ export function KauriBottomNav() {
                     Tontines
                   </span>
 
-                  {/* ── FORME PROPRIÉTAIRE INSPIRÉE DU COQUILLAGE KAURI (SILHOUETTE GALBÉE ORGANIQUE) ── */}
+                  {/* ── BOUTON SIGNATURE : OVALE VERTICAL RÉGULIER & SYMÉTRIQUE INCARNANT LE COQUILLAGE KAURI AVEC SA FENTE CENTRALE ── */}
                   <button
                     className="cursor-pointer border-none outline-none absolute pointer-events-none transition-transform active:scale-90"
                     style={{
-                      width: 52,
-                      height: 56,
-                      borderRadius: "48% 48% 45% 45% / 58% 58% 42% 42%",
+                      width: 48,
+                      height: 60,
+                      borderRadius: "9999px",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      top: -10,
+                      top: -14,
                       left: "50%",
                       transform: `translateX(-50%) ${isActive ? "scale(1.08)" : "scale(1)"}`,
                       transition:
                         "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
                       boxShadow:
-                        "0 10px 24px rgba(212,175,55,0.45), 0 4px 10px rgba(10,92,122,0.22)",
+                        "0 12px 28px -4px rgba(212,175,55,0.48), 0 4px 12px rgba(10,92,122,0.25), inset 0 2px 4px rgba(255,255,255,0.7), inset 0 -2px 4px rgba(0,0,0,0.18)",
                       border: isActive
                         ? "2.5px solid #F5EFE3"
-                        : "2px solid rgba(245, 239, 227, 0.8)",
+                        : "2px solid rgba(245, 239, 227, 0.9)",
                       background:
-                        "linear-gradient(145deg, #F5EFE3 0%, #D4AF37 34%, #B8860B 100%)",
+                        "linear-gradient(160deg, #FDFBF7 0%, #F5EFE3 22%, #D4AF37 62%, #B8860B 100%)",
                       zIndex: 10,
                     }}
                   >
+                    {/* ── FENTE CENTRALE DENTELÉE DU COQUILLAGE KAURI ── */}
                     <svg
-                      viewBox="0 0 100 100"
+                      viewBox="0 0 24 38"
                       style={{
-                        width: 24,
-                        height: 24,
-                        color: "#0F172A",
+                        width: 20,
+                        height: 32,
                         display: "block",
                         margin: "auto",
                       }}
+                      fill="none"
                     >
+                      {/* Creux de la fente centrale (profondeur navy) */}
                       <path
-                        d="M50 20 Q30 30 25 50 Q30 70 50 80 Q70 70 75 50 Q70 30 50 20 M50 35 Q60 40 62 50 Q60 60 50 65 Q40 60 38 50 Q40 40 50 35"
-                        fill="currentColor"
+                        d="M12 3 C10 8 8.8 14 8.8 19 C8.8 24 10 30 12 35 C14 30 15.2 24 15.2 19 C15.2 14 14 8 12 3 Z"
+                        fill="#0F172A"
+                      />
+                      {/* Dents gauches du kauri */}
+                      <line x1="8.2" y1="11" x2="11.4" y2="11" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
+                      <line x1="7.8" y1="15" x2="11.4" y2="15" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
+                      <line x1="7.5" y1="19" x2="11.4" y2="19" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
+                      <line x1="7.8" y1="23" x2="11.4" y2="23" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
+                      <line x1="8.2" y1="27" x2="11.4" y2="27" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
+
+                      {/* Dents droites du kauri */}
+                      <line x1="12.6" y1="11" x2="15.8" y2="11" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
+                      <line x1="12.6" y1="15" x2="16.2" y2="15" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
+                      <line x1="12.6" y1="19" x2="16.5" y2="19" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
+                      <line x1="12.6" y1="23" x2="16.2" y2="23" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
+                      <line x1="12.6" y1="27" x2="15.8" y2="27" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
+
+                      {/* Fissure médiane sombre */}
+                      <path
+                        d="M12 5 Q11.7 19 12 33"
+                        stroke="#0F172A"
+                        strokeWidth="1.2"
+                        strokeLinecap="round"
                       />
                     </svg>
 
                     <div
                       style={{
                         position: "absolute",
-                        top: -2,
-                        right: -2,
-                        width: 18,
-                        height: 18,
+                        top: -3,
+                        right: -3,
+                        width: 17,
+                        height: 17,
                         borderRadius: "50%",
                         backgroundColor: isDarkMode
                           ? "#0F172A"
