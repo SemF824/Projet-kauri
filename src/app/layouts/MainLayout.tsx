@@ -419,96 +419,90 @@ export function KauriBottomNav() {
                     Tontines
                   </span>
 
-                  {/* ── BOUTON SIGNATURE : OVALE DODU SYMÉTRIQUE INCARNANT LE COQUILLAGE KAURI EN OR RICHE AVEC SA FENTE ÉPURÉE ── */}
+                  {/* ── BOUTON SIGNATURE : LE COQUILLAGE KAURI EST LE BOUTON ── */}
                   <button
-                    className="cursor-pointer border-none outline-none absolute pointer-events-none transition-transform active:scale-90"
+                    className="kauree-fab cursor-pointer outline-none absolute pointer-events-none"
                     style={{
-                      width: 54,
-                      height: 56,
-                      borderRadius: "9999px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      top: -11,
                       left: "50%",
-                      transform: `translateX(-50%) ${isActive ? "scale(1.08)" : "scale(1)"}`,
-                      transition:
-                        "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
-                      boxShadow:
-                        "0 10px 24px -2px rgba(212,175,55,0.48), 0 4px 10px rgba(0,0,0,0.18), inset 0 1.5px 2px rgba(255,255,255,0.45), inset 0 -2px 3px rgba(0,0,0,0.22)",
-                      border: isActive
-                        ? "2.5px solid #FFFFFF"
-                        : "2px solid rgba(255, 235, 170, 0.85)",
-                      background:
-                        "linear-gradient(165deg, #D4AF37 0%, #C89C2E 48%, #A8760B 100%)",
+                      top: 0,
+                      transform: `translateX(-50%) ${isActive ? "scale(1.06)" : "scale(1)"}`,
                       zIndex: 10,
                     }}
                   >
-                    {/* ── FENTE CENTRALE DU COQUILLAGE KAURI (ÉPURÉE À 3 CRANS ÉPAIS) ── */}
                     <svg
-                      viewBox="0 0 24 32"
-                      style={{
-                        width: 20,
-                        height: 28,
-                        display: "block",
-                        margin: "auto",
-                      }}
-                      fill="none"
+                      viewBox="0 0 100 120"
+                      width="60"
+                      height="72"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-label="Kauree"
                     >
-                      {/* Fond sombre de la fente (navy profond) */}
+                      <defs>
+                        <radialGradient id="kShell" cx="35%" cy="28%" r="80%">
+                          <stop offset="0" stopColor="#F6E7B0" />
+                          <stop offset="0.35" stopColor="#E2C25A" />
+                          <stop offset="0.75" stopColor="#C9A032" />
+                          <stop offset="1" stopColor="#8F6A1C" />
+                        </radialGradient>
+                        <linearGradient id="kSlit" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0" stopColor="#3B2A0E" />
+                          <stop offset="1" stopColor="#0F172A" />
+                        </linearGradient>
+                        <radialGradient id="kShine">
+                          <stop offset="0" stopColor="#FFF" stopOpacity="0.85" />
+                          <stop offset="1" stopColor="#FFF" stopOpacity="0" />
+                        </radialGradient>
+                      </defs>
+
+                      {/* Coquille */}
                       <path
-                        d="M12 2.5 C9 7.5 8 12 8 16 C8 20 9 24.5 12 29.5 C15 24.5 16 20 16 16 C16 12 15 7.5 12 2.5 Z"
-                        fill="#0F172A"
+                        d="M50 6 C76 6 92 34 92 66 C92 96 74 114 50 114 C26 114 8 96 8 66 C8 34 24 6 50 6 Z"
+                        fill="url(#kShell)"
+                        stroke="#7A5A16"
+                        strokeOpacity=".4"
+                        strokeWidth="1.5"
                       />
-                      {/* 3 dents nettes et épaisses par côté (lisibilité immédiate sans effet fermeture éclair) */}
-                      <line x1="6.8" y1="10.5" x2="10.8" y2="10.5" stroke="#F5EFE3" strokeWidth="2.2" strokeLinecap="round" />
-                      <line x1="13.2" y1="10.5" x2="17.2" y2="10.5" stroke="#F5EFE3" strokeWidth="2.2" strokeLinecap="round" />
 
-                      <line x1="6.2" y1="16" x2="10.8" y2="16" stroke="#F5EFE3" strokeWidth="2.4" strokeLinecap="round" />
-                      <line x1="13.2" y1="16" x2="17.8" y2="16" stroke="#F5EFE3" strokeWidth="2.4" strokeLinecap="round" />
-
-                      <line x1="6.8" y1="21.5" x2="10.8" y2="21.5" stroke="#F5EFE3" strokeWidth="2.2" strokeLinecap="round" />
-                      <line x1="13.2" y1="21.5" x2="17.2" y2="21.5" stroke="#F5EFE3" strokeWidth="2.2" strokeLinecap="round" />
-
-                      {/* Fissure médiane sombre continue */}
+                      {/* Lèvres (bande plus claire autour de la fente) */}
                       <path
-                        d="M12 4.5 Q11.8 16 12 27.5"
-                        stroke="#0F172A"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
+                        d="M50 10 C40 30 36 52 37 72 C38 90 42 102 46 110 L54 110 C60 100 64 86 64 70 C64 50 62 28 54 10 Z"
+                        fill="#EBD27A"
+                        opacity=".6"
+                      />
+
+                      {/* Fente */}
+                      <path
+                        d="M50 12 C45 30 42 52 43 72 C44 88 46 98 48 106 L52 106 C55 96 58 84 58 70 C58 50 57 30 54 12 Z"
+                        fill="url(#kSlit)"
+                      />
+
+                      {/* Dents */}
+                      <g stroke="#F3E2A0" strokeWidth="3" strokeLinecap="round">
+                        <line x1="40.8" y1="30" x2="48.3" y2="30" />
+                        <line x1="61.3" y1="30" x2="53.8" y2="30" />
+                        <line x1="39.2" y1="40" x2="46.7" y2="40" />
+                        <line x1="62.3" y1="40" x2="54.8" y2="40" />
+                        <line x1="38.2" y1="50" x2="45.7" y2="50" />
+                        <line x1="62.9" y1="50" x2="55.4" y2="50" />
+                        <line x1="37.9" y1="60" x2="45.4" y2="60" />
+                        <line x1="63" y1="60" x2="55.5" y2="60" />
+                        <line x1="38" y1="70" x2="45.5" y2="70" />
+                        <line x1="63" y1="70" x2="55.5" y2="70" />
+                        <line x1="38.8" y1="80" x2="46.3" y2="80" />
+                        <line x1="62.2" y1="80" x2="54.7" y2="80" />
+                        <line x1="40.2" y1="90" x2="47.7" y2="90" />
+                        <line x1="60.8" y1="90" x2="53.3" y2="90" />
+                      </g>
+
+                      {/* Reflet brillant */}
+                      <ellipse
+                        cx="30"
+                        cy="36"
+                        rx="12"
+                        ry="20"
+                        fill="url(#kShine)"
+                        transform="rotate(-20 30 36)"
                       />
                     </svg>
-
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: -2,
-                        right: -2,
-                        width: 17,
-                        height: 17,
-                        borderRadius: "50%",
-                        backgroundColor: isDarkMode
-                          ? "#0F172A"
-                          : "#0a5c7a",
-                        border: "1.5px solid #F5EFE3",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        boxShadow: "0 2px 5px rgba(0,0,0,0.25)",
-                      }}
-                    >
-                      <span
-                        style={{
-                          color: "#ffffff",
-                          fontSize: 13,
-                          fontWeight: 900,
-                          lineHeight: 1,
-                          marginTop: -1,
-                        }}
-                      >
-                        +
-                      </span>
-                    </div>
                   </button>
                 </div>
               );

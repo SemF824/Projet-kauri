@@ -17,3 +17,19 @@ html, body {
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
+
+/* ── Bouton Signature Kauree FAB ── */
+.kauree-fab {
+  width: 64px;
+  height: 76px;
+  margin-top: -28px;
+  background: none;
+  border: 0;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 6px 10px rgba(15, 23, 42, .35)) drop-shadow(0 2px 3px rgba(143, 106, 28, .4));
+  transition: transform .15s ease;
+}
+.kauree-fab:active {
+  transform: scale(.94);
+}
