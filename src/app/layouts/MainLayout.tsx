@@ -419,66 +419,62 @@ export function KauriBottomNav() {
                     Tontines
                   </span>
 
-                  {/* ── BOUTON SIGNATURE : OVALE VERTICAL RÉGULIER & SYMÉTRIQUE INCARNANT LE COQUILLAGE KAURI AVEC SA FENTE CENTRALE ── */}
+                  {/* ── BOUTON SIGNATURE : OVALE DODU SYMÉTRIQUE INCARNANT LE COQUILLAGE KAURI EN OR RICHE AVEC SA FENTE ÉPURÉE ── */}
                   <button
                     className="cursor-pointer border-none outline-none absolute pointer-events-none transition-transform active:scale-90"
                     style={{
-                      width: 48,
-                      height: 60,
+                      width: 54,
+                      height: 56,
                       borderRadius: "9999px",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      top: -14,
+                      top: -11,
                       left: "50%",
                       transform: `translateX(-50%) ${isActive ? "scale(1.08)" : "scale(1)"}`,
                       transition:
                         "transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
                       boxShadow:
-                        "0 12px 28px -4px rgba(212,175,55,0.48), 0 4px 12px rgba(10,92,122,0.25), inset 0 2px 4px rgba(255,255,255,0.7), inset 0 -2px 4px rgba(0,0,0,0.18)",
+                        "0 10px 24px -2px rgba(212,175,55,0.48), 0 4px 10px rgba(0,0,0,0.18), inset 0 1.5px 2px rgba(255,255,255,0.45), inset 0 -2px 3px rgba(0,0,0,0.22)",
                       border: isActive
-                        ? "2.5px solid #F5EFE3"
-                        : "2px solid rgba(245, 239, 227, 0.9)",
+                        ? "2.5px solid #FFFFFF"
+                        : "2px solid rgba(255, 235, 170, 0.85)",
                       background:
-                        "linear-gradient(160deg, #FDFBF7 0%, #F5EFE3 22%, #D4AF37 62%, #B8860B 100%)",
+                        "linear-gradient(165deg, #D4AF37 0%, #C89C2E 48%, #A8760B 100%)",
                       zIndex: 10,
                     }}
                   >
-                    {/* ── FENTE CENTRALE DENTELÉE DU COQUILLAGE KAURI ── */}
+                    {/* ── FENTE CENTRALE DU COQUILLAGE KAURI (ÉPURÉE À 3 CRANS ÉPAIS) ── */}
                     <svg
-                      viewBox="0 0 24 38"
+                      viewBox="0 0 24 32"
                       style={{
                         width: 20,
-                        height: 32,
+                        height: 28,
                         display: "block",
                         margin: "auto",
                       }}
                       fill="none"
                     >
-                      {/* Creux de la fente centrale (profondeur navy) */}
+                      {/* Fond sombre de la fente (navy profond) */}
                       <path
-                        d="M12 3 C10 8 8.8 14 8.8 19 C8.8 24 10 30 12 35 C14 30 15.2 24 15.2 19 C15.2 14 14 8 12 3 Z"
+                        d="M12 2.5 C9 7.5 8 12 8 16 C8 20 9 24.5 12 29.5 C15 24.5 16 20 16 16 C16 12 15 7.5 12 2.5 Z"
                         fill="#0F172A"
                       />
-                      {/* Dents gauches du kauri */}
-                      <line x1="8.2" y1="11" x2="11.4" y2="11" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
-                      <line x1="7.8" y1="15" x2="11.4" y2="15" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
-                      <line x1="7.5" y1="19" x2="11.4" y2="19" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
-                      <line x1="7.8" y1="23" x2="11.4" y2="23" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
-                      <line x1="8.2" y1="27" x2="11.4" y2="27" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
+                      {/* 3 dents nettes et épaisses par côté (lisibilité immédiate sans effet fermeture éclair) */}
+                      <line x1="6.8" y1="10.5" x2="10.8" y2="10.5" stroke="#F5EFE3" strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1="13.2" y1="10.5" x2="17.2" y2="10.5" stroke="#F5EFE3" strokeWidth="2.2" strokeLinecap="round" />
 
-                      {/* Dents droites du kauri */}
-                      <line x1="12.6" y1="11" x2="15.8" y2="11" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
-                      <line x1="12.6" y1="15" x2="16.2" y2="15" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
-                      <line x1="12.6" y1="19" x2="16.5" y2="19" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
-                      <line x1="12.6" y1="23" x2="16.2" y2="23" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
-                      <line x1="12.6" y1="27" x2="15.8" y2="27" stroke="#F5EFE3" strokeWidth="1.2" strokeLinecap="round" />
+                      <line x1="6.2" y1="16" x2="10.8" y2="16" stroke="#F5EFE3" strokeWidth="2.4" strokeLinecap="round" />
+                      <line x1="13.2" y1="16" x2="17.8" y2="16" stroke="#F5EFE3" strokeWidth="2.4" strokeLinecap="round" />
 
-                      {/* Fissure médiane sombre */}
+                      <line x1="6.8" y1="21.5" x2="10.8" y2="21.5" stroke="#F5EFE3" strokeWidth="2.2" strokeLinecap="round" />
+                      <line x1="13.2" y1="21.5" x2="17.2" y2="21.5" stroke="#F5EFE3" strokeWidth="2.2" strokeLinecap="round" />
+
+                      {/* Fissure médiane sombre continue */}
                       <path
-                        d="M12 5 Q11.7 19 12 33"
+                        d="M12 4.5 Q11.8 16 12 27.5"
                         stroke="#0F172A"
-                        strokeWidth="1.2"
+                        strokeWidth="1.6"
                         strokeLinecap="round"
                       />
                     </svg>
@@ -486,8 +482,8 @@ export function KauriBottomNav() {
                     <div
                       style={{
                         position: "absolute",
-                        top: -3,
-                        right: -3,
+                        top: -2,
+                        right: -2,
                         width: 17,
                         height: 17,
                         borderRadius: "50%",
