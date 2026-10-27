@@ -1,12 +1,76 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useNavigate } from "react-router";
+import { getSupabase } from "../../utils/supabase";
+import { toast } from "sonner";
+
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes d'inactivité avant verrouillage
 
 /**
- * Hook qui surveille l'inactivité de l'utilisateur.
- * Désactivé pour la déconnexion brutale afin d'éviter les coupures intempestives
- * et les renvois automatiques à la page d'accueil pendant la navigation.
+ * Hook qui surveille l'inactivité de l'utilisateur (sécurité financière et bancaire).
+ * Déconnecte automatiquement la session en cas d'inactivité prolongée pour maintenir
+ * l'actualisation et la protection des données financières du compte.
  */
 export function useInactivitySecurityTimeout() {
+  const navigate = useNavigate();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
+
+  const resetTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    timerRef.current = setTimeout(async () => {
+      // Déconnexion ou verrouillage de sécurité
+      const supabase = getSupabase();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        toast.error("Session verrouillée pour cause d'inactivité.", {
+          description:
+            "Pour votre sécurité financière, veuillez vous réauthentifier.",
+        });
+        await supabase.auth.signOut();
+        navigate("/kauri/login");
+      }
+    }, INACTIVITY_TIMEOUT_MS);
+  };
+
   useEffect(() => {
-    // Maintien actif de la session utilisateur sans coupure inattendue
+    const events = [
+      "mousedown",
+      "mousemove",
+      "keypress",
+      "scroll",
+      "touchstart",
+    ];
+
+    // Throttle l'enregistrement d'activité toutes les 10 secondes pour éviter de surcharger le processeur
+    const handleUserActivity = () => {
+      const now = Date.now();
+      if (now - lastActivityRef.current > 10000) {
+        lastActivityRef.current = now;
+        resetTimer();
+      }
+    };
+
+    // Démarrer l'écoute des événements
+    events.forEach((event) => {
+      window.addEventListener(event, handleUserActivity, { passive: true });
+    });
+
+    // Initialiser le timer
+    resetTimer();
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      events.forEach((event) => {
+        window.removeEventListener(event, handleUserActivity);
+      });
+    };
   }, []);
 }
