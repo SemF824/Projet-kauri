@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Search,
   Loader2,
+  User,
 } from "lucide-react";
 import {
   SocialDiscoveryService,
@@ -1423,8 +1424,8 @@ export default function RencontresScreen() {
           </span>
         </div>
 
-        {/* Right — undo button */}
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        {/* Right — undo button & My Profile button */}
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8 }}>
           <button
             onClick={handleUndo}
             disabled={!lastSwiped}
@@ -1442,6 +1443,7 @@ export default function RencontresScreen() {
               cursor: lastSwiped ? "pointer" : "not-allowed",
               transition: "all 0.2s",
             }}
+            title="Annuler le dernier swipe"
           >
             <RotateCcw
               style={{
@@ -1450,6 +1452,25 @@ export default function RencontresScreen() {
                 color: lastSwiped ? GOLD : "rgba(255,255,255,0.28)",
               }}
             />
+          </button>
+          <button
+            onClick={() => navigate("/kauri/social-hub/profil-setup", { state: { isEditing: true } })}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              background: "rgba(212,175,55,0.15)",
+              border: `1px solid ${GOLD}60`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              overflow: "hidden",
+            }}
+            title="Modifier mon profil & photo pro"
+          >
+            <User style={{ width: 16, height: 16, color: GOLD }} />
           </button>
         </div>
       </div>

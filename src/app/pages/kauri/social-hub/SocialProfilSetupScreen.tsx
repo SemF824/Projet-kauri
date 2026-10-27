@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowLeft, ArrowRight, Check, Eye, EyeOff, MapPin,
-  Shield, MessageCircle, Star, User, Edit3,
+  Shield, MessageCircle, Star, User, Edit3, Camera, Upload, Trash2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const TEAL   = '#006D77';
@@ -16,6 +17,7 @@ const BORDER = 'rgba(255,255,255,0.10)';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface SocialProfile {
+  photoUrl?: string;
   avatarIndex: number;
   useRealName: boolean;
   pseudo: string;
@@ -188,8 +190,17 @@ function ProfilePreviewCard({ profile }: { profile: SocialProfile }) {
           background: av.bg, border: '3px solid #0A1E26',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+          overflow: 'hidden',
         }}>
-          <span style={{ color: '#fff', fontSize: 18, fontWeight: 800 }}>{av.initials}</span>
+          {profile.photoUrl ? (
+            <img
+              src={profile.photoUrl}
+              alt="Avatar"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            <span style={{ color: '#fff', fontSize: 18, fontWeight: 800 }}>{av.initials}</span>
+          )}
         </div>
 
         {/* Invisible badges */}
@@ -280,22 +291,118 @@ function ProfilePreviewCard({ profile }: { profile: SocialProfile }) {
 
 // ── Step components ───────────────────────────────────────────────────────────
 function StepIdentite({ p, set }: { p: SocialProfile; set: (k: keyof SocialProfile, v: unknown) => void }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La photo ne doit pas dépasser 5 Mo.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target?.result as string;
+      set('photoUrl', base64);
+      toast.success("Photo de profil professionnelle importée !");
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-      {/* Avatar picker */}
+      {/* Photo de profil personnalisée */}
       <div>
-        <SectionTitle>Votre avatar</SectionTitle>
+        <SectionTitle>Photo de profil professionnelle</SectionTitle>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 16,
+          background: CARD, border: `1px solid ${p.photoUrl ? `${GOLD}60` : BORDER}`,
+          borderRadius: 18, padding: 14, transition: 'all 0.2s',
+        }}>
+          <div style={{
+            position: 'relative', width: 68, height: 68, borderRadius: '50%',
+            overflow: 'hidden', flexShrink: 0,
+            background: p.photoUrl ? '#000' : AVATARS[p.avatarIndex].bg,
+            border: `2.5px solid ${GOLD}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+          }}>
+            {p.photoUrl ? (
+              <img
+                src={p.photoUrl}
+                alt="Avatar"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <span style={{ color: '#fff', fontSize: 20, fontWeight: 800 }}>JD</span>
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: '#fff', fontSize: 13, fontWeight: 700, margin: '0 0 3px' }}>
+              {p.photoUrl ? 'Photo pro enregistrée' : 'Ajouter ma vraie photo'}
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, margin: '0 0 10px', lineHeight: 1.4 }}>
+              Essentiel pour être reconnu et crédibiliser vos partenariats & tontines.
+            </p>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  padding: '7px 12px', borderRadius: 10,
+                  background: `${GOLD}22`, border: `1px solid ${GOLD}55`,
+                  color: GOLD, fontSize: 12, fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                <Camera size={14} />
+                <span>{p.photoUrl ? 'Remplacer' : 'Importer une photo'}</span>
+              </button>
+              {p.photoUrl && (
+                <button
+                  type="button"
+                  onClick={() => set('photoUrl', undefined)}
+                  style={{
+                    padding: '7px 10px', borderRadius: 10,
+                    background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                    color: '#EF4444', fontSize: 12, fontWeight: 600,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                  }}
+                >
+                  <Trash2 size={13} />
+                  <span>Retirer</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Avatar picker alternatif */}
+      <div>
+        <SectionTitle>Ou choisir une illustration d'avatar</SectionTitle>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
           {AVATARS.map((av, i) => (
             <button
               key={i}
-              onClick={() => set('avatarIndex', i)}
+              onClick={() => {
+                set('avatarIndex', i);
+                set('photoUrl', undefined);
+              }}
               style={{
                 aspectRatio: '1', borderRadius: '50%',
-                background: av.bg, border: `3px solid ${i === p.avatarIndex ? GOLD : 'transparent'}`,
+                background: av.bg,
+                border: `3px solid ${i === p.avatarIndex && !p.photoUrl ? GOLD : 'transparent'}`,
                 cursor: 'pointer', padding: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: i === p.avatarIndex ? `0 0 0 2px ${BG}, 0 0 0 4px ${GOLD}` : 'none',
+                boxShadow: i === p.avatarIndex && !p.photoUrl ? `0 0 0 2px ${BG}, 0 0 0 4px ${GOLD}` : 'none',
                 transition: 'border-color 0.2s, box-shadow 0.2s',
               }}
             >
